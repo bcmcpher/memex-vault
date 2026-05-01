@@ -5,7 +5,7 @@ description: Save meeting notes to the vault as a structured source note. Use wh
 
 # Karpathy Wiki Meeting
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-llm-obsidian-template`
+**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
 
 This skill takes meeting notes — spoken, typed, or pasted — and creates a properly structured source note in `sources/meeting/`. It extracts decisions, action items, and follow-up sources, wires connections to existing atoms, and seeds stubs for new concepts that emerged. Unlike digital sources, meeting notes have no URL and use their own template.
 
@@ -40,7 +40,7 @@ Use the meeting date (not today's date if the meeting was yesterday or earlier).
 
 Check for duplicates before creating:
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-llm-obsidian-template
+VAULT=/home/bcmcpher/Projects/claude/memex-vault
 ls "$VAULT/sources/meeting/" | grep "<date>"
 ```
 

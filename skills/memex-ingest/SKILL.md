@@ -5,7 +5,7 @@ description: Ingest a new source into the personal Karpathy-style Obsidian wiki 
 
 # Karpathy Wiki Ingest
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-llm-obsidian-template`
+**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
 
 This vault uses a layered structure: raw sources feed concept atoms, which feed topic maps. Your job here is to create a well-formed source note, connect it to existing atoms, and optionally seed new atoms — keeping the graph growing without duplicating work.
 
@@ -83,7 +83,7 @@ Never reproduce full article text. Summaries only.
 Ask which existing atoms or concepts this source relates to. Check for likely candidates:
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-llm-obsidian-template
+VAULT=/home/bcmcpher/Projects/claude/memex-vault
 ls "$VAULT/atoms/" | grep -i "keyword"
 grep -rl "keyword" "$VAULT/atoms/"
 ```

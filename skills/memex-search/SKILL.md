@@ -5,7 +5,7 @@ description: Search and navigate the personal Karpathy-style Obsidian wiki vault
 
 # Karpathy Wiki Search
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-llm-obsidian-template`
+**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
 
 The vault is a layered graph. Search always flows top-down — never scan all sources directly.
 
@@ -112,19 +112,19 @@ If concept map and atom traversal yield no results, fall back to text search:
 
 ```bash
 # Keyword in atom bodies
-grep -ril "keyword" /home/bcmcpher/Projects/claude/memex-llm-obsidian-template/atoms/
+grep -ril "keyword" /home/bcmcpher/Projects/claude/memex-vault/atoms/
 
 # Keyword in glossary definitions
-grep -ril "keyword" /home/bcmcpher/Projects/claude/memex-llm-obsidian-template/glossary/
+grep -ril "keyword" /home/bcmcpher/Projects/claude/memex-vault/glossary/
 
 # Keyword in source summaries
-grep -ril "keyword" /home/bcmcpher/Projects/claude/memex-llm-obsidian-template/sources/
+grep -ril "keyword" /home/bcmcpher/Projects/claude/memex-vault/sources/
 
 # Find all atoms in a domain by tag
-grep -rl "tags:.*deep-learning" /home/bcmcpher/Projects/claude/memex-llm-obsidian-template/atoms/
+grep -rl "tags:.*deep-learning" /home/bcmcpher/Projects/claude/memex-vault/atoms/
 
 # Find all uses of a specific relationship
-grep -r "extends:: \[\[" /home/bcmcpher/Projects/claude/memex-llm-obsidian-template/atoms/
+grep -r "extends:: \[\[" /home/bcmcpher/Projects/claude/memex-vault/atoms/
 ```
 
 Always report when you fell back to grep, so the user knows the graph coverage is incomplete for this topic.

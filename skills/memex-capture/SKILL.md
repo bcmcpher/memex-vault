@@ -5,7 +5,7 @@ description: Quick-save a source to the vault without wiring connections or prom
 
 # Karpathy Wiki Capture
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-llm-obsidian-template`
+**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
 
 This skill does one thing: get a URL into the vault as fast as possible. Metadata enrichment, summaries, and connection wiring all happen later in `memex-connect`. The only thing that can't be recovered later is *why* the user saved it — so that's the only thing worth asking.
 
@@ -112,4 +112,4 @@ Report the file path. One line: note is in the inbox, run `memex-connect` to enr
 - Don't use the publication date in the filename — always use today's date
 - Don't check for existing atoms or concepts
 - Don't create a note if the URL is already in `sources/` — do a quick check first:
-  `grep -rl "<url>" /home/bcmcpher/Projects/claude/memex-llm-obsidian-template/sources/`
+  `grep -rl "<url>" /home/bcmcpher/Projects/claude/memex-vault/sources/`

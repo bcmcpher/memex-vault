@@ -5,7 +5,7 @@ description: Synthesize a topic's knowledge into a structured Markdown export. U
 
 # Karpathy Wiki Compose
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-llm-obsidian-template`
+**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
 
 This skill synthesizes vault knowledge into a structured export document. Every sentence in the output traces to an atom or source body — nothing is invented. Run `memex-reconcile` and `memex-trust-audit` before composing a topic you plan to share; the quality of the output depends directly on graph integrity and trustworthy confidence signals.
 
@@ -37,7 +37,7 @@ Ask:
 
 Locate the topic file:
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-llm-obsidian-template
+VAULT=/home/bcmcpher/Projects/claude/memex-vault
 find "$VAULT/topics" -name "<topic>.md" 2>/dev/null
 ```
 
@@ -181,7 +181,7 @@ composed: YYYY-MM-DD
 atom-count: N
 source-count: M
 glossary-term-count: K
-vault: /home/bcmcpher/Projects/claude/memex-llm-obsidian-template
+vault: /home/bcmcpher/Projects/claude/memex-vault
 ---
 ```
 

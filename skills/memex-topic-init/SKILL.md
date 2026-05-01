@@ -5,7 +5,7 @@ description: Create and bootstrap a new topic node in the personal Karpathy-styl
 
 # Karpathy Wiki Topic Init
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-llm-obsidian-template`
+**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
 
 This skill creates a new topic node — a concept map, research note, or project workspace — and immediately wires it into the existing graph. The goal is to give a freshly named topic a meaningful starting structure rather than an empty shell: atoms already in the vault get linked, relevant sources get cited, and adjacent topics get connected.
 
@@ -33,7 +33,7 @@ For projects, ask for the goal (goes in the `## Goal` section).
 
 Check for an existing topic with the same or similar name before creating:
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-llm-obsidian-template
+VAULT=/home/bcmcpher/Projects/claude/memex-vault
 ls "$VAULT/topics/concepts/" "$VAULT/topics/research/" "$VAULT/topics/projects/" | grep -i "keyword"
 ```
 
@@ -44,7 +44,7 @@ Derive 3–5 search keywords from the topic title and description. Include synon
 
 ### 3. Search for relevant atoms
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-llm-obsidian-template
+VAULT=/home/bcmcpher/Projects/claude/memex-vault
 
 # Match by filename
 ls "$VAULT/atoms/" | grep -i "keyword"

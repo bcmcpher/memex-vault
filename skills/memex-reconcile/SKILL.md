@@ -5,7 +5,7 @@ description: Detect and repair bidirectional drift between atom part-of:: and to
 
 # Karpathy Wiki Reconcile
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-llm-obsidian-template`
+**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
 
 This skill finds and repairs bidirectional drift between atom `part-of::` fields and their corresponding topic `covers::` fields. These two fields are meant to be mirrors: if an atom says `part-of:: [[deep-learning]]`, then `topics/concepts/deep-learning.md` should say `covers:: [[atom-name]]`, and vice versa. Drift accumulates silently during ingest when one side is written but the other is forgotten.
 
@@ -30,7 +30,7 @@ Run two scans:
 
 **Scan A — atoms with part-of:: not reflected in topic covers::**
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-llm-obsidian-template
+VAULT=/home/bcmcpher/Projects/claude/memex-vault
 grep -rn "^part-of::" "$VAULT/atoms/"
 ```
 For each `part-of:: [[Topic]]` found, verify the named topic file has `covers:: [[atom-name]]`. Collect every mismatch.

@@ -5,7 +5,7 @@ description: Wire captured sources into the knowledge graph. Use when the user w
 
 # Karpathy Wiki Connect
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-llm-obsidian-template`
+**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
 
 This skill takes inbox-only captures and integrates them into the knowledge graph. It enriches metadata by fetching URLs, wires Dataview connection fields, promotes atoms, updates topic maps, and marks sources as processed. One note at a time, with user confirmation before any write.
 
@@ -19,7 +19,7 @@ For the relationship taxonomy and full field definitions, read: `references/vaul
 Find all source notes that are `status: unread` or `status: unprocessed` AND have no populated Dataview relation fields in their `## Connections` block (inbox-only captures):
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-llm-obsidian-template
+VAULT=/home/bcmcpher/Projects/claude/memex-vault
 
 # Find unread sources
 grep -rl "status: unread\|status: unprocessed" "$VAULT/sources/"
@@ -101,7 +101,7 @@ Process notes **one at a time** — complete all steps for one note before movin
 For each key concept, check `atoms/` for existing matches:
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-llm-obsidian-template
+VAULT=/home/bcmcpher/Projects/claude/memex-vault
 ls "$VAULT/atoms/" | grep -i "concept-keyword"
 grep -rl "concept-keyword" "$VAULT/atoms/"
 ```

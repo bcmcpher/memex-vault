@@ -5,7 +5,7 @@ description: Query the ingest history log for activity summaries and cross-refer
 
 # Karpathy Wiki Log Query
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-llm-obsidian-template`
+**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
 
 This skill parses `_meta/log.md` to answer activity and status questions about the vault. It does not modify the log, does not scan source files directly (except for cross-reference checks), and does not generate synthesis reports (that belongs to `memex-compose`).
 
@@ -53,7 +53,7 @@ Identify the query type from the table above. A query may combine multiple filte
 ### 2. Read and parse `_meta/log.md`
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-llm-obsidian-template
+VAULT=/home/bcmcpher/Projects/claude/memex-vault
 cat "$VAULT/_meta/log.md"
 ```
 

@@ -5,7 +5,7 @@ description: Surface and document unacknowledged conflicts in the vault graph. U
 
 # Karpathy Wiki Conflicts
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-llm-obsidian-template`
+**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
 
 This skill follows explicit conflict relation fields already in the graph — it does not infer conflicts from atom content. Its job is to distinguish acknowledged conflicts (tension described, both sides linked) from unacknowledged ones (link present but no explanation), and to help you document the ones that are bare.
 
@@ -33,7 +33,7 @@ The four fields this skill tracks:
 ### 1. Scan for all conflict links
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-llm-obsidian-template
+VAULT=/home/bcmcpher/Projects/claude/memex-vault
 grep -rn "^contradicts::\|^refutes::\|^challenges::\|^limits::" "$VAULT/atoms/"
 ```
 

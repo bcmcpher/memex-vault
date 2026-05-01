@@ -1,4 +1,4 @@
-# memex-llm-obsidian-template
+# memex-vault
 
 A personal memex for accumulating and connecting knowledge from web articles, videos, academic papers, technical documentation, and meetings. A memex is a memory-extension machine — it ingests, indexes, and recombines knowledge rather than surfacing crowd-derived consensus. Inspired by [Andrej Karpathy's LLM wiki concept](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f).
 

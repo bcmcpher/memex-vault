@@ -5,7 +5,7 @@ description: Audit and update atom confidence levels based on provenance structu
 
 # Karpathy Wiki Trust Audit
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-llm-obsidian-template`
+**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
 
 This skill audits the provenance structure behind atom confidence levels. It does not judge whether atom bodies are factually correct — only whether the `confidence:` field is justified by the sources backing it. Run it after bulk ingest, after new sources challenge existing claims, or monthly as part of vault hygiene.
 
@@ -30,7 +30,7 @@ Ask the user: "Which topic should I audit, or use `--vault` for all atoms?"
 
 If a topic name is given:
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-llm-obsidian-template
+VAULT=/home/bcmcpher/Projects/claude/memex-vault
 grep "^covers::" "$VAULT/topics/concepts/<topic>.md"
 # Also check topics/research/ and topics/projects/ if not found in concepts/
 ```

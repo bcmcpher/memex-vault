@@ -5,7 +5,7 @@ description: Evaluate the semantic validity and structural coherence of topic-le
 
 # Karpathy Wiki Review
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-llm-obsidian-template`
+**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
 
 This skill performs a semantic audit of topic-level nodes. It reads a topic map alongside all its linked atoms and sources, then evaluates whether the knowledge structure makes sense — flagging misclassified relationships, surface-level contradictions that haven't been acknowledged, atoms that belong in a different topic, atoms missing from this topic, and relationship types that could be made more precise.
 
@@ -32,9 +32,9 @@ It reads downward into the atoms and sources those topics cover, but does not au
 Ask the user which topic to audit (or list available topics):
 
 ```bash
-ls /home/bcmcpher/Projects/claude/memex-llm-obsidian-template/topics/concepts/
-ls /home/bcmcpher/Projects/claude/memex-llm-obsidian-template/topics/research/
-ls /home/bcmcpher/Projects/claude/memex-llm-obsidian-template/topics/projects/
+ls /home/bcmcpher/Projects/claude/memex-vault/topics/concepts/
+ls /home/bcmcpher/Projects/claude/memex-vault/topics/research/
+ls /home/bcmcpher/Projects/claude/memex-vault/topics/projects/
 ```
 
 One topic per session — each audit is deep work. For multiple topics, run the skill again. If the named topic doesn't exist yet, say so and offer to list what's available.
@@ -43,7 +43,7 @@ One topic per session — each audit is deep work. For multiple topics, run the 
 Read the topic file in full. Then collect all linked content:
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-llm-obsidian-template
+VAULT=/home/bcmcpher/Projects/claude/memex-vault
 
 # List atoms covered by this topic
 grep "^covers::" "$VAULT/topics/concepts/<topic>.md"
