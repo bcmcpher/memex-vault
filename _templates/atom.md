@@ -14,6 +14,9 @@ confidence: medium
 <!-- Expanded explanation, edge cases, nuance -->
 
 ## Sources
+<!-- Use [[source#Section]] to anchor the specific section supporting this claim.
+     Valid sections: Summary, Key Points, Why Saved, Decisions Made, Key Concepts Discussed.
+     Bare [[source]] is fine when the whole source is relevant. -->
 cites:: 
 
 ## Connections

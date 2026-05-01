@@ -117,7 +117,7 @@ For each new concept that emerged (not yet in `atoms/`):
 
 > "The concept [X] came up but has no atom yet. Want to create a stub? (Yes / Skip)"
 
-If yes, create `atoms/kebab-concept.md` with `confidence: low` and `cites:: [[meeting-filename]]`. Add `introduces:: [[concept-name]]` to the meeting note's Connections.
+Write a candidate file to `_meta/candidates/` before creating the atom. If yes, create `atoms/kebab-concept.md` with `confidence: low` and `cites:: [[meeting-filename#Key Concepts Discussed]]` (or `#Decisions Made` if the concept emerged from a decision). Add `introduces:: [[concept-name]]` to the meeting note's Connections.
 
 Ask before creating each stub — do not auto-create.
 
@@ -127,7 +127,7 @@ For each technical term that surfaced in the meeting that needs precise definiti
 
 > "The term [X] came up but has no glossary entry yet. Want to create a stub? (Yes / Skip)"
 
-If yes, create `glossary/kebab-term.md`:
+Write a candidate file to `_meta/candidates/` before creating the glossary entry. If yes, create `glossary/kebab-term.md`:
 ```markdown
 ---
 title: Term Name

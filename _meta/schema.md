@@ -19,6 +19,7 @@ This file is the vault's constitution. Update it when adding or retiring relatio
 | Project | `topics/projects/` | One project per file | `title`, `topic-type`, `status` |
 | Research | `topics/research/` | One research question per file | `title`, `topic-type`, `question` |
 | Export | `_exports/` | One file per compose session | (generated — no required frontmatter) |
+| Candidate | `_meta/candidates/` | One file per proposed write | `proposed`, `skill`, `action`, `target`, `session`, `status` |
 
 ---
 
@@ -62,6 +63,8 @@ Relationships are grouped by **epistemic role**: affirmative (source builds on t
 |-------|---------|
 | `cites::` | This note references that source as evidence (affirmative or neutral) |
 | `rebuts::` | This note references that source as counter-evidence to a claim |
+
+**Provenance anchors:** Use `[[note#Section]]` heading anchors on `cites::` to record which section of a source supports the specific claim in this atom. Valid section names match the source note's `##` headings: `Summary`, `Key Points`, `Why Saved`, `Decisions Made`, `Key Concepts Discussed`. Example: `cites:: [[2026-04-27-flash-attention#Key Points]]`. Bare `[[note]]` remains valid when the whole source is relevant or the section is indeterminate. Multiple sources may mix anchored and bare forms on the same field.
 
 ### Any Note → Glossary
 | Field | Meaning |
@@ -177,7 +180,54 @@ Skills that write vault notes, and what they produce:
 | `memex-topic-init` | New topic map + atom back-wires | Full | No |
 | `memex-refactor` | Rewrites/splits/merges existing atoms | Varies | No |
 | `memex-glossary` | Glossary entries from existing notes | `defines::` only | No |
+| `memex-candidates` | Applies pending candidates from `_meta/candidates/` | Varies | No |
 | `memex-compose` | Export document in `_exports/` | None (read-only) | Yes |
+
+---
+
+## Candidate Lifecycle
+
+Candidate files in `_meta/candidates/` are ephemeral proposals written by writing skills before each vault change. They make proposed content durable across session drops. Use `memex-candidates` to review and apply pending candidates.
+
+**Two candidate types:**
+
+*Create candidate* — full proposed file content in body:
+```markdown
+---
+proposed: YYYY-MM-DD HH:MM
+skill: memex-ingest
+action: create
+target: atoms/flash-attention.md
+session: YYYY-MM-DD-HHMM
+status: pending
+---
+
+[full file content to write]
+```
+
+*Modify candidate* — structured append to a specific section:
+```markdown
+---
+proposed: YYYY-MM-DD HH:MM
+skill: memex-connect
+action: modify
+target: atoms/attention-mechanism.md
+section: "## Sources"
+change: append
+session: YYYY-MM-DD-HHMM
+status: pending
+---
+
+cites:: [[2026-05-01-flash-attention#Key Points]]
+```
+
+**Lifecycle:** Candidate written → user confirms interactively → vault file written → candidate deleted. If session ends before confirmation, candidate persists. `memex-candidates` resurfaces pending candidates for approval or rejection.
+
+**File naming:** `YYYY-MM-DD-HHMMSS-{action}-{target-slug}.md`
+
+`_meta/candidates/` is gitignored — candidates are ephemeral working state, not vault history.
+
+---
 
 A source note with `status: unread` and no populated Dataview fields in `## Connections` is considered **inbox-only** — captured but not yet integrated into the graph. Run `memex-connect` to process inbox notes.
 

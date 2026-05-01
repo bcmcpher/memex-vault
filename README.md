@@ -1,6 +1,16 @@
 # memex-vault
 
-A personal memex for accumulating and connecting knowledge from web articles, videos, academic papers, technical documentation, and meetings. A memex is a memory-extension machine — it ingests, indexes, and recombines knowledge rather than surfacing crowd-derived consensus. Inspired by [Andrej Karpathy's LLM wiki concept](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f).
+A personal template [memex](https://en.wikipedia.org/wiki/Memex) for
+accumulating and connecting knowledge from web articles, videos,
+academic papers, technical documentation, and meetings. A memex is a
+memory-extension machine — it ingests, indexes, and recombines
+knowledge. Inspired by [Andrej Karpathy's LLM wiki
+concept](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f).
+
+This specific name - other than being a cool reference - was adjusted
+based on some now deleted comments here that rightly pointed out that a core aspect
+of a "wiki" is *community consensus between people*. So a mostly LLM
+derived knowledge graph of notes is decidedly not a interpersonal consensus.
 
 ---
 
@@ -336,7 +346,7 @@ Then add to `.claude/settings.local.json`:
 ```json
 "mcpServers": {
   "youtube": {
-    "command": "mcp-youtube"
+	"command": "mcp-youtube"
   }
 }
 ```
@@ -359,8 +369,8 @@ Then add a shell MCP wrapper to `.claude/settings.local.json`:
 ```json
 "mcpServers": {
   "pdf": {
-    "command": "bash",
-    "args": ["-c", "pdftotext \"$1\" -", "--", ""]
+	"command": "bash",
+	"args": ["-c", "pdftotext \"$1\" -", "--", ""]
   }
 }
 ```
@@ -374,4 +384,5 @@ Note: test specific MCP server stability before committing to one — the ecosys
 - [Karpathy's original LLM wiki concept](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
 - [Extended memory hierarchy discussion](https://gist.github.com/rohitg00/2067ab416f7bbe447c1977edaaa681e2)
 - [llm-atomic-wiki (linting patterns)](https://github.com/cablate/llm-atomic-wiki)
+- [llm-wiki-compiler](https://github.com/atomicmemory/llm-wiki-compiler)
 - [claude-obsidian (Obsidian integration)](https://github.com/AgriciDaniel/claude-obsidian)

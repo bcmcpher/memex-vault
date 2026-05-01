@@ -124,6 +124,19 @@ For each proposal, ask: "Create this entry? (Yes / Edit / Skip)"
 
 ### 5. Create accepted stubs
 
+Write a candidate file to `_meta/candidates/` before creating each glossary entry:
+```yaml
+---
+proposed: YYYY-MM-DD HH:MM
+skill: memex-glossary
+action: create
+target: glossary/kebab-term.md
+session: YYYY-MM-DD-HHMM
+status: pending
+---
+```
+Body: full proposed glossary file content. Write to vault and delete candidate after user confirms.
+
 For each accepted term, create `glossary/kebab-term.md`:
 
 ```markdown

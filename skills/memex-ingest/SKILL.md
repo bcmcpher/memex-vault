@@ -88,24 +88,26 @@ ls "$VAULT/atoms/" | grep -i "keyword"
 grep -rl "keyword" "$VAULT/atoms/"
 ```
 
-Then write the Dataview inline fields under `## Connections`:
+For each atom relationship, ask: **"Which section of this source supports that connection? (Summary / Key Points / skip for bare link)"** Use a heading anchor when a section is identifiable:
 
 ```
-supports:: [[Relevant Atom]]
-introduces:: [[New Concept]]
-challenges:: [[Claim This Source Questions]]
-refutes:: [[Claim With Counter-Evidence]]
-cites:: [[Prior Work]]
+supports:: [[transformer-architecture#Key Points]]
+introduces:: [[flash-attention#Summary]]
+cites:: [[prior-work]]          ← bare link when whole source is relevant
 related:: [[Adjacent Concept]]
 ```
 
-Use `challenges::` when the source questions a claim without fully refuting it. Use `refutes::` when it provides direct counter-evidence. Use `related::` only as a fallback — it can be refined during the monthly review. See `references/vault-schema.md` for the full decision tree.
+Write candidate file before writing to the source note (see Candidate Gating below). Then write the Dataview inline fields under `## Connections`.
+
+Use `challenges::` when the source questions a claim without fully refuting it. Use `refutes::` when it provides direct counter-evidence. Use `related::` only as a fallback. See `references/vault-schema.md` for the full decision tree.
 
 ### 6. Promote to atoms (optional but encouraged)
 If the source introduces a concept not yet in `atoms/`, offer to create a stub. A good atom candidate is any concept that:
 - Appears in the source's title or abstract
 - Would be referenced from multiple future sources
 - Isn't already covered by an existing atom
+
+Write a candidate file before creating the atom (see Candidate Gating below).
 
 Stub atom format (save to `atoms/kebab-concept.md`):
 ```markdown
@@ -125,14 +127,14 @@ confidence: low
 <!-- Expand later -->
 
 ## Sources
-cites:: [[source-filename]]
+cites:: [[source-filename#Key Points]]
 
 ## Connections
 part-of:: 
 related:: 
 ```
 
-Set `confidence: low` for single-source atoms. Upgrade to `medium` when two or more independent sources support it.
+Use `[[source-filename#Section]]` anchors on `cites::` — ask which section the claim came from. Set `confidence: low` for single-source atoms. Upgrade to `medium` when two or more independent sources support it.
 
 ### 7. Add glossary terms (optional)
 
@@ -143,6 +145,8 @@ If the source defines a specific technical term precisely — and that term's va
 - **Atom**: the concept makes claims, can accumulate evidence from multiple sources, or connects structurally to other concepts → use Step 6 instead
 
 For each glossary candidate, ask: "Create a glossary stub for '[term]'? (Yes / Skip)"
+
+Write a candidate file before creating the glossary entry (see Candidate Gating below).
 
 If yes, create `glossary/kebab-term.md`:
 ```markdown
@@ -179,6 +183,57 @@ atoms:: [[Atom A]], [[Atom B]]
 skill:: memex-ingest
 notes: <optional>
 ```
+
+---
+
+## Candidate Gating
+
+Before writing any vault file (source note, atom stub, glossary stub), write a candidate file to `_meta/candidates/`. This makes the proposed content durable — if the session ends before the user confirms, `memex-candidates` can resurface it later.
+
+**Session ID**: use `YYYY-MM-DD-HHMM` from the start of this skill invocation. All candidates from one session share the same ID.
+
+**For create actions** (new source note, atom stub, glossary stub):
+```
+_meta/candidates/YYYYMMDD-HHMMSS-create-{target-slug}.md
+```
+Frontmatter:
+```yaml
+---
+proposed: YYYY-MM-DD HH:MM
+skill: memex-ingest
+action: create
+target: atoms/flash-attention.md
+session: YYYY-MM-DD-HHMM
+status: pending
+---
+```
+Body: full proposed file content.
+
+**For modify actions** (back-wiring an existing atom's `cites::`, adding `defines::` to the source note):
+```
+_meta/candidates/YYYYMMDD-HHMMSS-modify-{target-slug}.md
+```
+Frontmatter:
+```yaml
+---
+proposed: YYYY-MM-DD HH:MM
+skill: memex-ingest
+action: modify
+target: atoms/attention-mechanism.md
+section: "## Sources"
+change: append
+session: YYYY-MM-DD-HHMM
+status: pending
+---
+```
+Body: the exact text to append.
+
+**Lifecycle per candidate:**
+1. Write candidate file
+2. Show proposed content to user
+3. User confirms → write to vault, delete candidate
+4. User skips → delete candidate without writing
+5. Session ends → candidate persists for `memex-candidates`
 
 ---
 

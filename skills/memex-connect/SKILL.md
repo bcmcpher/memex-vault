@@ -163,20 +163,22 @@ Then add `defines:: [[term-name]]` to the source note's `## Connections` section
 ---
 
 ### 5. Write connection fields
-Update the `## Connections` section in the source note. Confirm proposed connections before writing. Multiple targets are fine:
+For each atom relationship, ask: **"Which section of this source best supports that connection? (Summary / Key Points / skip for bare link)"** Use heading anchors where a section is identifiable:
 
 ```
-supports:: [[transformer-architecture]], [[attention-mechanism]]
-introduces:: [[flash-attention]]
+supports:: [[transformer-architecture#Key Points]], [[attention-mechanism#Summary]]
+introduces:: [[flash-attention#Summary]]
 challenges:: [[scaling-laws]]
 cites:: [[2026-04-27-attention-is-all-you-need]]
 ```
 
+Write a candidate file to `_meta/candidates/` before writing to the source note (see Candidate Gating below). Confirm proposed connections before writing. Multiple targets are fine.
+
 ---
 
 ### 6. Back-wire atoms
-For every atom that gains a new source:
-- Add `cites:: [[source-filename]]` to the atom's `## Sources` section
+For every atom that gains a new source, write a candidate file before modifying the atom. Then:
+- Add `cites:: [[source-filename#Section]]` to the atom's `## Sources` section — use the section anchor matched to this relationship
 - Update `updated:` in atom frontmatter to today's date
 - If a second independent source now supports this atom, upgrade `confidence: low → medium`
 
@@ -229,6 +231,42 @@ After all selected notes are processed, report:
 ## Processing Mode
 
 One note at a time. Complete Steps 2–10 for one note before moving to the next.
+
+---
+
+## Candidate Gating
+
+Before writing any vault change (source note connections, atom back-wires, atom stubs, glossary stubs), write a candidate file to `_meta/candidates/`. Use the session ID `YYYY-MM-DD-HHMM` from the start of this skill invocation.
+
+**Create candidate** (new atom or glossary stub):
+```yaml
+---
+proposed: YYYY-MM-DD HH:MM
+skill: memex-connect
+action: create
+target: atoms/new-concept.md
+session: YYYY-MM-DD-HHMM
+status: pending
+---
+```
+Body: full proposed file content.
+
+**Modify candidate** (appending `cites::` to an existing atom, updating connection fields in source):
+```yaml
+---
+proposed: YYYY-MM-DD HH:MM
+skill: memex-connect
+action: modify
+target: atoms/attention-mechanism.md
+section: "## Sources"
+change: append
+session: YYYY-MM-DD-HHMM
+status: pending
+---
+```
+Body: exact text to append.
+
+Write candidate → confirm with user → write to vault → delete candidate. If session ends early, candidates persist for `memex-candidates`.
 
 ---
 
