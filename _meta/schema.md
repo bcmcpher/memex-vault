@@ -14,7 +14,7 @@ This file is the vault's constitution. Update it when adding or retiring relatio
 | Source (docs) | `sources/docs/` | One file per URL | `title`, `url`, `medium`, `tool`, `saved`, `status` |
 | Source (meeting) | `sources/meeting/` | One file per meeting | `title`, `medium`, `date`, `status` |
 | Atom | `atoms/` | One concept per file | `title`, `created`, `confidence` |
-| Glossary | `glossary/` | One term per file | `title`, `term`, `domain` |
+| Glossary | `glossary/` | One term per file | `title`, `term`, `domain`, `status` |
 | Concept map | `topics/concepts/` | One domain per file | `title`, `topic-type` |
 | Project | `topics/projects/` | One project per file | `title`, `topic-type`, `status` |
 | Research | `topics/research/` | One research question per file | `title`, `topic-type`, `question` |
@@ -132,6 +132,12 @@ When using `challenges::`, `refutes::`, or `contradicts::`, always write a sente
 | `complete` | Finished |
 | `abandoned` | Dropped |
 
+### Glossary
+| Value | Meaning |
+|-------|---------|
+| `stub` | Created opportunistically; definition drafted but not reviewed for operational precision |
+| `reviewed` | Definition vetted for operational precision via `memex-glossary` workflow |
+
 ---
 
 ## Naming Conventions
@@ -160,15 +166,20 @@ raw:: .archive/2026-04-27-slug.md
 
 ## Workflow Stages
 
-Three skills operate on vault notes at different integration depths:
+Skills that write vault notes, and what they produce:
 
 | Skill | What it creates | Graph wiring | Log entry |
 |-------|----------------|--------------|-----------|
-| `karpathy-wiki-capture` | Source note (metadata + summary) | None | No |
-| `karpathy-wiki-ingest` | Source note + atoms + connections | Full | Yes |
-| `karpathy-wiki-connect` | Updates existing unread notes | Full | Yes |
+| `memex-capture` | Source note (metadata + summary) | None | No |
+| `memex-ingest` | Source note + atoms + connections | Full | Yes |
+| `memex-connect` | Updates existing unread notes | Full | Yes |
+| `memex-meeting` | Meeting source note + atom/glossary stubs | Full | Yes |
+| `memex-topic-init` | New topic map + atom back-wires | Full | No |
+| `memex-refactor` | Rewrites/splits/merges existing atoms | Varies | No |
+| `memex-glossary` | Glossary entries from existing notes | `defines::` only | No |
+| `memex-compose` | Export document in `_exports/` | None (read-only) | Yes |
 
-A source note with `status: unread` and no populated Dataview fields in `## Connections` is considered **inbox-only** — captured but not yet integrated into the graph. Run `karpathy-wiki-connect` to process inbox notes.
+A source note with `status: unread` and no populated Dataview fields in `## Connections` is considered **inbox-only** — captured but not yet integrated into the graph. Run `memex-connect` to process inbox notes.
 
 A source can legitimately have multiple targets on a single relation field (e.g., a conference talk citing several papers via `cites:: [[Paper A]], [[Paper B]]`). This is not a schema violation — multiple `cites::` entries on one source note are expected and correct.
 
@@ -180,7 +191,7 @@ These thresholds are soft signals surfaced as WARNings, not hard failures. They 
 
 | Check | Level | Threshold | Notes |
 |-------|-------|-----------|-------|
-| Source: unread + no Connections | Source | any | Inbox-only; run `karpathy-wiki-connect` |
+| Source: unread + no Connections | Source | any | Inbox-only; run `memex-connect` |
 | Atom: no populated relations | Atom | any | Fully isolated atom; check for orphan or missing wiring |
 | Atom: bloated | Atom | `cites::` > 5 AND `related::` > 4 AND body > 100 lines | May cover multiple concepts; consider splitting |
 | Topic map: too many atoms | Concept map | `covers::` > 15 entries | May span multiple domains; consider sub-topics |

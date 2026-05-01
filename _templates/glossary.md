@@ -5,6 +5,7 @@ aliases: []
 domain: 
 tags: []
 created: <% tp.date.now("YYYY-MM-DD") %>
+status: stub
 ---
 
 ## Definition
@@ -14,5 +15,4 @@ created: <% tp.date.now("YYYY-MM-DD") %>
 <!-- When/how the term is used, common confusions -->
 
 ## Source
-defines:: 
 cites:: 

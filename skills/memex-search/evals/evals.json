@@ -1,0 +1,23 @@
+{
+  "skill_name": "memex-search",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "What do I know about retrieval-augmented generation? I'm trying to remember what sources I have and what the key concepts are.",
+      "expected_output": "Structured answer: graph path taken (concept map → atoms → sources), synthesized answer from atom content, source table with URLs and status, adjacent concepts to explore. If vault is empty, gracefully explains there's no content and suggests next steps.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Find me everything in my wiki that's connected to transformer architecture. I want both the conceptual atoms and the specific papers/articles I've saved.",
+      "expected_output": "Graph traversal result showing relevant atoms and their cites:: links, relationship chains followed (extends/uses/part-of), sources table, and adjacent concepts. Clear signal when content is missing.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Do I have any notes on embedding models? Specifically around how different models compare for retrieval tasks.",
+      "expected_output": "If content exists: synthesized answer with confidence level, sources. If content is sparse: reports what little exists, flags unread sources as unverified leads, suggests ingesting specific resources to fill the gap.",
+      "files": []
+    }
+  ]
+}

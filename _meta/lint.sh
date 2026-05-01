@@ -187,7 +187,7 @@ while IFS= read -r -d '' f; do
         has_connections=$(grep -cE "^(supports|introduces|demonstrates|cites|related)::[[:space:]]*\[\[" "$f" 2>/dev/null || true)
         if [ "$has_connections" -eq 0 ]; then
             label=$(realpath --relative-to="$VAULT" "$f")
-            warn "$label — unread with no Connections wired (inbox-only; run karpathy-wiki-connect)"
+            warn "$label — unread with no Connections wired (inbox-only; run memex-connect)"
         fi
     fi
 done < <(find "$VAULT/sources" -name "*.md" ! -name ".gitkeep" -print0)

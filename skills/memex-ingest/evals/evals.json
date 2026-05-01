@@ -1,0 +1,23 @@
+{
+  "skill_name": "memex-ingest",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Save this article to my wiki: https://lilianweng.github.io/posts/2023-06-23-agent/ — I want to track the tool-use and planning patterns for an AI agents project I'm working on. Create the source note and seed any atoms you think are worth tracking.",
+      "expected_output": "A well-formed source-web note in sources/web/ with YYYY-MM-DD prefix, filled Why Saved section, summary, key points, and connection fields. At least one atom stub created in atoms/. Log entry appended to _meta/log.md.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "I just had a meeting with my team about RAG architectures. We discussed: chunking strategies (fixed-size vs semantic), embedding models (we compared Cohere embed-v3 and OpenAI text-embedding-3-large), and storage options (pgvector vs Chroma). We decided to benchmark pgvector this week. Attendees: me, Sarah, and Dev. Add this as a meeting note.",
+      "expected_output": "A meeting note in sources/meeting/ with today's date prefix, attendees filled, key discussions captured, action items listed, and follow-up sources flagged. Connection fields pointing to any relevant atoms (or stubs created for RAG, chunking, embedding models).",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Add the RAG paper to my wiki: https://arxiv.org/abs/2005.11401 — this is the original Lewis et al. paper on retrieval-augmented generation. I need it for my RAG research notes. Authors are Patrick Lewis, Ethan Perez et al., published at NeurIPS 2020.",
+      "expected_output": "A source-paper note in sources/paper/ with authors, year, venue filled. Summary of contributions. Connection to any existing RAG-related atoms. Log entry in _meta/log.md.",
+      "files": []
+    }
+  ]
+}

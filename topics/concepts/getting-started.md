@@ -87,7 +87,7 @@ Or manually: start here (or any concept map), follow `covers::`, read the atom, 
 
 | Task | Frequency | How |
 |------|-----------|-----|
-| Ingest + summarize new sources | As needed | Templater or Claude Code `karpathy-wiki-ingest` |
+| Ingest + summarize new sources | As needed | Templater or Claude Code `memex-ingest` |
 | Process read sources into atoms | Weekly | Check `_meta/index.md` → "Read but Not Processed" table |
 | Review orphan atoms | Weekly | Check `_meta/index.md` → "Orphan Atoms" table |
 | Run programmatic lint | Weekly | `bash _meta/lint.sh` |

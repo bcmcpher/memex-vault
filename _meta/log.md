@@ -13,7 +13,7 @@ notes: <optional free-text>
 Fields:
 - `url::` — source URL or `n/a` for meetings and reconcile/refactor operations
 - `atoms::` — Dataview wikilinks to every atom created or modified; empty list is `atoms:: ` with no links
-- `skill::` — the karpathy-wiki-* skill that wrote the entry; enables log-query to filter by operation type
+- `skill::` — the memex-* skill that wrote the entry; enables log-query to filter by operation type
 - `notes:` — plain text; optional context, counts, or flags
 
 ---
