@@ -10,7 +10,7 @@ concept](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f).
 This specific name - other than being a cool reference - was adjusted
 based on some now deleted comments here that rightly pointed out that a core aspect
 of a "wiki" is *community consensus between people*. So a mostly LLM
-derived knowledge graph of notes is decidedly not a interpersonal consensus.
+derived knowledge graph of notes is decidedly not an interpersonal consensus.
 
 ---
 
@@ -398,3 +398,4 @@ Note: test specific MCP server stability before committing to one — the ecosys
 - [llm-atomic-wiki (linting patterns)](https://github.com/cablate/llm-atomic-wiki)
 - [llm-wiki-compiler](https://github.com/atomicmemory/llm-wiki-compiler)
 - [claude-obsidian (Obsidian integration)](https://github.com/AgriciDaniel/claude-obsidian)
+- [`_meta/ccm-mapping.md`](_meta/ccm-mapping.md) — how this vault's design lines up with PaperGuru's Capital Chunk Memory (CCM) architecture
