@@ -42,10 +42,15 @@ SORT confidence DESC, file.name ASC
 
 ### Orphan Atoms (no cites, no backlinks)
 
+Inbound links are counted only from curated folders. `_meta/log.md` records
+`atoms:: [[Atom A]]` on every ingest, so an unfiltered `file.inlinks` would report
+zero orphans forever. Keep this in step with `_meta/lint.sh` section 4.
+
 ```dataview
 LIST
 FROM "atoms"
-WHERE !cites AND length(file.inlinks) = 0
+WHERE !cites AND length(filter(file.inlinks, (l) =>
+    regexmatch("^(sources|atoms|topics|glossary)/.*", meta(l).path))) = 0
 ```
 
 ---
@@ -63,7 +68,8 @@ SORT domain ASC, term ASC
 ```dataview
 LIST
 FROM "glossary"
-WHERE length(file.inlinks) = 0
+WHERE length(filter(file.inlinks, (l) =>
+    regexmatch("^(sources|atoms|topics|glossary)/.*", meta(l).path))) = 0
 ```
 
 ---

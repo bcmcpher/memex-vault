@@ -234,6 +234,10 @@ cites:: [[2026-05-01-flash-attention#Key Points]]
 
 A source note with `status: unread` and no populated Dataview fields in `## Connections` is considered **inbox-only** — captured but not yet integrated into the graph. Run `memex-connect` to process inbox notes.
 
+An atom is an **orphan** when it has no `cites::` *and* no inbound wikilink from a **curated folder** — `sources/`, `atoms/`, `topics/`, or `glossary/`. It neither cites evidence nor is referenced by anything, so it is disconnected from the graph in both directions.
+
+Links from `_meta/`, `_exports/`, and `.archive/` never count. `_meta/log.md` records `atoms:: [[Atom A]]` for every atom it touches, so counting it would mark every ingested atom as connected and make the check vacuous. Both `_meta/lint.sh` (section 4) and `_meta/index.md` implement this definition; changing one without the other makes them disagree silently.
+
 A source can legitimately have multiple targets on a single relation field (e.g., a conference talk citing several papers via `cites:: [[Paper A]], [[Paper B]]`). This is not a schema violation — multiple `cites::` entries on one source note are expected and correct.
 
 ---

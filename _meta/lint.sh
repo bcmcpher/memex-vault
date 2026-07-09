@@ -9,7 +9,7 @@
 #   1. Naming convention violations
 #   2. Missing required frontmatter fields
 #   3. Stale unread sources (>30 days)
-#   4. Orphan atoms (no cites::, no backlinks from topics)
+#   4. Orphan atoms (no cites::, no inbound links from curated nodes)
 #   5. Archive mismatches (raw:: pointing to missing file)
 #   6. Graph health (inbox-only sources, isolated atoms, bloated atoms, broad topic maps)
 #   7. Structural integrity (part-of/covers asymmetry, atom freshness, unknown relation fields)
@@ -17,6 +17,14 @@
 #   9. Conflict acknowledgment (bare conflict links)
 #  10. Tag vocabulary (unknown tags)
 #   Summary counts
+#
+# Exit status:
+#   0 — no FAIL-level findings (warnings may still be present)
+#   1 — one or more FAIL-level findings
+#
+# WARN is a soft signal for human review. FAIL means the vault is corrupt in a way
+# no reviewer should have to notice: a misnamed source, or a raw:: pointing at a
+# file that does not exist.
 
 set -euo pipefail
 
@@ -29,10 +37,16 @@ DIM='\033[0;90m'
 NC='\033[0m'
 
 issues=0
+fails=0
 
 warn()  { echo -e "  ${YEL}WARN${NC}  $1"; ((issues++)) || true; }
-error() { echo -e "  ${RED}FAIL${NC}  $1"; ((issues++)) || true; }
+error() { echo -e "  ${RED}FAIL${NC}  $1"; ((issues++)) || true; ((fails++)) || true; }
 ok()    { echo -e "  ${GRN}OK${NC}    $1"; }
+
+# Folders whose wikilinks count as real graph edges. _meta/ is excluded on purpose:
+# the ingest log records `atoms:: [[Atom A]]` for every atom it touches, so counting
+# it would make the orphan check below vacuous the moment the log has an entry.
+CURATED=(sources atoms topics glossary)
 
 # ── 1. Naming convention ─────────────────────────────────────────────────────
 
@@ -134,20 +148,33 @@ fi
 # ── 4. Orphan atoms ──────────────────────────────────────────────────────────
 
 echo ""
-echo "── 4. Orphan Atoms (no cites::, no covers:: backlinks) ───────────────────"
+echo "── 4. Orphan Atoms (no cites::, no inbound links) ────────────────────────"
+
+# An atom is an orphan when it cites no evidence AND nothing in a curated folder
+# links to it. Defined normatively in _meta/schema.md; _meta/index.md's Dataview
+# query must stay in step with this. Deliberately does not test covers:: — that
+# field becomes Dataview-derived in roadmap Phase 1.
 
 while IFS= read -r -d '' f; do
     label="atoms/$(basename "$f")"
+    slug="$(basename "$f" .md)"
 
-    # Check for cites:: in the atom itself
-    has_cites=$(grep -c "^cites::" "$f" 2>/dev/null || true)
+    # A populated cites::, not merely the field's presence. _templates/atom.md ships
+    # an empty `cites:: ` line, which Dataview reads as absent (`!cites` is true).
+    has_cites=$(grep -cE "^cites::[[:space:]]*\[\[" "$f" 2>/dev/null || true)
 
-    # Check if any topic covers:: this atom
-    atom_link="[[$(basename "$f" .md)]]"
-    covered=$(grep -rl "covers::.*${atom_link}" "$VAULT/topics" 2>/dev/null | wc -l || true)
+    # Count inbound wikilinks from curated nodes, ignoring the atom's own file.
+    # Matches both [[slug]] and anchored [[slug#Section]] / [[slug#^block]].
+    inbound=0
+    for dir in "${CURATED[@]}"; do
+        [ -d "$VAULT/$dir" ] || continue
+        n=$(grep -rlF --include='*.md' -e "[[${slug}]]" -e "[[${slug}#" \
+                "$VAULT/$dir" 2>/dev/null | grep -vFx "$f" | wc -l || true)
+        inbound=$((inbound + n))
+    done
 
-    if [ "$has_cites" -eq 0 ] && [ "$covered" -eq 0 ]; then
-        warn "$label — no cites:: and not covered by any topic map"
+    if [ "$has_cites" -eq 0 ] && [ "$inbound" -eq 0 ]; then
+        warn "$label — no cites:: and no inbound links from ${CURATED[*]}"
     fi
 done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
@@ -476,7 +503,15 @@ printf "  %-22s %s\n" "Research notes:"    "$(count_md "$VAULT/topics/research")
 echo ""
 if [ "$issues" -eq 0 ]; then
     echo -e "  ${GRN}All checks passed.${NC}"
+elif [ "$fails" -eq 0 ]; then
+    echo -e "  ${YEL}${issues} warning(s).${NC} Review above."
 else
-    echo -e "  ${YEL}${issues} issue(s) found.${NC} Review warnings above."
+    echo -e "  ${RED}${fails} failure(s)${NC}, $((issues - fails)) warning(s). Review above."
 fi
 echo ""
+
+# FAIL gates; WARN does not. See the exit-status note at the top of this file.
+if [ "$fails" -gt 0 ]; then
+    exit 1
+fi
+exit 0
