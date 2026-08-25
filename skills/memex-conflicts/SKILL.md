@@ -55,9 +55,10 @@ For each conflict pair (A → B via relation R):
 
 ### 3. Identify cross-topic conflicts
 
-For each conflict pair, look up which topic's `covers::` list each atom appears in:
+For each conflict pair, read each atom's own `part-of::` — membership is declared
+there, not listed on the topic:
 ```bash
-grep -r "covers::.*\[\[<atom-name>\]\]" "$VAULT/topics/"
+grep -h "^part-of::" "$VAULT/atoms/<atom-name>.md"
 ```
 Flag pairs where the two atoms belong to different topics — these cross-topic conflicts are especially worth documenting since they won't appear in a single-topic review.
 

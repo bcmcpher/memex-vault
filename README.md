@@ -137,7 +137,19 @@ cites:: [[source-filename]]
 |-------|---------|
 | `related::` | Loosely connected; fallback only — refine monthly |
 | `defines::` | Any note → glossary term |
-| `covers::` | Topic map → atoms it covers |
+
+### Topic membership is derived, not written
+
+A topic does not list its atoms. Each atom declares `part-of:: [[Topic]]`, and the
+topic surfaces its membership with a Dataview query:
+
+```dataview
+LIST FROM "atoms"
+WHERE contains(row["part-of"], this.file.link)
+```
+
+There is one source of truth and nothing to keep in sync. Outside Obsidian, the
+same set is recovered with `grep -rlE "^part-of::.*\[\[<topic>\]\]" atoms/`.
 
 Full taxonomy with decision tree for skeptical relations: `_meta/schema.md`
 
@@ -223,7 +235,7 @@ STRUCTURE ───────────────────────�
   refactor       revise / split / merge existing atoms
 
 MAINTAIN ────────────────────────────────────────────────
-  reconcile      fix part-of ↔ covers bidirectional drift
+  reconcile      fix dangling part-of; promote stale related:: to typed relations
   trust-audit    review and update atom confidence levels
   conflicts      surface and document unacknowledged tensions
   stale          read-only decay audit (unread age, stale atoms, underconfident topics)

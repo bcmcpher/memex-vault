@@ -13,12 +13,13 @@ This is both the entry point to the vault and a working example of the concept m
 
 ## Core Concepts
 
-<!-- Add atom links below as you create them. Example:
-covers:: [[source-types-and-when-to-use-them]]
-covers:: [[typed-relationships-dataview]]
-covers:: [[atom-confidence-levels]]
--->
-covers:: 
+Membership is derived from each atom's `part-of::` — there is nothing to maintain
+here. Add `part-of:: [[Getting Started]]` to an atom and it appears below.
+
+```dataview
+LIST FROM "atoms"
+WHERE contains(row["part-of"], this.file.link)
+```
 
 ## Key Sources
 
@@ -40,7 +41,9 @@ related::
 topics/concepts/  →  atoms/  →  sources/
 ```
 
-You rarely navigate to `sources/` directly. Instead, you enter at a concept map (like this file), follow `covers::` to find relevant atoms, and follow each atom's `cites::` links to reach the actual references. This keeps the graph traversable as sources grow indefinitely.
+You rarely navigate to `sources/` directly. Instead, you enter at a concept map (like this file), read the derived atom list to find relevant atoms, and follow each atom's `cites::` links to reach the actual references. This keeps the graph traversable as sources grow indefinitely.
+
+Note the direction: atoms declare their topic with `part-of::`, and topics discover their atoms by query. Membership is written once, in one place.
 
 ### Creating a new source
 
@@ -79,7 +82,7 @@ Obsidian's graph view renders these as edges. Dataview queries (like the tables 
 
 Use Claude Code: *"what do I know about [topic]?"* — it will traverse the graph and surface atoms and sources for you.
 
-Or manually: start here (or any concept map), follow `covers::`, read the atom, follow `cites::`.
+Or manually: start here (or any concept map), read the derived atom list, open an atom, follow `cites::`.
 
 ---
 
@@ -96,12 +99,6 @@ Or manually: start here (or any concept map), follow `covers::`, read the atom, 
 See `_meta/schema.md` for the full linting guide and relationship taxonomy.
 
 ---
-
-## Dataview: All Atoms in This Topic
-
-```dataview
-LIST FROM "atoms" WHERE contains(part-of, [[Getting Started]])
-```
 
 ## Dataview: Recently Ingested Sources
 

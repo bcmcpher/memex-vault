@@ -94,7 +94,7 @@ Find all atoms that point to the source atom:
 grep -rn "\[\[<atom-name>\]\]" "$VAULT/atoms/"
 grep -rn "\[\[<atom-name>\]\]" "$VAULT/topics/"
 ```
-Collect: which atoms use `extends::`, `uses::`, `part-of::` to point here, and which topics list it in `covers::`.
+Collect which atoms use `extends::`, `uses::`, or `part-of::` to point here. Topic files do not need checking — they list nothing, so a split or merge changes no topic file.
 
 **Step S4. Confirm the full plan**
 Before writing anything, present the complete plan:
@@ -108,7 +108,9 @@ Will stub:
 
 Will re-point (each requires your confirmation):
   atoms/other-atom.md: extends:: [[atom-name]] → extends:: [[A1 or A2?]]
-  topics/concepts/deep-learning.md: covers:: [[atom-name]] → covers:: [[A1]], [[A2]]
+
+Topic membership: A1 and A2 each need their own part-of::; carry over
+  part-of:: [[deep-learning]] from the source atom unless told otherwise.
 ```
 Ask for confirmation to proceed.
 
@@ -143,7 +145,7 @@ Ask user to review the drafted summaries before writing.
 **Step S6. Re-point incoming relations**
 For each atom with a relation pointing to the source atom, propose which child it should now point to. Confirm each one individually — do not batch-assign. Write the change only after confirmation.
 
-For topics with `covers:: [[atom-name]]`: replace with `covers:: [[A1]], [[A2]]` (or whichever subset the user specifies).
+Carry the source atom's `part-of::` onto A1 and A2 (or whichever subset the user specifies). No topic file is edited — membership is derived from `part-of::`.
 
 **Step S7. Stub the source atom**
 Replace the source atom's body with:
@@ -211,7 +213,9 @@ Will stub:
 
 Will re-point (each requires confirmation):
   atoms/other.md: uses:: [[atom-a]] → uses:: [[C]]
-  topics/concepts/deep-learning.md: covers:: [[atom-a]], [[atom-b]] → covers:: [[C]]
+
+Topic membership: C takes part-of:: from A and B (deduplicated); if they
+  disagree, ask which topic C belongs to.
 ```
 
 **Step M5. Create C**
@@ -220,7 +224,7 @@ Write `atoms/C-name.md` with merged content. Ask user to review the draft before
 **Step M6. Re-point incoming relations**
 For each atom with a relation pointing to A or B, propose re-pointing to C. Confirm individually.
 
-For topics: replace both A and B entries in `covers::` with C (deduplicated).
+Set C's `part-of::` from A's and B's, deduplicated. If A and B belonged to different topics, ask which one C belongs to — an atom belongs to one topic. No topic file is edited.
 
 **Step M7. Stub A and B**
 For each source atom, replace body with:
@@ -255,7 +259,7 @@ notes: reason: <user-supplied reason>; merged into [[C-name]]
 - Always confirm the full plan (Steps S4 / M4) before any file writes
 - Always confirm re-pointing decisions individually — never batch
 - After a split or merge, suggest running `memex-trust-audit` on the affected topic: confidence: low on new atoms is expected but should be revisited once sources are re-evaluated
-- After a split or merge, suggest running `memex-reconcile` to catch any `part-of` / `covers::` drift introduced by the re-pointing
+- After a split or merge, suggest running `memex-reconcile` to catch any `part-of::` left pointing at a topic that does not exist
 
 ---
 

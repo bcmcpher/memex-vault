@@ -47,9 +47,14 @@ Syntax: `relation:: [[Target]]` or `relation:: [[A]], [[B]]` in the note body (n
 | `defines::` | Canonical definition for this term |
 
 ### Topic → Atoms
-| Field | Meaning |
-|-------|---------|
-| `covers::` | This concept map covers these atoms |
+
+**Derived, not written.** Topic membership lives only on the atom's `part-of::`.
+Topics do not list their atoms; `covers::` was retired in roadmap Phase 1. To get
+a topic's atoms, reverse-lookup:
+
+```bash
+grep -rlE "^part-of::.*\[\[<topic-slug>\]\]" "$VAULT/atoms/"
+```
 
 ### Navigational
 | Field | Meaning |

@@ -72,9 +72,38 @@ Relationships are grouped by **epistemic role**: affirmative (source builds on t
 | `defines::` | This note elaborates or is the canonical definition for this term |
 
 ### Topic → Atoms
-| Field | Meaning |
-|-------|---------|
-| `covers::` | This concept map / research note covers these atoms |
+
+**Derived, not written.** Topic membership has one source of truth: the atom's
+`part-of::` field. A topic does not list its own atoms. `covers::` was retired in
+roadmap Phase 1 — it duplicated `part-of::` and required a reconcile pass to keep
+the two in step.
+
+Topic notes surface their membership with a Dataview query:
+
+```dataview
+LIST FROM "atoms"
+WHERE contains(row["part-of"], this.file.link)
+```
+
+Two details in that query are load-bearing, not style:
+
+- **`row["part-of"]`, never `part-of`.** Dataview parses a bare hyphenated field
+  in a `WHERE` clause as subtraction (`part` minus `of`), so the bare form
+  silently matches nothing. The bracket accessor is the documented escape.
+- **`this.file.link`, never a hardcoded `[[Title]]`.** Obsidian resolves
+  wikilinks by *filename*, not by the `title:` frontmatter field. A topic whose
+  file is `deep-learning.md` and whose title is "Deep Learning" would never match
+  atoms writing `part-of:: [[deep-learning]]`. The self-reference sidesteps the
+  question and survives renames.
+
+Both failure modes are silent: an empty topic looks identical to a correct query
+over a topic with no atoms yet.
+
+Outside Obsidian, the same set is recovered by reverse lookup:
+
+```bash
+grep -rlE "^part-of::.*\[\[<topic-slug>\]\]" atoms/
+```
 
 ### Navigational (any → any)
 | Field | Meaning |
@@ -238,6 +267,11 @@ An atom is an **orphan** when it has no `cites::` *and* no inbound wikilink from
 
 Links from `_meta/`, `_exports/`, and `.archive/` never count. `_meta/log.md` records `atoms:: [[Atom A]]` for every atom it touches, so counting it would mark every ingested atom as connected and make the check vacuous. Both `_meta/lint.sh` (section 4) and `_meta/index.md` implement this definition; changing one without the other makes them disagree silently.
 
+An atom's `part-of::` is **orphaned** when it names a topic file that does not
+exist. Since membership is derived from this field alone, a typo'd or stale
+`part-of::` silently removes the atom from its topic with no other symptom.
+`_meta/lint.sh` section 7a checks it.
+
 A source can legitimately have multiple targets on a single relation field (e.g., a conference talk citing several papers via `cites:: [[Paper A]], [[Paper B]]`). This is not a schema violation — multiple `cites::` entries on one source note are expected and correct.
 
 ---
@@ -251,7 +285,7 @@ These thresholds are soft signals surfaced as WARNings, not hard failures. They 
 | Source: unread + no Connections | Source | any | Inbox-only; run `memex-connect` |
 | Atom: no populated relations | Atom | any | Fully isolated atom; check for orphan or missing wiring |
 | Atom: bloated | Atom | `cites::` > 5 AND `related::` > 4 AND body > 100 lines | May cover multiple concepts; consider splitting |
-| Topic map: too many atoms | Concept map | `covers::` > 15 entries | May span multiple domains; consider sub-topics |
+| Topic map: too many atoms | Concept map | > 15 atoms with `part-of::` pointing at it | May span multiple domains; consider sub-topics |
 
 Note: high `cites::` count on a **source** note is not a smell. A survey paper or conference talk legitimately references many prior works.
 
@@ -277,7 +311,6 @@ contrasts-with
 cites
 rebuts
 defines
-covers
 related
 raw
 ```

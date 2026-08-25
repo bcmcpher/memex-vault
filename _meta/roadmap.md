@@ -113,6 +113,8 @@ warning has no remediation path, and `.archive/` has no consumer at all.
 `memex-reconcile` exists solely to sync them. Make `covers::` a Dataview-generated
 view from `part-of::`.
 
+*Status: fixed in Phase 1.*
+
 **P2. Confidence is unanchored — fix rewritten.** Previously: "add source-type
 weighting to the rubric." That treats the symptom. Source *count* is the wrong
 unit no matter how it is weighted — three blog posts agreeing is not `high`. With
@@ -201,7 +203,7 @@ everything it serialises exists.
 | Phase | Work | Closes | Why here |
 |-------|------|--------|----------|
 | **0** | Lint integrity: split `fails` from `warns`, `exit 1`, one orphan definition | L1, L2 | Small. Nothing downstream can treat lint as a gate until this lands. **Done.** |
-| **1** | `covers::` → Dataview migration | P1 | Breaking; all skills must be consistent first |
+| **1** | `covers::` → Dataview migration | P1 | Breaking; all skills must be consistent first. **Done.** |
 | **2** | Schema split + atom style spec + disambiguation policy + OKF frontmatter | S1, M1, M2, O1, O2 | M1 and M2 are hard prereqs for Phase 3. O1 and O2 land here because this phase already rewrites every template and writing skill — separately means touching both twice |
 | **3** | Evidence layer: `extracts/` + `memex-deep-extract` | E1, M5 | Depends on 0 (grounding gate), 1 (`part-of::` traversal), 2 (M1, M2) |
 | **4** | Confidence rubric grounded in claims + `related::` promotion | P2, P3 | P2's real fix only exists after Phase 3 |
@@ -233,7 +235,7 @@ Phase 9 is scheduled but deferred on the same footing.
 **Verification:** `bash _meta/lint.sh; echo $?` → `0` on a clean vault. Introduce a
 source file without a date prefix → prints `FAIL`, exits `1`.
 
-### Phase 1 — `covers::` → Dataview migration
+### Phase 1 — `covers::` → Dataview migration *(complete)*
 
 Make `covers::` auto-derived from `part-of::` on atoms. Single source of truth.
 
@@ -247,8 +249,27 @@ Make `covers::` auto-derived from `part-of::` on atoms. Single source of truth.
 5. `skills/memex-reconcile/SKILL.md` — remove the `part-of::` ↔ `covers::` drift
    check; replace with an orphan-`part-of::` check (points at a non-existent
    topic). Add the `related::` promotion pass from Phase 4.
-6. `_meta/lint.sh` — section 6d and 7a/7b reference `covers::`; rework or retire.
+6. `_meta/lint.sh` — 6d now counts atoms by reverse `part-of::` lookup; 7a keeps
+   only the dangling-topic half; 7b retired outright (a query cannot drift).
 7. `README.md` — note `covers::` is derived, not written.
+
+**The list above under-scoped the work.** `covers::` was *written* by three skills
+but *read* by eight more, and the per-skill schema reference is duplicated 13
+times. The full set that had to change:
+
+8. `skills/*/references/vault-schema.md` — 13 identical copies, all carrying the
+   retired `Topic → Atoms` table. Kept byte-identical after the edit.
+9. Reading skills switched to reverse lookup
+   (`grep -rlE "^part-of::.*\[\[<topic>\]\]" atoms/`): `memex-compose`,
+   `memex-review`, `memex-conflicts`, `memex-stale`, `memex-trust-audit`,
+   `memex-search`, `memex-connect`.
+10. `skills/memex-refactor/SKILL.md` — split and merge no longer rewrite any topic
+    file; they carry `part-of::` onto the new atoms instead.
+11. `_meta/ccm-mapping.md`, `_meta/deep-extract-design.md` — stale references.
+
+**Phase 4 item 2 is already done.** The `related::` promotion pass landed here, as
+step 5 directed. Phase 4 keeps only the confidence rubric and the trust-audit
+rebuild.
 
 **Verification:** `grep -r "covers::" skills/ _templates/ topics/` returns only
 Dataview query blocks and schema notes.
@@ -341,8 +362,8 @@ recorded so Phase 8 does not reinvent it.
 1. `_meta/schema.md` — confidence derives from independent claims across
    independent sources; source-type weighting (peer-reviewed > preprint > curated
    blog > unreviewed post) as a secondary term.
-2. `skills/memex-reconcile/SKILL.md` — `related::` promotion pass for links older
-   than 30 days.
+2. ~~`skills/memex-reconcile/SKILL.md` — `related::` promotion pass for links
+   older than 30 days.~~ **Done in Phase 1.**
 3. `skills/memex-trust-audit/SKILL.md` — rebuild checks on the claim-count rubric,
    and become the writer of `verified:` entries (`{ by: human:<id>, at: <date> }`
    on human sign-off), using the field defined in Phase 2.

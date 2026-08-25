@@ -12,7 +12,7 @@
 #   4. Orphan atoms (no cites::, no inbound links from curated nodes)
 #   5. Archive mismatches (raw:: pointing to missing file)
 #   6. Graph health (inbox-only sources, isolated atoms, bloated atoms, broad topic maps)
-#   7. Structural integrity (part-of/covers asymmetry, atom freshness, unknown relation fields)
+#   7. Structural integrity (orphan part-of, atom freshness, unknown relation fields)
 #   8. Confidence and coverage (overconfident, underconfident, unvalidated, under-extracted)
 #   9. Conflict acknowledgment (bare conflict links)
 #  10. Tag vocabulary (unknown tags)
@@ -152,8 +152,8 @@ echo "── 4. Orphan Atoms (no cites::, no inbound links) ──────�
 
 # An atom is an orphan when it cites no evidence AND nothing in a curated folder
 # links to it. Defined normatively in _meta/schema.md; _meta/index.md's Dataview
-# query must stay in step with this. Deliberately does not test covers:: — that
-# field becomes Dataview-derived in roadmap Phase 1.
+# query must stay in step with this. Does not test topic membership: that is
+# derived from the atom's own part-of::, which is not an inbound link.
 
 while IFS= read -r -d '' f; do
     label="atoms/$(basename "$f")"
@@ -237,11 +237,14 @@ while IFS= read -r -d '' f; do
     fi
 done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
-# 6d. Broad topic maps: many covers:: entries (sub-domain split candidate)
+# 6d. Broad topic maps: many member atoms (sub-domain split candidate)
+# Membership is derived, so count atoms pointing here rather than reading the topic.
 while IFS= read -r -d '' f; do
-    covers_count=$(grep "^covers::" "$f" 2>/dev/null | grep -o "\[\[" | wc -l || true)
-    if [ "$covers_count" -gt 15 ]; then
-        warn "topics/concepts/$(basename "$f") — covers $covers_count atoms; consider splitting into sub-domains"
+    topic_name="$(basename "$f" .md)"
+    member_count=$(grep -rlE "^part-of::.*\[\[${topic_name}\]\]" \
+        --include='*.md' "$VAULT/atoms" 2>/dev/null | wc -l || true)
+    if [ "$member_count" -gt 15 ]; then
+        warn "topics/concepts/$(basename "$f") — $member_count atoms declare part-of; consider splitting into sub-domains"
     fi
 done < <(find "$VAULT/topics/concepts" -name "*.md" ! -name ".gitkeep" -print0)
 
@@ -252,37 +255,20 @@ ok "graph health check complete"
 echo ""
 echo "── 7. Structural Integrity ────────────────────────────────────────────────"
 
-# 7a. atom part-of:: → topic covers:: asymmetry
+# 7a. Orphan part-of:: — names a topic file that does not exist.
+# Membership is derived from this field alone, so a typo'd or stale target
+# silently drops the atom out of its topic with no other symptom. There is no
+# reciprocal check to make: the topic side is a query, and a query cannot drift.
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
     while IFS= read -r line; do
         while IFS= read -r target; do
-            topic_file=$(find "$VAULT/topics" -name "${target}.md" 2>/dev/null | head -1)
-            if [ -z "$topic_file" ]; then
+            if [ -z "$(find "$VAULT/topics" -name "${target}.md" 2>/dev/null | head -1)" ]; then
                 warn "atoms/${atom_name}.md — part-of:: [[${target}]] but no matching topic file found"
-                continue
-            fi
-            if ! grep -q "covers::.*\[\[${atom_name}\]\]" "$topic_file" 2>/dev/null; then
-                warn "atoms/${atom_name}.md — part-of:: [[${target}]] but ${target}.md covers:: does not include [[${atom_name}]]"
             fi
         done < <(echo "$line" | grep -oE '\[\[[^]|]+' | tr -d '[')
     done < <(grep "^part-of::" "$f" 2>/dev/null || true)
 done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
-
-# 7b. topic covers:: → atom part-of:: asymmetry
-while IFS= read -r -d '' f; do
-    topic_name="$(basename "$f" .md)"
-    topic_rel="$(realpath --relative-to="$VAULT" "$f")"
-    while IFS= read -r line; do
-        while IFS= read -r target; do
-            atom_file=$(find "$VAULT/atoms" -name "${target}.md" 2>/dev/null | head -1)
-            [ -z "$atom_file" ] && continue
-            if ! grep -q "^part-of::.*\[\[${topic_name}\]\]" "$atom_file" 2>/dev/null; then
-                warn "$topic_rel — covers:: [[${target}]] but atoms/${target}.md has no matching part-of:: [[${topic_name}]]"
-            fi
-        done < <(echo "$line" | grep -oE '\[\[[^]|]+' | tr -d '[')
-    done < <(grep "^covers::" "$f" 2>/dev/null || true)
-done < <(find "$VAULT/topics" -name "*.md" ! -name ".gitkeep" -print0)
 
 # 7c. Atom freshness: newest cited source saved > 18 months ago
 if cutoff18=$(date -d "18 months ago" +%Y-%m-%d 2>/dev/null) || cutoff18=$(date -v-18m +%Y-%m-%d 2>/dev/null); then

@@ -58,13 +58,17 @@ If no clusters meet any threshold, skip to the report: "No clusters found — th
 
 ### Step 3 — Check for existing topic coverage
 
-For each candidate cluster, check whether an existing topic map already covers most of its atoms:
+For each candidate cluster, check whether an existing topic already claims most of
+its atoms. Membership is derived, so read it off the atoms themselves rather than
+off the topic files:
 
 ```bash
-grep -rh "^covers::" "$VAULT/topics/concepts/" "$VAULT/topics/research/" 2>/dev/null
+grep -rh "^part-of::" "$VAULT/atoms/" 2>/dev/null
 ```
 
-If an existing topic covers ≥ 60% of a cluster's atoms, flag it as **"possible extension"** rather than a new topic creation. Show the existing topic name.
+Tally which topic each cluster atom declares. If one existing topic already claims
+≥ 60% of a cluster's atoms, flag it as **"possible extension"** rather than a new
+topic creation. Show the existing topic name.
 
 ### Step 4 — Report findings
 
@@ -84,7 +88,7 @@ Signals: shared tags [X, Y] | M atoms in part-of:: chain | K mutual related:: li
 ### Cluster 2: [proposed title]
 Atoms (N): [[atom-d]], [[atom-e]], ...
 Signals: shared tags [X]
-Existing topic: [[existing-topic]] already covers M/N of these atoms
+Existing topic: [[existing-topic]] already claims M/N of these atoms
 
 → Action: (1) Extend existing topic  (2) Create separate topic  (3) Skip
 ```
@@ -97,7 +101,7 @@ Ask for a decision on each cluster before writing anything. Accept all decisions
 
 Options per cluster:
 - **Create** — create a new topic map with the proposed title (or a renamed one)
-- **Extend** — add uncovered atoms to an existing topic map's `covers::` list
+- **Extend** — point the unclaimed atoms' `part-of::` at an existing topic
 - **Skip** — no action for this cluster
 
 ### Step 6 — Write candidate files
@@ -115,14 +119,24 @@ tags: [<dominant tag from cluster>]
 ```
 
 Topic file body:
-```markdown
-covers:: [[atom-a]], [[atom-b]], [[atom-c]]
-
+````markdown
 ## Overview
 <!-- Scaffold — fill in with memex-compose or manually -->
-```
 
-For each confirmed **Extend**: write a candidate file proposing the addition of uncovered atoms to the existing topic's `covers::` line.
+## Core Concepts
+<!-- Derived from each atom's part-of:: — do not maintain by hand. -->
+```dataview
+LIST FROM "atoms"
+WHERE contains(row["part-of"], this.file.link)
+```
+````
+
+The topic file carries no membership list. The cluster's atoms join it in Step 7,
+by having their own `part-of::` set — that is the only write that creates
+membership.
+
+For each confirmed **Extend**: write candidate files proposing `part-of::` on each
+unclaimed atom. No change is proposed to the existing topic file at all.
 
 Confirm each candidate interactively before writing the vault file.
 
@@ -149,7 +163,7 @@ notes: signals: <tag clusters / part-of chains / related density>; <M> new topic
 
 Report: clusters found, topics created, topics extended, clusters skipped. One suggested next step:
 
-- "Run `memex-reconcile` to verify bidirectional `part-of::` ↔ `covers::` consistency across newly created topics."
+- "Run `memex-reconcile` to check for dangling `part-of::` links across newly created topics."
 
 ---
 
@@ -170,4 +184,4 @@ Report: clusters found, topics created, topics extended, clusters skipped. One s
 - Don't create duplicate topic maps — always check for existing coverage first (Step 3)
 - Don't batch-apply candidates without user confirmation per cluster
 - Don't infer topic type from keywords alone — default to `concept` and let the user correct it
-- Don't modify any existing topic map body except its `covers::` line (Extend path)
+- Don't write a membership list into a topic body, and don't modify an existing topic body at all on the Extend path — extension is an edit to atoms, not to topics

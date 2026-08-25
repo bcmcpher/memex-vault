@@ -10,8 +10,14 @@ reviewed:
 ## Research Question
 
 ## Current Understanding
-covers:: 
 cites:: 
+
+### Atoms in This Question
+<!-- Derived from each atom's part-of:: — do not maintain by hand. -->
+```dataview
+LIST FROM "atoms"
+WHERE contains(row["part-of"], this.file.link)
+```
 
 ## Evidence For
 - 

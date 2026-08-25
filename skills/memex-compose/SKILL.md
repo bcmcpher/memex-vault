@@ -41,11 +41,18 @@ VAULT=/home/bcmcpher/Projects/claude/memex-vault
 find "$VAULT/topics" -name "<topic>.md" 2>/dev/null
 ```
 
-If the topic has no `covers::` atoms, report that and stop — there is nothing to compose.
+If no atom declares `part-of:: [[<topic>]]`, report that and stop — there is nothing to compose.
 
 ### 2. Walk the graph
 
-Read the topic file. Collect `covers::` atom list.
+Read the topic file for its `## Overview` and `cites::`. Collect its atom set by
+reverse lookup — membership lives on the atoms:
+
+```bash
+VAULT=/home/bcmcpher/Projects/claude/memex-vault
+# Topic membership is derived — read it off the atoms, not the topic file.
+grep -rlE "^part-of::.*\[\[<topic>\]\]" "$VAULT/atoms/"
+```
 
 For each atom in scope:
 - Read the full atom file
@@ -54,7 +61,7 @@ For each atom in scope:
 - Follow `cites::` links to source files; read each source's `title`, `url`, `Summary`, `Key Points`, `status:`
 - Collect `defines::` fields; follow each link to `glossary/<term>.md` and read the `## Definition`, `domain:`, and `status:` frontmatter field
 
-Do not follow relation chains beyond the topic's atom set — only atoms in `covers::` contribute to the output. External atoms referenced via `extends::` or `uses::` are noted as pointers, not expanded.
+Do not follow relation chains beyond the topic's atom set — only atoms declaring `part-of:: [[<topic>]]` contribute to the output. External atoms referenced via `extends::` or `uses::` are noted as pointers, not expanded.
 
 ### 3. Compose the output
 
@@ -214,4 +221,4 @@ notes: exported to _exports/YYYY-MM-DD-<topic-slug>.md; N atoms, M sources
 - Don't skip the Tensions section when there are no conflicts — write "No tensions recorded in this topic" explicitly so the absence is visible
 - Don't hide unread-source flags in footnotes — surface them inline so the reader knows which claims are unverified
 - Don't expand atoms outside the topic scope — a `uses:: [[external-atom]]` pointer is a footnote reference, not a reason to pull in that atom's full content
-- Don't compose if the topic's `covers::` list is empty — check first and offer to run `memex-ingest` or `memex-topic-init` instead
+- Don't compose if no atom declares `part-of::` for the topic — check first and offer to run `memex-ingest` or `memex-topic-init` instead

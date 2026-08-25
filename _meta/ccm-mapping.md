@@ -57,7 +57,7 @@ level, even though there is no plugin to import.
 | **Chunk heads** — compact bounded routing surface, one per artifact | `sources/*` notes ("URL + why-saved + short summary. Never full article text"), indexed by Obsidian/Dataview | strong |
 | **Chunk contents** — unbounded raw text, accessed lazily on demand | `.archive/YYYY-MM-DD-slug.md` referenced via `raw::`; gitignored + excluded from the indexer | strong |
 | Routing layers *above* the head | `atoms/` → `topics/` hierarchy (vault adds layers CCM does not describe) | vault exceeds |
-| **Structural edges**: `cites`, `introduced-by`, `implements` | `cites::`, `introduces::`, plus atom→atom `uses::` / `extends::` / `part-of::` and topic `covers::` | strong |
+| **Structural edges**: `cites`, `introduced-by`, `implements` | `cites::`, `introduces::`, plus atom→atom `uses::` / `extends::` / `part-of::` (which also carries topic membership) | strong |
 | **Historical-causality edges**: `superseded-by`, `deprecated-by`, `retracted-by`, `discussed-in` | `supersedes::` (direct match) plus skeptical `contradicts::` / `refutes::` / `challenges::` / `limits::`; no first-class `deprecated-by` / `retracted-by` | partial |
 | **Axiom 1** — versioned content; staleness after revision/deprecation/retraction | `updated:` timestamp, `confidence`, `supersedes::`, `stale`/`needs-review` tags — but no automatic staleness propagation | partial (see Gaps) |
 | **Axiom 2** — structural multi-hop relevance ("evidence two citations away, not one cosine hop") | top-down typed traversal `topics/ → atoms/ → sources/`; "sources are never searched directly" (README *Concept*) | strong — this vault's core thesis |

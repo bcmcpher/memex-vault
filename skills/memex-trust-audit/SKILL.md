@@ -15,7 +15,7 @@ For the full relationship taxonomy, read: `references/vault-schema.md`
 
 ## Scope
 
-- **Topic-scoped:** provide a topic filename (e.g., `deep-learning`) — audits only atoms in that topic's `covers::` list. Best for targeted review.
+- **Topic-scoped:** provide a topic filename (e.g., `deep-learning`) — audits only atoms declaring `part-of::` for that topic. Best for targeted review.
 - **Vault-wide:** use `--vault` — audits all atoms. Use after bulk ingest or monthly.
 
 One scope per session. For multiple topics, run again.
@@ -31,10 +31,10 @@ Ask the user: "Which topic should I audit, or use `--vault` for all atoms?"
 If a topic name is given:
 ```bash
 VAULT=/home/bcmcpher/Projects/claude/memex-vault
-grep "^covers::" "$VAULT/topics/concepts/<topic>.md"
-# Also check topics/research/ and topics/projects/ if not found in concepts/
+# Membership is derived — read it off the atoms, not the topic file
+grep -rlE "^part-of::.*\[\[<topic>\]\]" "$VAULT/atoms/"
 ```
-Collect the `covers::` atom list. If the topic has no atoms, report that and stop.
+Confirm the topic file itself exists under `topics/concepts/`, `topics/research/`, or `topics/projects/`. If no atom declares membership, report that and stop.
 
 If `--vault`:
 ```bash

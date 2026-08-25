@@ -34,14 +34,21 @@ Identify what kind of answer the user needs:
 
 ### Step 2: Scan topic files (broad queries)
 Check all three topic directories for matches on filename or `tags` frontmatter:
-- `topics/concepts/` — domain concept maps (`covers::` → atoms)
-- `topics/research/` — research synthesis notes (`covers::` → atoms, `question:` frontmatter)
-- `topics/projects/` — project workspaces (`covers::` → atoms)
+- `topics/concepts/` — domain concept maps
+- `topics/research/` — research synthesis notes (`question:` frontmatter)
+- `topics/projects/` — project workspaces
+
+Topic files do not list their atoms. Membership is declared on each atom's
+`part-of::` and surfaced by Dataview, so to walk from a topic to its atoms:
+
+```bash
+grep -rlE "^part-of::.*\[\[<topic>\]\]" "$VAULT/atoms/"
+```
 
 If all three are empty (new vault), skip to the grep fallback section below and note that the graph hasn't been populated yet.
 
 Read matching topic files and extract:
-- `covers::` — atom list for this domain
+- member atoms — by the reverse lookup above
 - `cites::` — high-level sources
 - `related::` — adjacent domains
 
@@ -102,7 +109,7 @@ To answer specific structural questions, follow these chains:
 | What depends on concept X? | Atoms where `uses:: [[X]]` |
 | What conflicts with X? | `contradicts::` on X; atoms where `contradicts:: [[X]]` |
 | What sources back atom X? | `cites::` on atom X → source files |
-| What's in domain Y? | Concept map Y → `covers::` list |
+| What's in domain Y? | Atoms where `part-of:: [[Y]]` |
 | Where is term T defined? | `glossary/T.md` + atoms with `defines:: [[T]]` |
 | What sources introduced concept X? | Sources where `introduces:: [[X]]` |
 

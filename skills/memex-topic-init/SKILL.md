@@ -57,7 +57,7 @@ For each candidate atom, read its `title` and `## Summary` (one line is enough).
 - **Strong candidates** — title or summary directly matches the topic
 - **Possible candidates** — content mentions the topic but may be peripheral
 
-Ask the user which atoms belong in `covers::`. Default to including strong candidates; let the user drop any that don't fit.
+Ask the user which atoms belong to the topic. Default to including strong candidates; let the user drop any that don't fit. Membership is recorded on each atom's `part-of::` in step 7 — the topic file never lists its atoms.
 
 ### 4. Search for relevant sources
 ```bash
@@ -97,7 +97,11 @@ The template structures below show which fields to populate. Use `_templates/top
     <1–2 sentences: what this domain is and why it matters>
     
     ## Core Concepts
-    covers:: [[atom-one]], [[atom-two]]
+    <!-- Derived from each atom's part-of:: — do not maintain by hand. -->
+    ```dataview
+    LIST FROM "atoms"
+    WHERE contains(row["part-of"], this.file.link)
+    ```
     
     ## Key Sources
     cites:: [[source-file]]
@@ -121,8 +125,13 @@ The template structures below show which fields to populate. Use `_templates/top
     <question restated in full>
     
     ## Current Understanding
-    covers:: [[relevant-atom]]
     cites:: [[source-file]]
+    
+    ### Atoms in This Question
+    ```dataview
+    LIST FROM "atoms"
+    WHERE contains(row["part-of"], this.file.link)
+    ```
 
 **Project** — key fields to fill:
 
@@ -139,15 +148,26 @@ The template structures below show which fields to populate. Use `_templates/top
     <what you're trying to build or decide>
     
     ## Background
-    covers:: [[relevant-atom]]
     cites:: [[source-file]]
+    
+    ### Atoms in This Project
+    ```dataview
+    LIST FROM "atoms"
+    WHERE contains(row["part-of"], this.file.link)
+    ```
 
-All three templates include a Dataview live-query block at the bottom — copy it from the template file as-is, replacing `<% tp.file.title %>` with the actual topic title.
+Copy each Dataview block from the template file verbatim — it is self-referential (`this.file.link`), so nothing needs substituting. These blocks are how the topic surfaces its atoms; there is no hand-written membership list to fill in.
 
-### 7. Back-wire atoms
-For each atom confirmed in `covers::`, check whether it already has `part-of::` set. If it points elsewhere, leave it — an atom can only belong to one concept map. If `part-of::` is empty, offer to add `part-of:: [[new-topic]]`.
+### 7. Wire atom membership
+This step is what actually creates the topic's membership — the Dataview block in
+step 6 returns nothing until it runs.
 
-Ask before modifying any existing atom file.
+For each atom confirmed in step 3, check whether it already has `part-of::` set.
+If it points elsewhere, leave it — an atom belongs to one topic. If `part-of::` is
+empty, offer to add `part-of:: [[new-topic]]`.
+
+Ask before modifying any existing atom file. Report how many atoms were left
+pointing elsewhere, since those will not appear in the new topic.
 
 ### 8. Flag coverage gaps
 Based on what the confirmed sources discuss, are there obvious concepts that belong in this topic but have no atom yet? List up to 3 candidates. For each, offer to create a stub atom (`confidence: low`, no content — just title, tags, and `part-of::`). Ask before creating.
@@ -161,15 +181,14 @@ Append to `_meta/log.md`:
 url:: n/a
 atoms:: [[atom-one]], [[atom-two]]
 skill:: memex-topic-init
-notes: type: <concept|research|project>; covers N atoms; M sources; L stubs created
+notes: type: <concept|research|project>; N atoms wired; M sources; L stubs created
 ```
 
 ### 10. Summary
 Report:
 - Topic file created at `<path>`
-- N atoms linked via `covers::`
 - M sources linked via `cites::`
-- K atoms back-wired with `part-of::`
+- N atoms wired with `part-of::` (and K left pointing at another topic)
 - L atom stubs created
 - Adjacent topics connected (if any)
 
@@ -177,6 +196,7 @@ Report:
 
 ## Common Mistakes to Avoid
 - Don't create the topic if one already exists with the same or very similar name — check `topics/` first
-- Don't populate `covers::` with atoms that are only tangentially related; it's better to start sparse and grow the list than to pad it
+- Don't wire `part-of::` on atoms that are only tangentially related; it's better to start sparse and grow than to pad the topic
+- Don't hand-write a membership list into the topic file — the Dataview block is the only membership view, and a stale hand-written list is exactly what Phase 1 removed
 - Don't set `part-of::` on an atom that already has one pointing somewhere else — an atom belongs to one topic
 - Don't create more than 3 atom stubs in one init session; stubs without content accumulate and become noise

@@ -202,7 +202,7 @@ Example: a video cites three papers; if only one has a source note, offer to qui
 ---
 
 ### 8. Topic map update
-If the note introduces or supports an atom in an existing concept map, check whether that atom is in the map's `covers::`. If not, offer to add it. Ask before modifying topic maps.
+If the note introduces or supports an atom that has no `part-of::`, offer to set one so the atom joins a concept map. Ask first. Topic files are never edited — membership is derived from the atom's own `part-of::`.
 
 ---
 

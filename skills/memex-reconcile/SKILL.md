@@ -1,115 +1,181 @@
 ---
 name: memex-reconcile
-description: Detect and repair bidirectional drift between atom part-of:: and topic covers:: fields. Use when running a vault health check, after bulk ingest, or when lint Section 7 surfaces asymmetry warnings. Triggers on: "reconcile my vault", "check graph integrity", "fix bidirectional links", "repair part-of covers mismatch", "sync part-of and covers".
+description: Repair dangling part-of:: links and promote stale related:: links to typed relations. Use when running a vault health check, after bulk ingest, or when lint Section 7a surfaces orphan part-of warnings. Triggers on: "reconcile my vault", "check graph integrity", "fix dangling links", "part-of points nowhere", "promote related links", "retype my related links".
 ---
 
 # Karpathy Wiki Reconcile
 
 **Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
 
-This skill finds and repairs bidirectional drift between atom `part-of::` fields and their corresponding topic `covers::` fields. These two fields are meant to be mirrors: if an atom says `part-of:: [[deep-learning]]`, then `topics/concepts/deep-learning.md` should say `covers:: [[atom-name]]`, and vice versa. Drift accumulates silently during ingest when one side is written but the other is forgotten.
+This skill runs two repair passes over the graph:
+
+1. **Dangling `part-of::`** — an atom names a topic file that does not exist.
+2. **Stale `related::`** — a fallback link that has sat untyped long enough to be
+   worth resolving into a precise relation.
 
 For the full relationship taxonomy, read: `references/vault-schema.md`
+
+> **Topic membership is derived.** Atoms declare `part-of::`; topics discover
+> their atoms by Dataview query. There is no `covers::` field and no bidirectional
+> drift to reconcile — that was retired in roadmap Phase 1. A query cannot fall
+> out of step with its source. What *can* break is a `part-of::` that points at
+> nothing, which is Pass 1.
 
 ---
 
 ## When to Run
 
-- After bulk ingest of multiple sources (drift accumulates fastest here)
-- When `_meta/lint.sh` Section 7a or 7b surfaces asymmetry WARNs
-- Monthly, before running `memex-review` on a topic
-- Before running `memex-compose` (composition depends on correct graph structure)
+- After bulk ingest of multiple sources
+- When `_meta/lint.sh` Section 7a surfaces orphan `part-of::` WARNs
+- Monthly, for the `related::` promotion pass
+- Before running `memex-compose` (composition depends on correct membership)
 
 ---
 
-## Workflow
+## Pass 1 — Dangling `part-of::`
 
-### 1. Discover asymmetries
+### 1. Discover
 
-Run two scans:
-
-**Scan A — atoms with part-of:: not reflected in topic covers::**
 ```bash
 VAULT=/home/bcmcpher/Projects/claude/memex-vault
 grep -rn "^part-of::" "$VAULT/atoms/"
 ```
-For each `part-of:: [[Topic]]` found, verify the named topic file has `covers:: [[atom-name]]`. Collect every mismatch.
 
-**Scan B — topics with covers:: not reflected in atom part-of::**
+Extract wikilink targets by stripping `[[` and `]]`; ignore display-text aliases
+(anything after `|`). For each target, check whether a matching topic file exists:
+
 ```bash
-grep -rn "^covers::" "$VAULT/topics/"
-```
-For each `[[Atom]]` listed in `covers::`, verify the atom file has `part-of:: [[topic-name]]`. Collect every mismatch.
-
-Extract wikilink targets by stripping `[[` and `]]`; ignore display-text aliases (anything after `|`).
-
-### 2. Group and present mismatches
-
-Present in two groups:
-
-**Group A — atom claims membership, topic doesn't list it**
-```
-MISMATCH: atoms/transformer-architecture.md
-  part-of:: [[deep-learning]]
-  BUT topics/concepts/deep-learning.md covers:: does not include [[transformer-architecture]]
-  → Proposed fix: add covers:: [[transformer-architecture]] to deep-learning.md
+find "$VAULT/topics" -name "<target>.md"
 ```
 
-**Group B — topic lists atom, atom doesn't claim membership**
+Every target with no matching file is a dangling link. The atom believes it
+belongs to a topic; no topic will ever surface it.
+
+### 2. Present
+
 ```
-MISMATCH: topics/concepts/deep-learning.md
-  covers:: [[attention-mechanism]]
-  BUT atoms/attention-mechanism.md has no part-of:: [[deep-learning]]
-  → Proposed fix: add part-of:: [[deep-learning]] to attention-mechanism.md
+DANGLING: atoms/transformer-architecture.md
+  part-of:: [[deep-lerning]]
+  No topic file matches. This atom appears in no topic.
+  Nearest existing topics: deep-learning, machine-learning
+  → Proposed fix: retarget to part-of:: [[deep-learning]]
 ```
 
-For each mismatch, check both files' `updated:` frontmatter date (or file modification time as fallback) and note which side is newer — the newer side is usually the intended state.
+Always offer the nearest existing topic names — most dangling links are typos or
+renamed topics, not missing ones. Compute nearest by simple slug similarity; do
+not guess silently.
 
-If there are no mismatches, report "Graph is consistent — no part-of/covers drift found." and stop.
+If there are none, report "No dangling part-of:: links found." and move to Pass 2.
 
 ### 3. Confirm each fix individually
 
-Present one mismatch at a time. The user can:
-- **Accept** — apply the proposed fix
-- **Reject** — skip (asymmetry is intentional; e.g., an atom belongs to a sub-topic but the parent topic still lists it transitively)
-- **Swap** — fix the opposite side instead (e.g., remove `covers::` from the topic rather than adding `part-of::` to the atom)
+Present one at a time. The user can:
 
-Never batch-apply all fixes. Never auto-repair without confirmation.
+- **Retarget** — point `part-of::` at an existing topic
+- **Create** — the topic genuinely does not exist yet; hand off to
+  `memex-topic-init` rather than writing a stub here
+- **Remove** — drop the `part-of::` entirely; the atom belongs to no topic
+- **Skip** — leave it
 
-### 4. Apply accepted fixes
+Never batch-apply. Never auto-repair without confirmation.
 
-For each accepted fix:
-- Add the missing field to the correct file in the `## Connections` section
-- Update `updated:` in frontmatter to today's date if the file is an atom
-- For topic files: append to the existing `covers::` line or add a new one
+### 4. Apply
 
-### 5. Log the session
+- Edit `part-of::` in the atom's `## Connections` section
+- Update `updated:` in the atom's frontmatter to today
+
+---
+
+## Pass 2 — `related::` promotion
+
+`related::` is the documented fallback for "loosely connected, refine later."
+Without a pass that actually refines it, every hard call silently becomes
+`related::` and the typed vocabulary decays into a single untyped edge.
+
+### 1. Discover
+
+```bash
+grep -rn "^related::.*\[\[" "$VAULT/atoms/" "$VAULT/topics/" "$VAULT/sources/"
+```
+
+A link is **stale** when the note's `updated:` frontmatter (falling back to
+`created:`, then file mtime) is more than 30 days old. A `related::` written last
+week is still legitimately provisional; one written six months ago is a decision
+nobody came back to.
+
+### 2. Present with a proposed type
+
+For each stale link, read both notes and propose a specific relation using the
+decision tree in `references/vault-schema.md`. Show the reasoning:
+
+```
+STALE RELATED: atoms/flash-attention.md (updated 2026-03-02, 176 days)
+  related:: [[attention-mechanism]]
+  Both describe the same operation; flash-attention is an IO-aware
+  reimplementation of it, not a separate idea.
+  → Proposed: extends:: [[attention-mechanism]]
+```
+
+Propose exactly one type. If no typed relation genuinely fits, say so and
+recommend **Keep** — `related::` is a legitimate terminal state for a link that
+is real but untypeable. Do not force a type to clear the queue.
+
+### 3. Confirm each individually
+
+- **Accept** — replace `related::` with the proposed typed relation
+- **Choose** — user names a different type from the vocabulary
+- **Keep** — genuinely navigational; leave as `related::` and touch `updated:` so
+  it does not resurface next month
+- **Drop** — the link is not meaningful; remove it
+
+### 4. Apply
+
+- Remove the target from the `related::` line; add it to the typed field's line
+  in the same `## Connections` section, creating the line if absent
+- If `related::` ends up with no targets, leave the bare `related:: ` field —
+  templates ship it empty and Dataview reads an empty field as absent
+- Update `updated:` in frontmatter to today
+- For `challenges::`, `refutes::`, `contradicts::`, `limits::`: the schema
+  requires a sentence in the body explaining the tension. Write it, or the
+  promotion is not complete
+
+---
+
+## Log the session
 
 Append to `_meta/log.md`:
+
 ```markdown
 ## [YYYY-MM-DD] reconcile | vault
 url:: n/a
 atoms:: [[Atom A]], [[Atom B]]
 skill:: memex-reconcile
-notes: N mismatches found, M fixes applied, K skipped
+notes: N dangling part-of fixed; M related:: promoted, K kept, J dropped
 ```
 
-List every atom that was modified or whose topic counterpart was modified.
+List every note that was modified. Do not log a session where nothing was applied.
 
 ---
 
 ## What This Skill Does NOT Do
 
-- Never removes existing links — only adds the missing side
-- Never auto-repairs without explicit user confirmation per mismatch
-- Does not resolve `related::` into more specific relation types (that belongs to `memex-review`)
-- Does not touch source connection fields
-- Does not detect or repair other relation field types (only `part-of::` ↔ `covers::`)
+- Does not create topic files — that is `memex-topic-init`
+- Does not create or split atoms — that is `memex-refactor`
+- Never auto-repairs without explicit user confirmation per item
+- Does not touch source connection fields in Pass 1
+- Does not reconcile topic membership in either direction; membership is derived
+  from `part-of::` and cannot drift
 
 ---
 
 ## Common Mistakes to Avoid
 
-- Don't assume asymmetry is always a mistake — an atom can `part-of` a sub-topic while the grandparent topic still `covers` it; always show both sides and let the user decide
-- Don't modify `covers::` on research or project topics without checking whether the atom's `part-of::` is meant to point there specifically
+- Don't propose a typed relation you cannot justify in one sentence — **Keep** is
+  a valid outcome and a forced type is worse than an honest `related::`
+- Don't treat a dangling `part-of::` as always a typo; a topic may have been
+  deliberately deleted, in which case **Remove** is right
+- Don't re-surface a link the user chose to **Keep** last month — touching
+  `updated:` is what prevents that, so do not skip it
+- Don't promote a `related::` on a source note into an atom→atom relation; check
+  which node types are on each end first
 - Don't log entries for sessions where no fixes were applied

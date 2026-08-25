@@ -40,13 +40,15 @@ grep -rl "status: read" "$VAULT/sources/"
 For each hit, read its title and saved date. These are the highest-value targets: the user already knows the content, they just need to wire it.
 
 ### Check 3 — Underconfident topics
-Topics where every atom in `covers::` has `confidence: low`.
+Topics where every member atom has `confidence: low`.
 
 ```bash
 ls "$VAULT/topics/concepts/" "$VAULT/topics/research/"
+# Membership is derived — collect each topic's atoms by reverse lookup
+grep -rlE "^part-of::.*\[\[<topic>\]\]" "$VAULT/atoms/"
 ```
 
-For each topic, read its `covers::` list, then check the `confidence:` field in each linked atom. If all atoms are `confidence: low`, flag the topic as underconfident.
+For each topic, collect its member atoms, then check the `confidence:` field in each. If all are `confidence: low`, flag the topic as underconfident. A topic with no member atoms is not underconfident — it is empty; skip it.
 
 ---
 

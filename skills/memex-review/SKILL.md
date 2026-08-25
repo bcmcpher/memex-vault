@@ -45,16 +45,16 @@ Read the topic file in full. Then collect all linked content:
 ```bash
 VAULT=/home/bcmcpher/Projects/claude/memex-vault
 
-# List atoms covered by this topic
-grep "^covers::" "$VAULT/topics/concepts/<topic>.md"
+# List the topic's atoms — membership is derived, so read it off the atoms
+grep -rlE "^part-of::.*\[\[<topic>\]\]" "$VAULT/atoms/"
 
 # List sources cited by the topic itself
 grep "^cites::" "$VAULT/topics/concepts/<topic>.md"
 ```
 
-If `covers::` is empty (no atoms linked yet), skip lenses A, C, D, and E — they require atoms to exist. Run only Lens B (coverage gaps) to surface candidates, and Lens F (structural integrity) to assess whether the topic definition makes sense. Note to the user that the topic hasn't been populated yet.
+If no atom declares membership yet, skip lenses A, C, D, and E — they require atoms to exist. Run only Lens B (coverage gaps) to surface candidates, and Lens F (structural integrity) to assess whether the topic definition makes sense. Note to the user that the topic hasn't been populated yet.
 
-For each atom in `covers::`:
+For each member atom:
 - Read the atom file
 - Note its `confidence:`, `cites::`, and all relation fields (`extends::`, `uses::`, `contradicts::`, `challenges::`, `supersedes::`, `limits::`, `contrasts-with::`, `part-of::`)
 
@@ -65,7 +65,7 @@ For each source cited by atoms, read its Summary and Key Points sections. Do not
 Work through each lens and collect findings before presenting them:
 
 **Lens A — Scope fit**  
-Does each atom actually belong in this topic? Flag atoms that seem like they belong in a different domain or are only weakly related to the topic's stated overview. Propose a new `covers::` home for each misfit.
+Does each atom actually belong in this topic? Flag atoms that seem like they belong in a different domain or are only weakly related to the topic's stated overview. Propose a new topic for each misfit — a change to that atom's `part-of::`.
 
 **Lens B — Coverage gaps**  
 Based on the atoms present and the sources they cite, are there obvious concepts central to this domain that have no atom? List up to 5 candidate atoms worth creating. Don't invent — only propose gaps that the existing sources clearly point to.
@@ -80,7 +80,7 @@ Skip conflict detection here — use `memex-conflicts` instead. It handles this 
 Are there atoms with `confidence: medium` or `high` that only cite a single source, or cite sources still marked `status: unread`? Flag these as potentially overconfident. Are there atoms with `confidence: low` that now have multiple independent processed sources? Flag these as upgrade candidates. Do **not** propose or apply confidence changes here — surface the list and tell the user to run `memex-trust-audit` to make the actual adjustments with full provenance checks.
 
 **Lens F — Structural integrity**  
-Does the topic map's `covers::` list form a coherent cluster, or does it read like a dumping ground? Is there a clear conceptual spine? If the topic seems like two separate domains merged together, suggest a split with proposed names and which atoms would go where.
+Does the topic's derived atom set form a coherent cluster, or does it read like a dumping ground? Is there a clear conceptual spine? If the topic seems like two separate domains merged together, suggest a split with proposed names and which atoms would go where.
 
 ### 4. Present findings — one lens at a time
 For each lens, present findings and wait for the user to respond before moving to the next. Format:
@@ -99,7 +99,7 @@ The user can: Accept (you make the change), Reject (skip), Defer (note it but do
 For each accepted proposal:
 - Write the specific Dataview field change to the relevant atom or topic file
 - If a new atom is proposed and accepted: create a stub only (no content yet — capture the title and tags, `confidence: low`)
-- If an atom is being moved to a different topic: update `covers::` in both topic files; update `part-of::` in the atom if present
+- If an atom is being moved to a different topic: repoint `part-of::` in the atom. That is the whole edit — neither topic file changes, because both derive membership by query
 - Do not modify source files during topic review
 
 ### 6. Update the topic file

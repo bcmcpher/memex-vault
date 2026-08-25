@@ -10,7 +10,11 @@ reviewed:
 <!-- What is this domain? Why does it matter? -->
 
 ## Core Concepts
-covers:: 
+<!-- Derived from each atom's part-of:: — do not maintain by hand. -->
+```dataview
+LIST FROM "atoms"
+WHERE contains(row["part-of"], this.file.link)
+```
 
 ## Key Sources
 cites:: 
@@ -18,8 +22,3 @@ cites::
 ## Sub-topics and Relations
 part-of:: 
 related:: 
-
-## Dataview: All Atoms in This Topic
-```dataview
-LIST FROM "atoms" WHERE contains(part-of, [[<% tp.file.title %>]])
-```

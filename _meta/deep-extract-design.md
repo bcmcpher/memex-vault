@@ -21,7 +21,7 @@ by a reconciliation pass that merges duplicates. sift-kg reports 425 entities fr
 12 papers.
 
 Dumping that output into `atoms/` would destroy this vault: 425 single-cite
-`confidence: low` atoms, `covers::` blown past the lint threshold of 15, and the
+`confidence: low` atoms, every topic blown past the 15-atom lint threshold, and the
 "one hand-curated concept per file" invariant gone.
 
 **The extraction output is not atoms.** It is the evidence layer the atom layer has
