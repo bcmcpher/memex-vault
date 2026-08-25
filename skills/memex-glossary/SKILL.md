@@ -132,7 +132,7 @@ skill: memex-glossary
 action: create
 target: glossary/kebab-term.md
 session: YYYY-MM-DD-HHMM
-status: pending
+stage: pending
 ---
 ```
 Body: full proposed glossary file content. Write to vault and delete candidate after user confirms.
@@ -141,13 +141,18 @@ For each accepted term, create `glossary/kebab-term.md`:
 
 ```markdown
 ---
+type: Glossary Term
 title: Term Name
+description: <the definition in one line>
 term: term name
 aliases: [ALT, ACRONYM]
 domain: <inferred from note's topic area>
 tags: []
 created: YYYY-MM-DD
-status: reviewed
+stage: reviewed
+generated:
+  by: memex-glossary/claude-opus-5
+  at: YYYY-MM-DD
 ---
 
 ## Definition

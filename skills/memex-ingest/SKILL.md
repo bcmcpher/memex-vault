@@ -57,13 +57,22 @@ Write the file to the correct subfolder using `_templates/source-digital.md` as 
 
 Universal frontmatter fields (all digital sources):
 ```yaml
+type: Source
 title: <from fetch>
+description: <first sentence of the summary, condensed to one line>
 url: <url>
 medium: <web|video|paper|docs>
 saved: <today YYYY-MM-DD>
 tags: []
-status: unread
+stage: unread
+generated:
+  by: memex-ingest/claude-opus-5
+  at: <today YYYY-MM-DD>
 ```
+
+`type: Source` is required on every node; `medium:` is the subtype. `generated:`
+records origin once and is never updated — `updated:` is what moves when a note
+is revised. Both are defined in `_meta/schema.md`.
 
 Type-specific fields to add:
 - **Paper**: `authors: []`, `year:`, optionally `venue:`
@@ -77,7 +86,7 @@ Ask the user for:
 
 Never reproduce full article text. Summaries only.
 
-**Meeting notes** use `_templates/source-meeting.md` with `date` instead of `saved`, `attendees[]`, `context`, `status: unprocessed`. No URL.
+**Meeting notes** use `_templates/source-meeting.md` with `date` instead of `saved`, `attendees[]`, `context`, `stage: unprocessed`. No URL.
 
 ### 5. Wire up connections
 Ask which existing atoms or concepts this source relates to. Check for likely candidates:
@@ -112,12 +121,17 @@ Write a candidate file before creating the atom (see Candidate Gating below).
 Stub atom format (save to `atoms/kebab-concept.md`):
 ```markdown
 ---
+type: Atom
 title: Concept Name
+description: <the atom's claim in one sentence>
 aliases: []
 tags: []
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 confidence: low
+generated:
+  by: memex-ingest/claude-opus-5
+  at: YYYY-MM-DD
 ---
 
 ## Summary
@@ -159,13 +173,18 @@ Write a candidate file before creating the glossary entry (see Candidate Gating 
 If yes, create `glossary/kebab-term.md`:
 ```markdown
 ---
+type: Glossary Term
 title: Term Name
+description: <the definition in one line>
 term: term name
 aliases: []
 domain: <inferred from topic area>
 tags: []
 created: YYYY-MM-DD
-status: stub
+stage: stub
+generated:
+  by: memex-ingest/claude-opus-5
+  at: YYYY-MM-DD
 ---
 
 ## Definition
@@ -212,7 +231,7 @@ skill: memex-ingest
 action: create
 target: atoms/flash-attention.md
 session: YYYY-MM-DD-HHMM
-status: pending
+stage: pending
 ---
 ```
 Body: full proposed file content.
@@ -231,7 +250,7 @@ target: atoms/attention-mechanism.md
 section: "## Sources"
 change: append
 session: YYYY-MM-DD-HHMM
-status: pending
+stage: pending
 ---
 ```
 Body: the exact text to append.

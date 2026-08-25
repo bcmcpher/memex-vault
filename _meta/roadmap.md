@@ -93,6 +93,11 @@ constitution.
 *Fix:* split into `_meta/schema.md` (constitution) + `_meta/domain.md` (tag vocab,
 source subtypes, domain name). Lint reads tags from the domain config.
 
+*Status: fixed in Phase 2.* `_meta/domain.md` holds the domain name, three tag
+groups, the `medium:` vocabulary, and the folder→`type:` table; `_meta/lint.sh`
+sections 10 and 11 read both from it. `README.md` § Specializing This Template is
+the fork guide.
+
 **S2. No worked example** — deferred by design decision above.
 
 **S3. No specialization guide or onboarding skill.** No "how to make this yours"
@@ -137,11 +142,20 @@ granularity" is a length cue, not a style cue. Deep-extract mode B writes atom
 `## Detail` prose at volume; without a style spec it writes it inconsistently, at
 scale, into every atom it touches.
 
+*Status: fixed in Phase 2.* `_meta/schema.md` § Atom Writing Style — five rules,
+each tied to an existing lint signal so the spec is checkable rather than
+aspirational.
+
 **M2. No disambiguation policy — promoted to blocker.** `attention` (cognitive
 science) vs. `attention` (transformers) collide under kebab naming. A paper cut
 while a human names atoms by hand. Deep-extract's resolution pass handles dozens
 of concept mentions per document and will emit `ambiguous` rows on day one with no
 rule to settle them. **Must land before or with E1.**
+
+*Status: fixed in Phase 2.* `_meta/schema.md` § Disambiguation Policy. Homonyms
+get suffixed slugs and the bare slug is left permanently unused; polysemous
+senses stay one atom with per-sense `##` sections and section-anchored `cites::`.
+The test is whether a change to one sense obliges a change to the other.
 
 **M3. No temporal model on claims — now tractable.** `supersedes::` handles atom
 replacement, not time-bounded claims. Claims finally have a home: Hyper-Extract
@@ -175,6 +189,11 @@ read as `deprecated` and `stub` as `draft`, and neither does.
 "absent ⇒ stable" default applies, which is safe. The exporter synthesises the
 real value.
 
+*Status: fixed in Phase 2.* The rename is total — templates, 13 skills, eval
+fixtures, `_meta/index.md`, `_meta/lint.sh`, and the candidate frontmatter the
+original scope list missed. Lint 11c fails on any in-vault `status:`, and 11b
+validates each `stage:` against the vocabulary for its node type.
+
 **O2. No node-type discriminator in frontmatter.** The node type is currently
 implicit in the folder, plus `topic-type:` on topics and `medium:` on sources.
 Nothing states it directly, so the type is unavailable to any Dataview query that
@@ -182,6 +201,10 @@ spans folders, and unavailable to any consumer that is not walking the tree. It
 is also OKF's single required field (§4.1), which no template satisfies.
 
 *Fix:* add `type:` in Phase 2; retire `topic-type:`, which it subsumes exactly.
+
+*Status: fixed in Phase 2.* `type:` is on all seven templates and enforced by
+lint 11a against `_meta/domain.md` § OKF Types. `topic-type:` is gone. The
+cross-folder query O2 asks for now works — see `_meta/index.md` § Provenance.
 
 **O3. The vault has no interchange format.** Wikilinks, Dataview-backed indices,
 date-only timestamps, and typed relations are all load-bearing for Obsidian and
@@ -204,7 +227,7 @@ everything it serialises exists.
 |-------|------|--------|----------|
 | **0** | Lint integrity: split `fails` from `warns`, `exit 1`, one orphan definition | L1, L2 | Small. Nothing downstream can treat lint as a gate until this lands. **Done.** |
 | **1** | `covers::` → Dataview migration | P1 | Breaking; all skills must be consistent first. **Done.** |
-| **2** | Schema split + atom style spec + disambiguation policy + OKF frontmatter | S1, M1, M2, O1, O2 | M1 and M2 are hard prereqs for Phase 3. O1 and O2 land here because this phase already rewrites every template and writing skill — separately means touching both twice |
+| **2** | Schema split + atom style spec + disambiguation policy + OKF frontmatter | S1, M1, M2, O1, O2 | M1 and M2 are hard prereqs for Phase 3. O1 and O2 land here because this phase already rewrites every template and writing skill — separately means touching both twice. **Done.** |
 | **3** | Evidence layer: `extracts/` + `memex-deep-extract` | E1, M5 | Depends on 0 (grounding gate), 1 (`part-of::` traversal), 2 (M1, M2) |
 | **4** | Confidence rubric grounded in claims + `related::` promotion | P2, P3 | P2's real fix only exists after Phase 3 |
 | **5** | Anki render mode on `memex-compose` | — | Consumer of Phase 3. The glossary-only half has no dependency and can ship any time. |
@@ -280,17 +303,20 @@ exporter must materialize `covers` by scanning atoms' `part-of::` — the same
 traversal, done deterministically in Python. No work in this phase; recorded so it
 is not discovered late.
 
-### Phase 2 — Schema split + atom style spec + disambiguation + OKF frontmatter
+### Phase 2 — Schema split + atom style spec + disambiguation + OKF frontmatter *(complete)*
 
 **Schema work (S1, M1, M2):**
 
-1. `_meta/schema.md` — remove the Tags section; add **Atom Writing Style** (3–5
+1. `_meta/schema.md` — replace the Tags section with a pointer to `_meta/domain.md`; add **Atom Writing Style** (3–5
    rules: present tense, hedge single-source claims, use relations not inline
    prose, one claim per atom) and a **Disambiguation Policy** (suffixed slugs for
    true homonyms, polysemous sections for related senses).
-2. `_meta/domain.md` — new: `domain_name`, `domain_tags`, `type_tags`,
-   `stage_tags`, `source_types`, `okf_types`.
-3. `_meta/lint.sh` — read tag vocabulary from `_meta/domain.md`.
+2. `_meta/domain.md` — new. Sections: *Domain Name*, *Domain Tags*, *Type Tags*,
+   *Stage Tags*, *Source Types*, *OKF Types*. Each is a fenced list parsed one
+   entry per line, the same shape `schema.md` § Valid Relation Fields already
+   uses and lint already knows how to read.
+3. `_meta/lint.sh` — read tag vocabulary from `_meta/domain.md` (section 10) and
+   the folder→`type:` table from it as well (section 11).
 4. `README.md` — add a "Specializing This Template" section.
 
 **OKF frontmatter (O1, O2).** Additive except one rename. Nothing here costs
@@ -329,17 +355,63 @@ Obsidian or Dataview anything, and each item pays for itself independent of OKF.
    **written** in Phase 4. State explicitly that `confidence:` and `verified:`
    are orthogonal: confidence measures evidence strength, verified records who
    confirmed it.
-10. `_meta/lint.sh` — three new checks: `type:` present and drawn from
-    `domain.md`; `stage:` value valid for the node type; `status:` **absent**
-    in-vault, since it is the exporter's output field and hand-writing it would
-    diverge.
+10. `_meta/lint.sh` — three new checks, as section 11: `type:` present and
+    matching the folder's entry in `domain.md`; `stage:` value valid for the node
+    type; `status:` **absent** in-vault, since it is the exporter's output field
+    and hand-writing it would diverge. Section 2 also gained the topic
+    required-field checks it never had — `title` on all three topic kinds,
+    `stage` on projects, `question` on research.
 
-**Verification:** `grep -rn 'topic-type'` and
-`grep -rnE '(^|[^a-z-])status:' _templates/ skills/ _meta/` both return zero.
-`bash _meta/lint.sh` exits `0`. A note with `type: Nonsense`, or one carrying
+**Verification:** the invariant is about *frontmatter*, so match line-initial
+keys — prose that names the retired fields in order to explain the retirement is
+expected and desirable:
+
+```bash
+grep -rn '^topic-type:' _templates/ skills/ topics/ sources/ atoms/ glossary/
+grep -rn '^status:'     _templates/ skills/ topics/ sources/ atoms/ glossary/
+grep -rn 'status *='    _meta/index.md _templates/ topics/
+```
+
+All three return zero. `bash _meta/lint.sh` exits `0`. A note with `type: Nonsense`, or one carrying
 `status:`, prints `FAIL` and exits `1`. In Obsidian: every `_meta/index.md`
 Dataview table still renders, now with a `description` column, and a note created
 from each of the seven templates shows `type` and `stage` in the property editor.
+
+**Scope corrections found during implementation.** The step list above missed
+four things, all of them found by doing the work rather than by re-reading the
+plan:
+
+11. **`_meta/candidates/` also carried `status:`.** Step 7 enumerated templates,
+    skills, lint, and index, but not the candidate frontmatter documented in
+    `_meta/schema.md` § Candidate Lifecycle and emitted by `memex-ingest`,
+    `-connect`, and `-glossary`. Renamed there too. Keeping it would have forced
+    a folder carve-out in the new lint check and made "`status:` is the
+    exporter's output field" false in one place; the invariant is now total.
+12. **`_meta/index.md` had the same hyphen bug Phase 1 fixed.** The
+    uncategorized-atoms query read `WHERE !part-of`, which Dataview parses as
+    subtraction and which therefore matched nothing — a silent empty table, not
+    an error. Now `WHERE !row["part-of"]`, matching the membership query.
+    `topics/concepts/getting-started.md` also still told the reader to write
+    `part-of:: [[Getting Started]]`, the frontmatter title rather than the
+    filename, which would never resolve. Both are the Phase 1 failure class,
+    missed because Phase 1 fixed the queries it touched and not the prose.
+13. **`_meta/lint.sh` aborted silently on any missing field.** Eleven
+    `var=$(grep … | head -1 | sed …)` assignments run under `set -euo pipefail`,
+    so `grep` finding nothing returned 1 and killed the script mid-run — a
+    truncated report and `exit 1` with no failure printed. Surfaced immediately
+    by the new `type:` check, since a note missing `type:` is exactly the case.
+    All eleven now end `|| true`. Latent since the script was written; harmless
+    only because the vault has no notes yet.
+14. **Citation counts counted the empty template line.** `_templates/atom.md`
+    ships a bare `cites:: ` prompt, which Dataview reads as absent — section 4
+    documents this and matches `^cites::\s*\[\[`, but sections 6c, 7d, 8a, 8c,
+    and 8d used `grep -c "^cites::"`. Every freshly-created atom therefore drew
+    two bogus "all cited sources are unread" warnings. All counts now require a
+    populated field.
+
+Items 13 and 14 are lint defects rather than Phase 2 work, fixed here because
+this phase is what exposed them and because a lint that dies partway cannot gate
+anything — which was Phase 0's entire point.
 
 ### Phase 3 — Evidence layer
 
@@ -379,7 +451,7 @@ than inventing parallel ones.
 
 `memex-compose` gains an `anki` render mode writing Obsidian_to_Anki plain text to
 a versioned top-level `anki/`. Cloze cards from extract claims, Basic cards from
-`status: reviewed` glossary terms. Every card back carries the source link and the
+`stage: reviewed` glossary terms. Every card back carries the source link and the
 verbatim quote. Card identity keys off the extract block id, so the plugin's
 `<!--ID:-->` writeback makes re-export an update rather than a duplicate.
 

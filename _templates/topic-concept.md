@@ -1,13 +1,15 @@
 ---
+type: Concept Map
 title: 
-topic-type: concept
+description: 
 tags: []
 created: <% tp.date.now("YYYY-MM-DD") %>
 reviewed: 
 ---
 
 ## Overview
-<!-- What is this domain? Why does it matter? -->
+<!-- What is this domain? Why does it matter?
+     Condense into frontmatter `description:`. -->
 
 ## Core Concepts
 <!-- Derived from each atom's part-of:: — do not maintain by hand. -->

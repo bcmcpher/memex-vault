@@ -1,6 +1,24 @@
 # Vault Schema Reference
 
 This is a condensed version of `_meta/schema.md` bundled for offline reference.
+Tag vocabulary lives in `_meta/domain.md`.
+
+## Node Types
+
+`type:` is required on every curated node and is the single node-type
+discriminator. `medium:` is the *sub*type of a source.
+
+| Folder | `type:` | Other required fields |
+|--------|---------|-----------------------|
+| `sources/<medium>/` | `Source` | `title`, `url`, `medium`, `saved`, `stage` (meetings: `date` not `url`/`saved`) |
+| `atoms/` | `Atom` | `title`, `created`, `confidence` |
+| `glossary/` | `Glossary Term` | `title`, `term`, `domain`, `stage` |
+| `topics/concepts/` | `Concept Map` | `title` |
+| `topics/projects/` | `Project` | `title`, `stage` |
+| `topics/research/` | `Research Question` | `title`, `question` |
+
+`description:` (one sentence) is optional but expected on every node.
+`topic-type:` was retired in roadmap Phase 2 — `type:` subsumes it.
 
 ## Relationship Fields (Dataview Inline)
 
@@ -61,12 +79,42 @@ grep -rlE "^part-of::.*\[\[<topic-slug>\]\]" "$VAULT/atoms/"
 |-------|---------|
 | `related::` | Loosely connected; fallback only — refine monthly |
 
-## Status Values
+## Stage Values
+
+`stage:` is the workflow field. It is **not** called `status:` — that key is
+reserved for the Open Knowledge Format's document lifecycle (`draft` / `stable` /
+`deprecated`) and is synthesized only at export. `status:` in a vault note is a
+lint failure.
 
 **Sources:** `unread` → `read` → `processed`  
 **Meetings:** `unprocessed` → `processed`  
 **Projects:** `active` / `paused` / `complete` / `abandoned`  
-**Atoms (confidence):** `low` / `medium` / `high`
+**Glossary:** `stub` → `reviewed`  
+**Candidates:** `pending` → `reviewed`
+
+Atoms have no `stage:`.
+
+## Confidence Values
+
+Atoms only. Measures evidence strength: `low` / `medium` / `high`.
+
+Orthogonal to `verified:` — confidence is how much evidence stands behind a
+claim, `verified:` is who checked it.
+
+## Provenance
+
+| Field | Written | Shape |
+|-------|---------|-------|
+| `generated:` | once, at creation | `{ by: <producer>/<version>, at: YYYY-MM-DD }` |
+| `verified:` | appended on human sign-off | list of `{ by: human:<id>, at: YYYY-MM-DD }` |
+
+Actor forms: `<producer>/<version>`, `human:<id>`, `process:<id>`.
+
+## Tags
+
+Controlled vocabulary lives in `_meta/domain.md` — *Domain Tags*, *Type Tags*,
+*Stage Tags*. Read it before assigning `tags:`; lint warns on anything not
+listed. Add the tag to `_meta/domain.md` first if it genuinely belongs.
 
 ## Naming Conventions
 

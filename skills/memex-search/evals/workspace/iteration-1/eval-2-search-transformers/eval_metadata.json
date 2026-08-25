@@ -4,7 +4,7 @@
   "prompt": "Find me everything in my wiki that's connected to transformer architecture. I want both the conceptual atoms and the specific papers/articles I've saved.",
   "assertions": [
     {"name": "relationship-chains-followed", "description": "Response mentions following specific relationship fields (extends::, uses::, part-of::, cites::) not just filename matching"},
-    {"name": "sources-table-present", "description": "Response includes a table or list of sources with URL and status columns"},
+    {"name": "sources-table-present", "description": "Response includes a table or list of sources with URL and stage columns"},
     {"name": "adjacent-concepts-listed", "description": "Response surfaces at least one adjacent concept to explore, with the relationship type named"},
     {"name": "no-hallucinated-files", "description": "Any [[note links]] cited correspond to files that actually exist in the vault"}
   ]

@@ -16,13 +16,13 @@ Run it monthly, before a compose session, or whenever the vault feels like it ha
 ## Checks
 
 ### Check 1 — Long-unread sources (> 90 days)
-Sources saved with `status: unread` where `saved:` is more than 90 days ago.
+Sources saved with `stage: unread` where `saved:` is more than 90 days ago.
 
 ```bash
 VAULT=/home/bcmcpher/Projects/claude/memex-vault
 
 # Find all unread sources with their saved dates
-grep -rl "status: unread" "$VAULT/sources/" | xargs grep -l "saved:" | while read f; do
+grep -rl "stage: unread" "$VAULT/sources/" | xargs grep -l "saved:" | while read f; do
   saved=$(grep "^saved:" "$f" | head -1 | awk '{print $2}')
   echo "$saved $f"
 done | sort
@@ -31,10 +31,10 @@ done | sort
 Flag any source where the saved date is > 90 days before today. Report: filename, medium, title, saved date, days elapsed.
 
 ### Check 2 — Read but not integrated
-Sources with `status: read` — consumed but never processed into atoms.
+Sources with `stage: read` — consumed but never processed into atoms.
 
 ```bash
-grep -rl "status: read" "$VAULT/sources/"
+grep -rl "stage: read" "$VAULT/sources/"
 ```
 
 For each hit, read its title and saved date. These are the highest-value targets: the user already knows the content, they just need to wire it.
@@ -99,10 +99,10 @@ If the user asks to act on a specific finding during this session, describe what
 ## What This Skill Does NOT Do
 
 - Does not modify any vault file
-- Does not update `status:` or `confidence:` fields
+- Does not update `stage:` or `confidence:` fields
 - Does not write a log entry (read-only)
 - Does not track atom age or flag atoms for temporal decay — atom freshness is domain-dependent and left to the user's judgment
-- Does not flag sources in `status: processed` regardless of age — processed is terminal
+- Does not flag sources in `stage: processed` regardless of age — processed is terminal
 
 ---
 

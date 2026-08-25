@@ -77,7 +77,7 @@ Are `related::` links between atoms that could be made more specific? Look for p
 Skip conflict detection here — use `memex-conflicts` instead. It handles this more precisely: it scans relation fields directly, classifies acknowledged vs. unacknowledged pairs, and drafts tension prose for you. If you haven't run `memex-conflicts` on this topic recently, note that to the user and suggest running it after this review.
 
 **Lens E — Confidence vs. evidence (flag only)**  
-Are there atoms with `confidence: medium` or `high` that only cite a single source, or cite sources still marked `status: unread`? Flag these as potentially overconfident. Are there atoms with `confidence: low` that now have multiple independent processed sources? Flag these as upgrade candidates. Do **not** propose or apply confidence changes here — surface the list and tell the user to run `memex-trust-audit` to make the actual adjustments with full provenance checks.
+Are there atoms with `confidence: medium` or `high` that only cite a single source, or cite sources still marked `stage: unread`? Flag these as potentially overconfident. Are there atoms with `confidence: low` that now have multiple independent processed sources? Flag these as upgrade candidates. Do **not** propose or apply confidence changes here — surface the list and tell the user to run `memex-trust-audit` to make the actual adjustments with full provenance checks.
 
 **Lens F — Structural integrity**  
 Does the topic's derived atom set form a coherent cluster, or does it read like a dumping ground? Is there a clear conceptual spine? If the topic seems like two separate domains merged together, suggest a split with proposed names and which atoms would go where.

@@ -1,6 +1,7 @@
 ---
+type: Research Question
 title: 
-topic-type: research
+description: 
 question: 
 tags: []
 created: <% tp.date.now("YYYY-MM-DD") %>
@@ -8,6 +9,7 @@ reviewed:
 ---
 
 ## Research Question
+<!-- Restate `question:` in one line; that line is frontmatter `description:`. -->
 
 ## Current Understanding
 cites:: 
@@ -29,7 +31,7 @@ WHERE contains(row["part-of"], this.file.link)
 
 ## Dataview: Supporting Sources
 ```dataview
-TABLE medium, saved, status FROM "sources"
+TABLE medium, saved, stage FROM "sources"
 WHERE contains(supports, [[<% tp.file.title %>]])
 SORT saved DESC
 ```

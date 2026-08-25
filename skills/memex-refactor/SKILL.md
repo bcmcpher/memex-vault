@@ -46,7 +46,7 @@ Show the proposed new body as a diff or side-by-side. Ask for confirmation befor
 
 **Step R4. Assess confidence**
 If the change affects how many or which sources support the atom:
-- Re-count `cites::` sources and their `status:`
+- Re-count `cites::` sources and their `stage:`
 - If confidence should change, propose it explicitly as a separate question
 - Do not bundle confidence and body changes into one silent update
 
@@ -118,13 +118,21 @@ Ask for confirmation to proceed.
 Use the atom template structure:
 ```markdown
 ---
+type: Atom
 title: <A1 title>
+description: <the split-out claim in one sentence>
 aliases: []
 tags: []
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 confidence: low
+generated:
+  by: memex-refactor/claude-opus-5
+  at: YYYY-MM-DD
 ---
+
+Carry the parent atom's `generated:` forward only if the split is purely
+mechanical. A split that rewrites the claim has a new author — record this skill.
 
 ## Summary
 <drafted from source atom's body — user should review>

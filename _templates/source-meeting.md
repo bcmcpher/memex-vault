@@ -1,14 +1,17 @@
 ---
+type: Source
 title: 
+description: 
 medium: meeting
 date: <% tp.date.now("YYYY-MM-DD") %>
 attendees: []
 context: 
 tags: []
-status: unprocessed
+stage: unprocessed
 ---
 
 ## Purpose / Agenda
+<!-- One line of this becomes frontmatter `description:`. -->
 
 ## Key Discussions
 <!-- What was discussed, decided, or discovered? -->

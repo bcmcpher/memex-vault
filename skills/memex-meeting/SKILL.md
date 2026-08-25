@@ -51,13 +51,18 @@ Create the file using `_templates/source-meeting.md` as the structure.
 **Frontmatter:**
 ```yaml
 ---
+type: Source
 title: <context label, title-cased>
+description: <one line: what this meeting was for>
 medium: meeting
 date: YYYY-MM-DD
 attendees: [Name One, Name Two]
 context: <one-phrase label>
 tags: []
-status: unprocessed
+stage: unprocessed
+generated:
+  by: memex-meeting/claude-opus-5
+  at: YYYY-MM-DD
 ---
 ```
 
@@ -138,13 +143,18 @@ If either check returns a match, show the existing entry and skip the creation p
 Write a candidate file to `_meta/candidates/` before creating the glossary entry. If yes, create `glossary/kebab-term.md`:
 ```markdown
 ---
+type: Glossary Term
 title: Term Name
+description: <the definition in one line>
 term: term name
 aliases: []
 domain: <inferred from discussion topic>
 tags: []
 created: YYYY-MM-DD
-status: stub
+stage: stub
+generated:
+  by: memex-meeting/claude-opus-5
+  at: YYYY-MM-DD
 ---
 
 ## Definition
@@ -165,7 +175,7 @@ Ask before creating each stub — do not auto-create.
 
 ### 7. Status
 
-Set `status: unprocessed` on creation. Note to the user:
+Set `stage: unprocessed` on creation. Note to the user:
 
 > "This note is marked `unprocessed`. Update it to `processed` once action items are complete and any follow-up sources have been captured."
 
@@ -196,4 +206,4 @@ notes: <N> decisions, <M> action items, <K> follow-up sources mentioned
 - Don't use today's date in the filename if the meeting was on a different day — always use the meeting date
 - Don't add a `url:` field to meeting notes — the template doesn't include one
 - Don't create atom stubs for every concept mentioned — only for concepts that warrant independent tracking (would be referenced from multiple future sources)
-- Don't mark `status: processed` until follow-up sources are captured and action items are addressed
+- Don't mark `stage: processed` until follow-up sources are captured and action items are addressed

@@ -16,13 +16,13 @@ For the relationship taxonomy and full field definitions, read: `references/vaul
 ## Workflow
 
 ### 1. Discovery
-Find all source notes that are `status: unread` or `status: unprocessed` AND have no populated Dataview relation fields in their `## Connections` block (inbox-only captures):
+Find all source notes that are `stage: unread` or `stage: unprocessed` AND have no populated Dataview relation fields in their `## Connections` block (inbox-only captures):
 
 ```bash
 VAULT=/home/bcmcpher/Projects/claude/memex-vault
 
 # Find unread sources
-grep -rl "status: unread\|status: unprocessed" "$VAULT/sources/"
+grep -rl "stage: unread\|stage: unprocessed" "$VAULT/sources/"
 
 # From those, find ones with no wired connections
 grep -rL "supports::\|introduces::\|cites::\|demonstrates::\|challenges::\|refutes::" "$VAULT/sources/"
@@ -30,7 +30,7 @@ grep -rL "supports::\|introduces::\|cites::\|demonstrates::\|challenges::\|refut
 
 Present the intersection grouped by medium. Include count and ask: "Which of these N notes would you like to process? (All, or name specific ones)"
 
-If the user names a specific note not in the inbox list, process it directly regardless of status.
+If the user names a specific note not in the inbox list, process it directly regardless of stage.
 
 ---
 
@@ -108,7 +108,7 @@ grep -rl "concept-keyword" "$VAULT/atoms/"
 
 **For each concept:**
 - **Match found** → propose the correct relation type; confirm before writing
-- **No match, concept warrants an atom** → offer to create a stub (`confidence: low`); ask first
+- **No match, concept warrants an atom** → offer to create a stub (`type: Atom`, `confidence: low`); ask first
 - **Boundary unclear** → use `related::` as a holding pattern; flag for monthly review
 
 **Atom promotion criteria:**
@@ -134,13 +134,18 @@ Ask: "Create a glossary stub for '[term]'? (Yes / Skip)"
 If yes, create `glossary/kebab-term.md`:
 ```markdown
 ---
+type: Glossary Term
 title: Term Name
+description: <the definition in one line>
 term: term name
 aliases: []
 domain: <inferred from topic area>
 tags: []
 created: YYYY-MM-DD
-status: stub
+stage: stub
+generated:
+  by: memex-connect/claude-opus-5
+  at: YYYY-MM-DD
 ---
 
 ## Definition
@@ -254,7 +259,7 @@ skill: memex-connect
 action: create
 target: atoms/new-concept.md
 session: YYYY-MM-DD-HHMM
-status: pending
+stage: pending
 ---
 ```
 Body: full proposed file content.
@@ -269,7 +274,7 @@ target: atoms/attention-mechanism.md
 section: "## Sources"
 change: append
 session: YYYY-MM-DD-HHMM
-status: pending
+stage: pending
 ---
 ```
 Body: exact text to append.

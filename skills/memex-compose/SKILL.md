@@ -19,7 +19,7 @@ For the full relationship taxonomy, read: `references/vault-schema.md`
 
 Before composing, the topic should ideally have:
 - Atoms with `confidence: medium` or higher (low-confidence atoms are included but flagged)
-- Sources with `status: processed` (unread/read sources are included but flagged as unverified)
+- Sources with `stage: processed` (unread/read sources are included but flagged as unverified)
 - Conflict pairs with prose descriptions (bare conflicts will appear in the Tensions section as undescribed)
 
 If none of these are met, compose still runs — it just produces a more heavily-flagged output.
@@ -58,8 +58,8 @@ For each atom in scope:
 - Read the full atom file
 - Note: `title`, `confidence:`, `updated:`, `Summary`, `Detail`
 - Collect all relation fields: `extends::`, `uses::`, `contrasts-with::`, `contradicts::`, `challenges::`, `limits::`, `cites::`, `supports::`, `demonstrates::`, `supersedes::`
-- Follow `cites::` links to source files; read each source's `title`, `url`, `Summary`, `Key Points`, `status:`
-- Collect `defines::` fields; follow each link to `glossary/<term>.md` and read the `## Definition`, `domain:`, and `status:` frontmatter field
+- Follow `cites::` links to source files; read each source's `title`, `url`, `Summary`, `Key Points`, `stage:`
+- Collect `defines::` fields; follow each link to `glossary/<term>.md` and read the `## Definition`, `domain:`, and `stage:` frontmatter field
 
 Do not follow relation chains beyond the topic's atom set — only atoms declaring `part-of:: [[<topic>]]` contribute to the output. External atoms referenced via `extends::` or `uses::` are noted as pointers, not expanded.
 
@@ -118,7 +118,7 @@ List all cited sources grouped by the atom that cites them:
 [^2] **The Illustrated Transformer** — ...
 ```
 
-For sources with `status: unread` or `read`, prepend:
+For sources with `stage: unread` or `read`, prepend:
 `> ⚠ Unverified — this source has not been fully processed`
 
 #### Section 3 — Tensions
@@ -152,7 +152,7 @@ If any in-scope atoms carry `defines::` fields, read the linked glossary entries
 *(domain: Y)* ⚠ stub — definition not yet reviewed for precision
 ```
 
-Only include terms reachable via in-scope atoms — do not pull in all of `glossary/`. Flag entries where `status: stub` so readers know the definition is a first draft. Entries where `status: reviewed` need no flag.
+Only include terms reachable via in-scope atoms — do not pull in all of `glossary/`. Flag entries where `stage: stub` so readers know the definition is a first draft. Entries where `stage: reviewed` need no flag.
 
 ---
 

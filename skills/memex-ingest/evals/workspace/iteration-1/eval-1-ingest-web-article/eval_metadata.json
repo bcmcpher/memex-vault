@@ -4,7 +4,7 @@
   "prompt": "Save this article to my wiki: https://lilianweng.github.io/posts/2023-06-23-agent/ — I want to track the tool-use and planning patterns for an AI agents project I'm working on. Create the source note and seed any atoms you think are worth tracking.",
   "assertions": [
     {"name": "source-file-created", "description": "A .md file was created in sources/web/ with a YYYY-MM-DD- prefix"},
-    {"name": "correct-frontmatter-fields", "description": "Source note has title, url, medium: web, saved, and status fields"},
+    {"name": "correct-frontmatter-fields", "description": "Source note has title, url, medium: web, saved, and stage fields"},
     {"name": "why-saved-filled", "description": "The '## Why Saved' section contains non-template, non-placeholder content"},
     {"name": "connection-fields-present", "description": "At least one Dataview inline field (supports::, introduces::, or related::) is present"},
     {"name": "atom-created", "description": "At least one atom stub was created in atoms/"},

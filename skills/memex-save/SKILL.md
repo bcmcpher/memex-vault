@@ -59,12 +59,12 @@ In a single prompt, ask:
 1. **"Why are you saving this?"** — one sentence; this is the only context that won't be recoverable from the URL later
 2. **"Have you read this?"** — Yes / Not yet
 
-### 5. Branch on read status
+### 5. Branch on read stage
 
-#### If "Not yet" → `status: unread`
+#### If "Not yet" → `stage: unread`
 Write the source note (Step 6). No reactions, no summary session.
 
-#### If "Yes" → `status: read`
+#### If "Yes" → `stage: read`
 
 **5a. First-read reactions (optional)**
 Ask: "Any quick reactions or highlights?" Accept 1–3 bullets, or skip entirely. Do not prompt again if the user passes.
@@ -90,12 +90,17 @@ Create the file at the correct `sources/<medium>/` path using `_templates/source
 **Frontmatter:**
 ```yaml
 ---
+type: Source
 title: <from fetch>
+description: <one line from the fetched summary; leave blank if the fetch failed>
 url: <url>
 medium: <web|video|paper|docs>
 saved: <today YYYY-MM-DD>
 tags: []
-status: <unread|read>
+stage: <unread|read>
+generated:
+  by: memex-save/claude-opus-5
+  at: <today YYYY-MM-DD>
 ---
 ```
 
@@ -111,7 +116,7 @@ Add type-specific fields when extractable from the fetch: `authors: []` and `yea
 - <reaction bullet>
 - <reaction bullet>
 ```
-*(Omit `## First Read` entirely if `status: unread` or if no reactions were provided)*
+*(Omit `## First Read` entirely if `stage: unread` or if no reactions were provided)*
 
 ```markdown
 ## Summary
@@ -140,11 +145,11 @@ Append to `_meta/log.md`:
 url:: <url>
 atoms:: 
 skill:: memex-save
-notes: status: <unread|read>; <"collaborative summary" | "reactions captured" | "no reactions">
+notes: stage: <unread|read>; <"collaborative summary" | "reactions captured" | "no reactions">
 ```
 
 ### 8. Confirm and close
-Report the file path and status. Suggest next step in one line:
+Report the file path and stage. Suggest next step in one line:
 - If `unread`: "Run `memex-connect` when ready to enrich and wire this into the graph."
 - If `read`: "Run `memex-connect` when ready to wire this into the graph."
 
@@ -154,7 +159,7 @@ Report the file path and status. Suggest next step in one line:
 
 - Does not create atoms, glossary stubs, or Dataview connections
 - Does not do full metadata extraction (full authors array, venue, version) — that's `memex-connect`
-- Does not advance status past `read` — use `memex-connect` for full processing
+- Does not advance `stage:` past `read` — use `memex-connect` for full processing
 - Does not handle meeting notes (no URL) — use `memex-meeting`
 - Collaborative summary mode builds `## Summary` and `## Key Points` only — never touches relation fields
 

@@ -66,7 +66,7 @@ Follow relationship chains up to 2 hops. Stop when you have enough material to a
 For each relevant `cites::` link, read the source file and note:
 - `url` — the actual reference
 - `Summary` / `Key Points` — what the source says
-- `status` — `processed` sources are fully integrated; `read` are partially integrated; `unread` are raw
+- `stage` — `processed` sources are fully integrated; `read` are partially integrated; `unread` are raw
 
 Prefer `processed` sources for authoritative answers. Flag `unread` sources as unverified leads.
 
@@ -143,12 +143,12 @@ Always report when you fell back to grep, so the user knows the graph coverage i
 If the vault has nothing on the topic:
 1. Say so clearly — don't fabricate connections
 2. Check if the topic exists in `glossary/` as a bare definition
-3. Check `_meta/log.md` for any recently ingested but unprocessed sources (`status: read` or `unread`) that touch the topic
+3. Check `_meta/log.md` for any recently ingested but unprocessed sources (`stage: read` or `unread`) that touch the topic
 4. Suggest running ingest for relevant URLs, or creating a stub atom to anchor future sources
 
 ## Reporting Confidence
 
-When answering from the vault, signal confidence based on source status:
+When answering from the vault, signal confidence based on source stage:
 - Atom with multiple `processed` sources → high confidence
 - Atom with `confidence: low` or only `unread` sources → flag as tentative
 - No atom, only sources → summarize directly from sources and note the gap

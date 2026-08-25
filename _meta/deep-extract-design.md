@@ -48,8 +48,8 @@ extracted claim rather than to a whole `## Key Points` section. Same field, fine
 grain. `schema.md` must document this as an extension rather than let it drift in.
 
 **3. Candidate gating already is sift-kg's review pipeline.** sift-kg runs
-`extract → build → resolve → review (merge_proposals.yaml, status: DRAFT) →
-apply-merges`. This vault runs `propose → _meta/candidates/ (status: pending) →
+`extract → build → resolve → review (merge_proposals.yaml, stage: DRAFT) →
+apply-merges`. This vault runs `propose → _meta/candidates/ (stage: pending) →
 user confirms → write`. Structurally identical. The only mismatch is scale: a
 30-page paper yields ~50 claims and you cannot ask 50 confirmation questions.
 Fix: **the extract note itself is the review artifact**, exactly as
@@ -287,7 +287,7 @@ Making it a compose mode keeps the net skill count at 18, not 19.
 ### Card sources
 
 - **Extracted claims** → Cloze cards. The primary source.
-- **Glossary terms** → Basic term → definition cards. Only `status: reviewed`
+- **Glossary terms** → Basic term → definition cards. Only `stage: reviewed`
   entries, never `stub`. This half works today, with no extract needed.
 
 Atom summaries are deliberately excluded: atom prose is discursive and makes poor

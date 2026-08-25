@@ -3,6 +3,14 @@
 Written: 2026-08-25. Companion to `_meta/roadmap.md`; holds the full design for
 Phases 8–9 and the frontmatter changes those phases depend on in Phase 2.
 
+**Phase 2 has landed** (2026-08-25). Every row below marked "Add in Phase 2" is
+now in the vault: `type:` on all seven templates and enforced by `_meta/lint.sh`
+section 11, `description:` on all seven, `status:` renamed to `stage:` across
+templates, skills, lint, and the Dataview index, and `generated:`/`verified:`
+defined in `_meta/schema.md` § Provenance. The folder-to-`type:` mapping lives in
+`_meta/domain.md` under **OKF Types**, which is what the Phase 8 exporter should
+read instead of hard-coding type strings. What remains is the export layer.
+
 Infrastructure doc — not a vault node. No frontmatter, and nothing should link to
 it with a wikilink.
 
@@ -44,17 +52,17 @@ So the work splits in two:
 
 | OKF field | Vault field | Disposition |
 |---|---|---|
-| `type` (required, §4.1) | — | **Add in Phase 2.** The only hard conformance blocker |
+| `type` (required, §4.1) | `type:` | **Done (Phase 2).** Values in `_meta/domain.md` § OKF Types; lint 11a enforces |
 | `title` | `title:` | Already exact, all seven templates |
-| `description` | `## Summary` / `## Definition` / `## Overview` prose | **Add in Phase 2.** Right content, wrong location |
+| `description` | `description:` | **Done (Phase 2).** Drafted from the `## Summary` / `## Definition` / `## Overview` prose |
 | `resource` | `url:` (sources) | Keep `url:`. Exporter maps it. Absent on abstract nodes, correctly |
 | `tags` | `tags:` | Already exact. The vault's controlled vocabulary is stricter than OKF requires, which is legal |
 | `sources[]` (§5.1) | `cites::` / `rebuts::` / `raw::` | **Never duplicate into frontmatter.** Derived at export |
-| `generated.{by,at}` (§5.2) | — (`skill::` in `_meta/log.md`) | **Add in Phase 2.** Information exists, at the wrong granularity |
-| `verified[]` (§5.2) | — | **Define in Phase 2, write in Phase 4** |
-| `status` (§5.4) | `status:` | **Collision.** Rename ours to `stage:` |
+| `generated.{by,at}` (§5.2) | `generated:` | **Done (Phase 2).** Writing skills emit it at creation; `skill::` in `_meta/log.md` stays as the batch record |
+| `verified[]` (§5.2) | `verified:` | **Defined (Phase 2); written in Phase 4** by `memex-trust-audit` |
+| `status` (§5.4) | `stage:` | **Done (Phase 2).** Renamed; lint 11c fails on any in-vault `status:`, so the OKF default of `stable` applies cleanly |
 | `stale_after` (§5.5) | — | **Decline.** See divergences |
-| Actor convention (§7) | — | Adopt in Phase 2 alongside `generated:` |
+| Actor convention (§7) | `generated:` / `verified:` | **Done (Phase 2).** `<producer>/<version>`, `human:<id>`, `process:<id>` — see `_meta/schema.md` § Provenance |
 | `Attested Computation` (§10) | — | Not applicable. A reading vault has no computations |
 | `okf_version` (§12) | — | Emitted by the exporter on the bundle-root `index.md` only |
 

@@ -64,7 +64,7 @@ Ask the user which atoms belong to the topic. Default to including strong candid
 grep -rl "keyword" "$VAULT/sources/"
 ```
 
-Read each hit's frontmatter (`title`, `medium`, `status`) and `## Summary` (first sentence). Present the top matches — cap at 8; if more match, list them and ask the user to select.
+Read each hit's frontmatter (`title`, `medium`, `stage`) and `## Summary` (first sentence). Present the top matches — cap at 8; if more match, list them and ask the user to select.
 
 These populate `cites::` on the new topic. Prefer `processed` sources; flag `unread` ones as unverified.
 
@@ -86,11 +86,15 @@ The template structures below show which fields to populate. Use `_templates/top
 **Concept map** — key fields to fill:
 
     ---
+    type: Concept Map
     title: <Title>
-    topic-type: concept
+    description: <one sentence: what this domain is>
     tags: []
     created: <YYYY-MM-DD>
     reviewed:
+    generated:
+      by: memex-topic-init/claude-opus-5
+      at: <YYYY-MM-DD>
     ---
     
     ## Overview
@@ -113,12 +117,16 @@ The template structures below show which fields to populate. Use `_templates/top
 **Research note** — key fields to fill:
 
     ---
+    type: Research Question
     title: <Title>
-    topic-type: research
+    description: <the question restated in one line>
     question: <the specific research question>
     tags: []
     created: <YYYY-MM-DD>
     reviewed:
+    generated:
+      by: memex-topic-init/claude-opus-5
+      at: <YYYY-MM-DD>
     ---
     
     ## Research Question
@@ -136,12 +144,16 @@ The template structures below show which fields to populate. Use `_templates/top
 **Project** — key fields to fill:
 
     ---
+    type: Project
     title: <Title>
-    topic-type: project
-    status: active
+    description: <one sentence: what this project is trying to build or decide>
     tags: []
     created: <YYYY-MM-DD>
     reviewed:
+    stage: active
+    generated:
+      by: memex-topic-init/claude-opus-5
+      at: <YYYY-MM-DD>
     ---
     
     ## Goal
@@ -170,7 +182,7 @@ Ask before modifying any existing atom file. Report how many atoms were left
 pointing elsewhere, since those will not appear in the new topic.
 
 ### 8. Flag coverage gaps
-Based on what the confirmed sources discuss, are there obvious concepts that belong in this topic but have no atom yet? List up to 3 candidates. For each, offer to create a stub atom (`confidence: low`, no content — just title, tags, and `part-of::`). Ask before creating.
+Based on what the confirmed sources discuss, are there obvious concepts that belong in this topic but have no atom yet? List up to 3 candidates. For each, offer to create a stub atom (`type: Atom`, `confidence: low`, no content — just title, `description:`, tags, and `part-of::`). Ask before creating.
 
 This keeps the topic from starting as an isolated node — even stub atoms give the graph something to query.
 
@@ -181,7 +193,7 @@ Append to `_meta/log.md`:
 url:: n/a
 atoms:: [[atom-one]], [[atom-two]]
 skill:: memex-topic-init
-notes: type: <concept|research|project>; N atoms wired; M sources; L stubs created
+notes: type: <Concept Map|Research Question|Project>; N atoms wired; M sources; L stubs created
 ```
 
 ### 10. Summary

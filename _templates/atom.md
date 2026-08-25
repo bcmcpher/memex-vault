@@ -1,5 +1,7 @@
 ---
+type: Atom
 title: 
+description: 
 aliases: []
 tags: []
 created: <% tp.date.now("YYYY-MM-DD") %>
@@ -8,7 +10,8 @@ confidence: medium
 ---
 
 ## Summary
-<!-- 2–3 sentence plain-language summary of this concept -->
+<!-- 2–3 sentence plain-language summary of this concept.
+     Condense the first sentence into frontmatter `description:`. -->
 
 ## Detail
 <!-- Expanded explanation, edge cases, nuance -->

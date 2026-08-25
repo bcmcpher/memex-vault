@@ -1,25 +1,42 @@
 # Schema
 
-This file is the vault's constitution. Update it when adding or retiring relationship types, node types, status values, or naming conventions. All other notes defer to it.
+This file is the vault's constitution. Update it when adding or retiring relationship types, node types, stage values, or naming conventions. All other notes defer to it.
+
+Subject-matter vocabulary — tags, the domain name, the OKF type names — lives in
+`_meta/domain.md`, not here. This file is what every memex-vault shares; that one
+is what a fork changes.
 
 ---
 
 ## Node Types
 
-| Type | Folder | Granularity | Required Fields |
-|------|--------|-------------|-----------------|
-| Source (web) | `sources/web/` | One file per URL | `title`, `url`, `medium`, `saved`, `status` |
-| Source (video) | `sources/video/` | One file per URL | `title`, `url`, `medium`, `channel`, `saved`, `status` |
-| Source (paper) | `sources/paper/` | One file per URL | `title`, `url`, `medium`, `authors`, `year`, `saved`, `status` |
-| Source (docs) | `sources/docs/` | One file per URL | `title`, `url`, `medium`, `tool`, `saved`, `status` |
-| Source (meeting) | `sources/meeting/` | One file per meeting | `title`, `medium`, `date`, `status` |
-| Atom | `atoms/` | One concept per file | `title`, `created`, `confidence` |
-| Glossary | `glossary/` | One term per file | `title`, `term`, `domain`, `status` |
-| Concept map | `topics/concepts/` | One domain per file | `title`, `topic-type` |
-| Project | `topics/projects/` | One project per file | `title`, `topic-type`, `status` |
-| Research | `topics/research/` | One research question per file | `title`, `topic-type`, `question` |
-| Export | `_exports/` | One file per compose session | (generated — no required frontmatter) |
-| Candidate | `_meta/candidates/` | One file per proposed write | `proposed`, `skill`, `action`, `target`, `session`, `status` |
+| Node | Folder | `type:` | Granularity | Other required fields |
+|------|--------|---------|-------------|-----------------------|
+| Source (web) | `sources/web/` | `Source` | One file per URL | `title`, `url`, `medium`, `saved`, `stage` |
+| Source (video) | `sources/video/` | `Source` | One file per URL | `title`, `url`, `medium`, `channel`, `saved`, `stage` |
+| Source (paper) | `sources/paper/` | `Source` | One file per URL | `title`, `url`, `medium`, `authors`, `year`, `saved`, `stage` |
+| Source (docs) | `sources/docs/` | `Source` | One file per URL | `title`, `url`, `medium`, `tool`, `saved`, `stage` |
+| Source (meeting) | `sources/meeting/` | `Source` | One file per meeting | `title`, `medium`, `date`, `stage` |
+| Atom | `atoms/` | `Atom` | One concept per file | `title`, `created`, `confidence` |
+| Glossary | `glossary/` | `Glossary Term` | One term per file | `title`, `term`, `domain`, `stage` |
+| Concept map | `topics/concepts/` | `Concept Map` | One domain per file | `title` |
+| Project | `topics/projects/` | `Project` | One project per file | `title`, `stage` |
+| Research | `topics/research/` | `Research Question` | One research question per file | `title`, `question` |
+| Export | `_exports/` | — | One file per compose session | (generated — no required frontmatter) |
+| Candidate | `_meta/candidates/` | — | One file per proposed write | `proposed`, `skill`, `action`, `target`, `session`, `stage` |
+
+`type:` is required on every curated node and is the single node-type
+discriminator. `medium:` remains the *sub*type of a source, so a paper is
+`type: Source` + `medium: paper` and no fact is stored twice. `topic-type:` was
+retired — `type:` subsumed it exactly.
+
+The folder-to-`type:` mapping is data, not code: it lives in `_meta/domain.md`
+under **OKF Types**, which is what `_meta/lint.sh` validates against. A fork that
+renames `Atom` to `Note` edits that one table.
+
+`_exports/` and `_meta/candidates/` carry no `type:` — neither is a knowledge
+node. Exports are generated artifacts and candidates are ephemeral proposals;
+both are excluded from the OKF bundle.
 
 ---
 
@@ -134,7 +151,22 @@ When using `challenges::`, `refutes::`, or `contradicts::`, always write a sente
 
 ---
 
-## Status Values
+## Stage Values
+
+`stage:` is this vault's **workflow** position — where a note sits in the pipeline
+that runs from capture to fully integrated. The vocabulary is closed and differs
+per node type; `_meta/lint.sh` validates each note's value against the table for
+its folder.
+
+The field is deliberately *not* called `status:`. In the Open Knowledge Format,
+`status:` is a reserved document-lifecycle field with exactly three values
+(`draft`, `stable`, `deprecated`) and a documented default of `stable` when
+absent. Writing `status: unread` into an OKF-aware reader does not read as
+"missing" — it reads as **wrong**. Leaving `status:` unused in-vault means the
+safe default applies, and the Phase 8 exporter synthesizes a real `status:` from
+`stage:` at export time.
+
+**`status:` must never appear in a vault note.** Lint fails on it.
 
 ### Sources
 | Value | Meaning |
@@ -149,13 +181,6 @@ When using `challenges::`, `refutes::`, or `contradicts::`, always write a sente
 | `unprocessed` | Notes taken, follow-ups not yet acted on |
 | `processed` | Action items done, follow-up sources captured |
 
-### Atoms
-| Value (confidence) | Meaning |
-|--------------------|---------|
-| `low` | Single source, speculative |
-| `medium` | Multiple sources or well-established |
-| `high` | Extensively sourced, cross-validated |
-
 ### Projects
 | Value | Meaning |
 |-------|---------|
@@ -169,6 +194,151 @@ When using `challenges::`, `refutes::`, or `contradicts::`, always write a sente
 |-------|---------|
 | `stub` | Created opportunistically; definition drafted but not reviewed for operational precision |
 | `reviewed` | Definition vetted for operational precision via `memex-glossary` workflow |
+
+### Candidate
+| Value | Meaning |
+|-------|---------|
+| `pending` | Proposed, awaiting review by `memex-candidates` |
+| `reviewed` | Seen by a human; applied or rejected |
+
+Atoms have no `stage:`. An atom is not in a pipeline — it is either written or it
+is not. What varies is how well-evidenced it is, which is `confidence:`.
+
+---
+
+## Confidence Values
+
+Atoms only. Measures **evidence strength**, not workflow position and not human
+sign-off.
+
+| Value | Meaning |
+|-------|---------|
+| `low` | Single source, speculative |
+| `medium` | Multiple sources or well-established |
+| `high` | Extensively sourced, cross-validated |
+
+`confidence:` is orthogonal to `verified:` (below): confidence measures how much
+evidence stands behind a claim, `verified:` records who checked it. A `high`
+confidence atom nobody has reviewed is entirely possible, and so is a `low`
+confidence atom a human has explicitly signed off as correctly hedged.
+
+---
+
+## Atom Writing Style
+
+An atom is one claim, stated plainly, with its evidence attached. These five
+rules exist because the alternative — atoms drifting into essays — is what makes
+a vault unsearchable.
+
+1. **One claim per atom.** If the summary needs the word "and" to stay honest,
+   there are two atoms. `memex-refactor` splits them; lint flags the symptom
+   (`cites::` > 5 *and* `related::` > 4 *and* body > 100 lines).
+2. **Present tense, declarative.** "Flash attention tiles the softmax to avoid
+   materializing the full attention matrix" — not "the paper argues that…". The
+   atom states what is true as far as the vault knows; attribution is what
+   `cites::` is for.
+3. **Hedge single-source claims in the prose, not just in `confidence:`.** A
+   claim standing on one unreplicated paper should say so in words. `confidence:
+   low` is a machine signal; a reader skimming the body needs the same warning.
+4. **Use relations, not inline prose, for connections.** Write
+   `contrasts-with:: [[flash-attention]]`, not "unlike flash attention…". Prose
+   links are invisible to the graph, to Dataview, and to every skill.
+5. **Name the tension when you assert one.** `contradicts::`, `refutes::`, and
+   `challenges::` each require a sentence in the body saying *what* conflicts.
+   Lint section 9 fails a bare conflict link, because a bare one is unusable —
+   the reader learns two notes disagree and nothing about how.
+
+The target length is a Wikipedia stub: a `## Summary` a stranger can read in
+fifteen seconds, and a `## Detail` that earns every line it adds.
+
+---
+
+## Disambiguation Policy
+
+Two notes may not share a filename, and Obsidian resolves wikilinks by filename,
+so collisions are decided at creation time. There are two cases and they resolve
+differently.
+
+**True homonyms** — unrelated senses that happen to share a word. Suffix the slug
+with the disambiguating domain, and never create the bare slug:
+
+```
+atoms/attention-transformers.md
+atoms/attention-neuroscience.md
+```
+
+The bare `attention.md` is left permanently unused. A note that exists at the
+ambiguous name is worse than none, because every future `part-of:: [[attention]]`
+will silently resolve to whichever sense was written first.
+
+**Polysemous senses** — one concept read differently in two contexts. Keep one
+atom and give each reading a `##` section, then anchor citations at the section:
+
+```
+cites:: [[2026-04-27-source#Systems Reading]]
+```
+
+Splitting these produces two atoms that must be kept in step forever, which is
+the failure mode `covers::` was retired for.
+
+**The test:** would a change to one sense oblige a change to the other? Yes ⇒ one
+atom with sections. No ⇒ two suffixed atoms.
+
+Record the decision in the atom body when it is not obvious. `aliases:` carries
+the surface forms a reader might search for — `aliases: [attention]` on both
+homonyms is correct and useful, because aliases disambiguate at read time without
+creating a resolvable link target.
+
+---
+
+## Provenance: `generated:` and `verified:`
+
+Two optional frontmatter blocks recording **who produced a note** and **who has
+since checked it**. Both use the Open Knowledge Format actor convention (OKF §7),
+so the values survive export without translation.
+
+### Actor strings
+
+| Form | Use | Example |
+|------|-----|---------|
+| `<producer>/<version>` | An automated producer and the model or version behind it | `memex-ingest/claude-opus-5` |
+| `human:<id>` | A person | `human:bcmcpher` |
+| `process:<id>` | A non-interactive job | `process:nightly-lint` |
+
+### `generated:`
+
+Written **once, at creation**, by whichever skill created the note. Never updated
+— it records origin, not last touch. `updated:` is the authoritative
+last-modified timestamp and is what changes when a note is revised.
+
+```yaml
+generated:
+  by: memex-ingest/claude-opus-5
+  at: 2026-08-25
+```
+
+This is a genuine capability gain, not conformance overhead. Authorship exists
+today only as `skill::` in `_meta/log.md`, which means it is recoverable for a
+batch but not for a note: open an atom and there is currently no way to tell
+whether a human wrote it or a model did.
+
+### `verified:`
+
+A **list**, appended to whenever someone confirms the note is still accurate. It
+is the human sign-off record, so entries are only ever added, never rewritten.
+
+```yaml
+verified:
+  - by: human:bcmcpher
+    at: 2026-08-25
+```
+
+`verified:` is **defined here in Phase 2 and written in Phase 4**, where
+`memex-trust-audit` becomes its writer. A note with no `verified:` key has simply
+never been checked, which is the honest default.
+
+See `## Confidence Values` above for why `verified:` and `confidence:` are
+orthogonal and must not be collapsed into one field.
 
 ---
 
@@ -202,7 +372,7 @@ Skills that write vault notes, and what they produce:
 
 | Skill | What it creates | Graph wiring | Log entry |
 |-------|----------------|--------------|-----------|
-| `memex-save` | Source note with fetched title + summary draft; branches on read status; optional collaborative summary | None | Yes |
+| `memex-save` | Source note with fetched title + summary draft; branches on read stage; optional collaborative summary | None | Yes |
 | `memex-ingest` | Source note + atoms + connections | Full | Yes |
 | `memex-connect` | Updates existing unread notes | Full | Yes |
 | `memex-meeting` | Meeting source note + atom/glossary stubs | Full | Yes |
@@ -231,7 +401,7 @@ skill: memex-ingest
 action: create
 target: atoms/flash-attention.md
 session: YYYY-MM-DD-HHMM
-status: pending
+stage: pending
 ---
 
 [full file content to write]
@@ -247,7 +417,7 @@ target: atoms/attention-mechanism.md
 section: "## Sources"
 change: append
 session: YYYY-MM-DD-HHMM
-status: pending
+stage: pending
 ---
 
 cites:: [[2026-05-01-flash-attention#Key Points]]
@@ -261,7 +431,7 @@ cites:: [[2026-05-01-flash-attention#Key Points]]
 
 ---
 
-A source note with `status: unread` and no populated Dataview fields in `## Connections` is considered **inbox-only** — captured but not yet integrated into the graph. Run `memex-connect` to process inbox notes.
+A source note with `stage: unread` and no populated Dataview fields in `## Connections` is considered **inbox-only** — captured but not yet integrated into the graph. Run `memex-connect` to process inbox notes.
 
 An atom is an **orphan** when it has no `cites::` *and* no inbound wikilink from a **curated folder** — `sources/`, `atoms/`, `topics/`, or `glossary/`. It neither cites evidence nor is referenced by anything, so it is disconnected from the graph in both directions.
 
@@ -317,30 +487,15 @@ raw
 
 ---
 
-## Tags
+## Tag Vocabulary
 
-Controlled vocabulary for `tags:` frontmatter. Lint Section 10 warns on tags not in this list. Add new tags here before using them.
+Controlled vocabulary for `tags:` frontmatter lives in **`_meta/domain.md`**,
+under *Domain Tags*, *Type Tags*, and *Stage Tags*. Lint section 10 warns on any
+tag not listed there.
 
-### Domain tags
-- `deep-learning`
-- `systems`
-- `statistics`
-- `mathematics`
-- `software-engineering`
-- `neuroscience`
-- `reinforcement-learning`
-- `natural-language-processing`
-- `computer-vision`
+It is not here because tags are the most instance-specific thing in the vault:
+a fork covering, say, constitutional law replaces every domain tag and keeps
+every relation type. Splitting the two means a fork edits one file and inherits
+the rest.
 
-### Type tags
-- `foundational`
-- `applied`
-- `speculative`
-- `tutorial`
-- `reference`
-- `survey`
-
-### Status tags
-- `needs-review`
-- `high-confidence`
-- `stale`
+Add a tag to `_meta/domain.md` before using it.

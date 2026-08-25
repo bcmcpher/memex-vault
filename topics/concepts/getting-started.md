@@ -1,6 +1,7 @@
 ---
+type: Concept Map
 title: Getting Started
-topic-type: concept
+description: Entry point to the vault and a worked example of the concept map format.
 tags: [meta, vault, knowledge-management]
 created: 2026-04-27
 ---
@@ -14,7 +15,7 @@ This is both the entry point to the vault and a working example of the concept m
 ## Core Concepts
 
 Membership is derived from each atom's `part-of::` — there is nothing to maintain
-here. Add `part-of:: [[Getting Started]]` to an atom and it appears below.
+here. Add `part-of:: [[getting-started]]` to an atom and it appears below.
 
 ```dataview
 LIST FROM "atoms"
@@ -103,7 +104,7 @@ See `_meta/schema.md` for the full linting guide and relationship taxonomy.
 ## Dataview: Recently Ingested Sources
 
 ```dataview
-TABLE medium, saved, status
+TABLE medium, saved, stage
 FROM "sources"
 SORT saved DESC
 LIMIT 10

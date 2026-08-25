@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "What do I know about retrieval-augmented generation? I'm trying to remember what sources I have and what the key concepts are.",
-      "expected_output": "Structured answer: graph path taken (concept map → atoms → sources), synthesized answer from atom content, source table with URLs and status, adjacent concepts to explore. If vault is empty, gracefully explains there's no content and suggests next steps.",
+      "expected_output": "Structured answer: graph path taken (concept map → atoms → sources), synthesized answer from atom content, source table with URLs and stage, adjacent concepts to explore. If vault is empty, gracefully explains there's no content and suggests next steps.",
       "files": []
     },
     {

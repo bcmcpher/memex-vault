@@ -111,10 +111,14 @@ For each confirmed **Create**: write a candidate file to `_meta/candidates/` bef
 Topic file frontmatter:
 ```yaml
 ---
+type: Concept Map
 title: <confirmed title, Title Case>
-topic-type: concept
+description: <one sentence naming what the cluster has in common>
 created: YYYY-MM-DD
 tags: [<dominant tag from cluster>]
+generated:
+  by: memex-topic-emerge/claude-opus-5
+  at: YYYY-MM-DD
 ---
 ```
 

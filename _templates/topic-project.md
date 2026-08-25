@@ -1,14 +1,16 @@
 ---
+type: Project
 title: 
-topic-type: project
-status: active
+description: 
 tags: []
 created: <% tp.date.now("YYYY-MM-DD") %>
 reviewed: 
+stage: active
 ---
 
 ## Goal
-<!-- What are you trying to build or decide? -->
+<!-- What are you trying to build or decide?
+     Condense into frontmatter `description:`. -->
 
 ## Background
 cites:: 

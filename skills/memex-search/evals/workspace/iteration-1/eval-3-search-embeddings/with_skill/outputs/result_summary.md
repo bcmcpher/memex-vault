@@ -5,7 +5,7 @@
 | Assertion | Pass? | Evidence |
 |-----------|-------|---------|
 | honest-sparse-reporting | PASS | Reported meeting note as an "unverified lead", not a primary answer; called out zero benchmark data |
-| unread-sources-flagged | PASS | Meeting note (status: unprocessed) explicitly flagged as "unverified lead, not authoritative knowledge" |
+| unread-sources-flagged | PASS | Meeting note (stage: unprocessed) explicitly flagged as "unverified lead, not authoritative knowledge" |
 | gap-suggestion-provided | PASS | 5 specific next steps: Cohere docs, OpenAI docs, MTEB survey, promote meeting to atoms, create concept map |
 | grep-fallback-transparent | PASS | Explicitly stated "Graph traversal yielded nothing — fell back to grep" with method described |
 
