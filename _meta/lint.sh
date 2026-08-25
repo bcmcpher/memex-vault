@@ -18,6 +18,7 @@
 #  10. Tag vocabulary (unknown tags, from _meta/domain.md)
 #  11. Schema conformance (type: present and correct, stage: in vocabulary,
 #      status: absent)
+#  12. Extract grounding (every claim's quote present in the normalized archive)
 #   Summary counts
 #
 # Exit status:
@@ -25,8 +26,9 @@
 #   1 — one or more FAIL-level findings
 #
 # WARN is a soft signal for human review. FAIL means the vault is corrupt in a way
-# no reviewer should have to notice: a misnamed source, or a raw:: pointing at a
-# file that does not exist.
+# no reviewer should have to notice: a misnamed source, a raw:: pointing at a file
+# that does not exist, or an extracted claim quoting text the source never
+# contained.
 
 set -euo pipefail
 
@@ -118,6 +120,14 @@ while IFS= read -r -d '' f; do
     check_field "$f" "domain" "$label"
 done < <(find "$VAULT/glossary" -name "*.md" ! -name ".gitkeep" -print0)
 
+dir="$VAULT/extracts"
+[ -d "$dir" ] && while IFS= read -r -d '' f; do
+    label="extracts/$(basename "$f")"
+    check_field "$f" "title"     "$label"
+    check_field "$f" "extracted" "$label"
+    check_field "$f" "claims"    "$label"
+done < <(find "$dir" -name "*.md" ! -name ".gitkeep" -print0)
+
 # Topics, per the Node Types table in _meta/schema.md.
 for sub in concepts projects research; do
     dir="$VAULT/topics/$sub"
@@ -200,22 +210,30 @@ ok "orphan atom check complete"
 echo ""
 echo "── 5. Archive Mismatches (raw:: links) ───────────────────────────────────"
 
-while IFS= read -r -d '' f; do
-    while IFS= read -r line; do
-        # Extract path after "raw:: " — strip leading ./ or vault-relative prefix
-        raw_path=$(echo "$line" | sed 's/^raw:: *//')
-        if [[ "$raw_path" == .archive/* ]]; then
-            target="$VAULT/$raw_path"
-        else
-            target="$raw_path"
-        fi
-        if [ ! -f "$target" ]; then
-            error "$(realpath --relative-to="$VAULT" "$f") — raw:: points to missing file: $raw_path"
-        fi
-    done < <(grep "^raw::" "$f" 2>/dev/null || true)
-done < <(find "$VAULT/sources" -name "*.md" ! -name ".gitkeep" -print0)
+# .archive/ is gitignored, so a fresh clone has none of it. Absent *entirely* is
+# the clone case and SKIPs; a file missing while the folder exists is a real
+# mismatch and FAILs. Without that split every clone would fail lint on the first
+# raw:: it met — the same trap section 12 avoids, and the same reasoning.
+if [ ! -d "$VAULT/.archive" ]; then
+    echo -e "  ${DIM}SKIP${NC}  no .archive/ directory — raw:: targets unverifiable (expected on a fresh clone)"
+else
+    while IFS= read -r -d '' f; do
+        while IFS= read -r line; do
+            # Extract path after "raw:: " — strip leading ./ or vault-relative prefix
+            raw_path=$(echo "$line" | sed 's/^raw:: *//')
+            if [[ "$raw_path" == .archive/* ]]; then
+                target="$VAULT/$raw_path"
+            else
+                target="$raw_path"
+            fi
+            if [ ! -f "$target" ]; then
+                error "$(realpath --relative-to="$VAULT" "$f") — raw:: points to missing file: $raw_path"
+            fi
+        done < <(grep "^raw::" "$f" 2>/dev/null || true)
+    done < <(find "$VAULT/sources" -name "*.md" ! -name ".gitkeep" -print0)
 
-ok "archive mismatch check complete"
+    ok "archive mismatch check complete"
+fi
 
 # ── 6. Graph Health ──────────────────────────────────────────────────────────
 
@@ -341,7 +359,7 @@ if [ -f "$schema_file" ]; then
                     warn "$label — unknown relation field: ${field}::"
                 fi
             done < <(awk 'BEGIN{fm=0} /^---$/{fm++; next} fm>=2 && /^[a-z][a-z-]*::/{sub(/::.*/, ""); print}' "$f" 2>/dev/null)
-        done < <(find "$VAULT/sources" "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null)
+        done < <(find "$VAULT/sources" "$VAULT/atoms" "$VAULT/extracts" -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null)
     fi
 fi
 
@@ -594,6 +612,161 @@ else
     ok "schema conformance check complete"
 fi
 
+# ── 12. Extract Grounding ────────────────────────────────────────────────────
+
+echo ""
+echo "── 12. Extract Grounding ──────────────────────────────────────────────────"
+
+# The anti-fabrication check, and the reason Phase 0 had to make FAIL a real gate
+# first. Every claim in extracts/ carries a verbatim quote; this section greps for
+# that quote in the source's normalized raw:: archive. A quote that is not there
+# is a FAIL — fabrication is deep extraction's characteristic failure mode, and
+# this is the only defense with no LLM anywhere in the verification loop.
+#
+# It works only against normalized text. Raw pdftotext output is hard-wrapped and
+# full of ligatures and smart quotes, so a naive grep -F would fail on almost
+# every multi-line quote and the check would be pure noise. _meta/normalize.sh is
+# what makes exact match hold by construction; every skill that writes an archive
+# pipes through it.
+#
+# A missing archive is a SKIP, never a FAIL: .archive/ is gitignored, so it is
+# absent on every clone, and *unverifiable* is not *fabricated*. The guarantee is
+# local-only by construction. See _meta/schema.md § Extract Claims.
+
+extracts_dir="$VAULT/extracts"
+have_extracts=""
+if [ -d "$extracts_dir" ]; then
+    have_extracts=$(find "$extracts_dir" -name "*.md" ! -name ".gitkeep" -print -quit 2>/dev/null || true)
+fi
+
+if [ -z "$have_extracts" ]; then
+    echo -e "  ${DIM}SKIP${NC}  no extracts/ — run memex-deep-extract to build the evidence layer"
+else
+    grounded=0
+    unverifiable=0
+
+    while IFS= read -r -d '' f; do
+        rel="extracts/$(basename "$f")"
+        slug="$(basename "$f" .md)"
+
+        # 12a. extracted-from:: is the extract's only record of provenance, and
+        # the filename is supposed to be the source's with an ext- prefix. A
+        # dangling one detaches the whole file: there is nothing left to check
+        # the quotes against.
+        src_target=$(grep "^extracted-from::" "$f" 2>/dev/null | head -1 \
+                     | grep -oE '\[\[[^]|#]+' | tr -d '[' || true)
+        src_file=""
+        if [ -z "$src_target" ]; then
+            error "$rel — no extracted-from:: (an extract with no source cannot be grounded)"
+        else
+            src_file=$(find "$VAULT/sources" -name "${src_target}.md" 2>/dev/null | head -1)
+            if [ -z "$src_file" ]; then
+                error "$rel — extracted-from:: [[${src_target}]] but no such file in sources/"
+            fi
+            if [ "ext-${src_target}" != "$slug" ]; then
+                warn "$rel — filename should be ext-${src_target}.md to match extracted-from::"
+            fi
+        fi
+
+        # 12b. claims: is the one derived number the schema keeps in frontmatter,
+        # because Dataview cannot count block ids. Cross-check so it cannot drift.
+        declared=$(grep "^claims:" "$f" 2>/dev/null | head -1 | sed 's/^claims:[[:space:]]*//;s/[[:space:]]*$//' || true)
+        claim_ids=$(grep -cE '\^c[0-9]+[[:space:]]*$' "$f" 2>/dev/null || true)
+        if [ -n "$declared" ] && [ "$declared" != "$claim_ids" ]; then
+            warn "$rel — claims: $declared but $claim_ids block ids in the body"
+        fi
+
+        # Duplicate ids would make cites:: [[extract#^c07]] resolve ambiguously,
+        # which silently breaks the provenance the whole layer exists to provide.
+        dupes=$(grep -oE '\^c[0-9]+[[:space:]]*$' "$f" 2>/dev/null | sed 's/[[:space:]]*$//' | sort | uniq -d || true)
+        if [ -n "$dupes" ]; then
+            error "$rel — duplicate claim ids: $(echo "$dupes" | tr '\n' ' ')"
+        fi
+
+        # Resolve the archive once per extract.
+        archive=""
+        if [ -n "$src_file" ]; then
+            raw_path=$(grep "^raw::" "$src_file" 2>/dev/null | head -1 | sed 's/^raw:: *//' || true)
+            if [ -n "$raw_path" ]; then
+                case "$raw_path" in
+                    /*) archive="$raw_path"        ;;
+                    *)  archive="$VAULT/$raw_path" ;;
+                esac
+                [ -f "$archive" ] || archive=""
+            fi
+        fi
+
+        # 12c. Every claim needs a quote. "A claim with no checkable quote is not
+        # a claim" is the design's phrasing, and it is a FAIL for that reason.
+        quote_count=$(grep -cE '^[[:space:]]*-[[:space:]]*quote:' "$f" 2>/dev/null || true)
+        if [ "$quote_count" -lt "$claim_ids" ]; then
+            error "$rel — $claim_ids claims but only $quote_count quote: lines"
+        fi
+
+        # 12d. The grounding itself.
+        while IFS= read -r qline; do
+            quote=$(echo "$qline" | sed 's/^[[:space:]]*-[[:space:]]*quote:[[:space:]]*//; s/^"//; s/"[[:space:]]*$//')
+            if [ -z "$quote" ]; then
+                error "$rel — empty quote: line"
+                continue
+            fi
+            if [ -z "$archive" ]; then
+                unverifiable=$((unverifiable + 1))
+                continue
+            fi
+            if grep -qF -- "$quote" "$archive" 2>/dev/null; then
+                grounded=$((grounded + 1))
+            else
+                hint=""
+                case "$quote" in
+                    *...*) hint=" [contains an ellipsis — quotes must be contiguous; emit two quote: lines]" ;;
+                esac
+                error "$rel — quote not found in $(basename "$archive"): \"$(echo "$quote" | cut -c1-70)\"$hint"
+            fi
+        done < <(grep -E '^[[:space:]]*-[[:space:]]*quote:' "$f" 2>/dev/null || true)
+    done < <(find "$extracts_dir" -name "*.md" ! -name ".gitkeep" -print0)
+
+    if [ "$unverifiable" -gt 0 ]; then
+        echo -e "  ${DIM}SKIP${NC}  $unverifiable quote(s) unverifiable — no archive on disk (expected on a fresh clone)"
+    fi
+    ok "grounding check complete ($grounded quote(s) verified)"
+fi
+
+# 12e. Dangling block anchor: a note cites [[target#^id]] that does not exist.
+# Provenance that resolves to nothing is worse than none — the atom reads as
+# claim-grounded and is not.
+while IFS= read -r -d '' f; do
+    label=$(realpath --relative-to="$VAULT" "$f")
+    while IFS= read -r ref; do
+        target="${ref%%#*}"
+        anchor="${ref#*#}"
+        tfile=$(find "$VAULT/extracts" "$VAULT/sources" "$VAULT/atoms" -name "${target}.md" 2>/dev/null | head -1)
+        if [ -z "$tfile" ]; then
+            warn "$label — cites:: [[${target}#${anchor}]] but no such note"
+        elif ! grep -qF -- "$anchor" "$tfile" 2>/dev/null; then
+            warn "$label — cites:: [[${target}#${anchor}]] but ${target} has no block ${anchor}"
+        fi
+    done < <(grep -oE '\[\[[^]|]+#\^[A-Za-z0-9-]+' "$f" 2>/dev/null | sed 's/^\[\[//' || true)
+done < <(find "$VAULT/atoms" "$VAULT/sources" "$VAULT/topics" "$VAULT/glossary" \
+              -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null)
+
+# 12f. confidence: high with no block-anchored citation. Per _meta/schema.md
+# § Confidence Values, `high` requires claim-level grounding — an atom resting on
+# three filenames has not been checked, it has been counted. Complements 8a,
+# which checks how many sources there are; this checks how specific they are.
+while IFS= read -r -d '' f; do
+    atom_name="$(basename "$f" .md)"
+    confidence=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | sed 's/^confidence:[[:space:]]*//' || true)
+    if [ "$confidence" = "high" ]; then
+        anchored=$(grep -cE '^cites::.*\[\[[^]|]+#\^' "$f" 2>/dev/null || true)
+        if [ "$anchored" -eq 0 ]; then
+            warn "atoms/${atom_name}.md — confidence: high with no block-anchored cites:: (capped at medium without claim-level grounding)"
+        fi
+    fi
+done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
+
+ok "extract grounding check complete"
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 
 echo ""
@@ -606,6 +779,7 @@ printf "  %-22s %s\n" "Sources (video):"   "$(count_md "$VAULT/sources/video")"
 printf "  %-22s %s\n" "Sources (paper):"   "$(count_md "$VAULT/sources/paper")"
 printf "  %-22s %s\n" "Sources (docs):"    "$(count_md "$VAULT/sources/docs")"
 printf "  %-22s %s\n" "Sources (meeting):" "$(count_md "$VAULT/sources/meeting")"
+printf "  %-22s %s\n" "Extracts:"          "$(count_md "$VAULT/extracts")"
 printf "  %-22s %s\n" "Atoms:"             "$(count_md "$VAULT/atoms")"
 printf "  %-22s %s\n" "Glossary terms:"    "$(count_md "$VAULT/glossary")"
 printf "  %-22s %s\n" "Concept maps:"      "$(count_md "$VAULT/topics/concepts")"

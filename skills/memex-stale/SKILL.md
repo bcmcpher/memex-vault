@@ -50,6 +50,28 @@ grep -rlE "^part-of::.*\[\[<topic>\]\]" "$VAULT/atoms/"
 
 For each topic, collect its member atoms, then check the `confidence:` field in each. If all are `confidence: low`, flag the topic as underconfident. A topic with no member atoms is not underconfident — it is empty; skip it.
 
+### Check 4 — Processed sources never deep-extracted
+
+An extract records what a source said claim by claim. A source that is
+`stage: processed` but has no extract has been summarized and wired, never read
+at that grain — so nothing citing it can be grounded, and no atom resting on it
+can reach `confidence: high`.
+
+```bash
+VAULT=/home/bcmcpher/Projects/claude/memex-vault
+for f in "$VAULT"/sources/*/*.md; do
+    grep -q "^stage: processed" "$f" || continue
+    [ -f "$VAULT/extracts/ext-$(basename "$f")" ] || echo "$f"
+done
+```
+
+Rank by how much the vault leans on the source: count the atoms citing it, and
+report the most-cited first. A source three atoms depend on and nobody has read
+closely is a much better use of an expensive skill than one nothing cites.
+
+Report these; do not run anything. `memex-deep-extract` is the most expensive
+skill in the vault and is user-invoked by design.
+
 ---
 
 ## Output Format
@@ -78,8 +100,14 @@ These are highest priority: you've already read them.
 | ...   | ...        | yes                 |
 → Run: memex-connect (add sources) or memex-trust-audit
 
+### Processed sources never deep-extracted (Check 4) — N sources
+| Title | Medium | Atoms citing it |
+|-------|--------|-----------------|
+| ...   | ...    | ...             |
+→ Run: memex-deep-extract mode A (expensive — pick the most-cited first)
+
 ---
-Total: N findings across 3 checks.
+Total: N findings across 4 checks.
 ```
 
 If a check finds nothing, say so in one line and move on — don't omit the section.

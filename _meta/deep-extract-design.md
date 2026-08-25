@@ -1,6 +1,9 @@
 # Deep Extract — Design
 
 Written: 2026-07-09. Design for roadmap Phase 3 (finding E1).
+**Implemented 2026-08-25.** Six things changed between the design and the build;
+they are recorded in *Implementation decisions* at the end, and the body below has
+been corrected to match what actually shipped.
 
 Infrastructure doc — not a vault node. No frontmatter, and nothing should link to
 it with a wikilink.
@@ -67,12 +70,20 @@ carefully. See "Making the grounding check real."
 
 ## The new layer: `extracts/`
 
-One file per deep-extracted source, filename mirroring the source **exactly**:
+One file per deep-extracted source, filename derived from the source's with an
+`ext-` prefix:
 
 ```
 sources/paper/2026-04-27-lewis-rag-retrieval-augmented-generation.md
-extracts/2026-04-27-lewis-rag-retrieval-augmented-generation.md
+extracts/ext-2026-04-27-lewis-rag-retrieval-augmented-generation.md
 ```
+
+The prefix is load-bearing. Mirroring the filename *exactly* — which this document
+originally specified — puts two notes in the vault under one name, and Phase 2's
+own § Disambiguation Policy opens by stating that Obsidian resolves wikilinks by
+filename. Every `cites:: [[2026-04-27-lewis-rag-…]]` already written on an atom
+would have gone ambiguous the moment its extract appeared, silently. The prefix
+keeps the mapping mechanical in both directions while leaving one name per file.
 
 Density sits between `.archive/` (raw text, gitignored) and `sources/` (prose
 summary). In the `_meta/ccm-mapping.md` framing this is the missing rung of the
@@ -102,12 +113,14 @@ both at the top of the note.
 
 ````markdown
 ---
+type: Extract
 title: "Extract: Retrieval-Augmented Generation for Knowledge-Intensive NLP"
-source: 2026-04-27-lewis-rag-retrieval-augmented-generation
-medium: paper
+description: Claim-level extraction of the RAG paper.
 extracted: 2026-07-09
 claims: 47
-grounded: true
+generated:
+  by: memex-deep-extract/claude-opus-5
+  at: 2026-07-09
 ---
 
 extracted-from:: [[2026-04-27-lewis-rag-retrieval-augmented-generation]]
@@ -146,6 +159,16 @@ mentions:: [[retrieval-augmented-generation]], [[dense-passage-retrieval]]
 Staging tables use **backticked slugs, never `[[wikilinks]]`**. A proposed relation
 is not yet a graph edge; rendering it as a link would create edges the human never
 approved.
+
+Three fields from the original sketch are gone. `source:` and `medium:` were
+derivable — the filename and `extracted-from::` already name the source twice, and
+`medium:` belongs to the source note — so keeping them would have rebuilt the
+duplication Phase 1 spent its whole budget removing. `grounded: true` was worse: a
+cached lint verdict stored inside the file it judges, which goes stale on the next
+edit and which a fabricating writer can simply assert. Grounding is what lint
+computes, never what a note claims about itself. `claims:` survives, because
+Dataview cannot count block ids and the index needs the figure — and lint
+cross-checks it so it cannot drift.
 
 `type:` is the bridge from free extraction into the vault's closed vocabulary:
 `finding → supports::`, `definition → glossary`, `limitation → limits::`,

@@ -111,8 +111,15 @@ glossary|Glossary Term
 topics/concepts|Concept Map
 topics/projects|Project
 topics/research|Research Question
+extracts|Extract
 ```
 
 `medium:` remains the source subtype, so nothing is duplicated: a paper is
 `type: Source` + `medium: paper`. `topic-type:` was retired in roadmap Phase 2 —
 `type:` subsumed it exactly.
+
+`Extract` was added in roadmap Phase 3. An extract is evidence, not knowledge: it
+records what one source said, claim by claim, with a verbatim quote per claim. It
+is the only node type with no `stage:`, because it is written once and harvested
+many times rather than moving through a pipeline. See `_meta/schema.md`
+§ Extract Claims.

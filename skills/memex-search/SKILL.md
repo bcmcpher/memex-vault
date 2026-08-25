@@ -108,7 +108,8 @@ To answer specific structural questions, follow these chains:
 | What specializes concept X? | Atoms where `extends:: [[X]]` |
 | What depends on concept X? | Atoms where `uses:: [[X]]` |
 | What conflicts with X? | `contradicts::` on X; atoms where `contradicts:: [[X]]` |
-| What sources back atom X? | `cites::` on atom X → source files |
+| What sources back atom X? | `cites::` on atom X → source files (a `#^cNN` anchor lands on one claim in an extract) |
+| What exactly did source S say about X? | `extracts/ext-<S>.md` → the claim whose `about:` names X |
 | What's in domain Y? | Atoms where `part-of:: [[Y]]` |
 | Where is term T defined? | `glossary/T.md` + atoms with `defines:: [[T]]` |
 | What sources introduced concept X? | Sources where `introduces:: [[X]]` |
@@ -136,6 +137,33 @@ grep -r "extends:: \[\[" /home/bcmcpher/Projects/claude/memex-vault/atoms/
 
 Always report when you fell back to grep, so the user knows the graph coverage is incomplete for this topic.
 
+### Extracts: a gap-finding surface, never an answer surface
+
+`extracts/` holds claim-level readings of sources — structured, typed, and
+quote-grounded. That structure is why the usual objection to grepping sources
+(unranked hits with no epistemic status) does not apply to them.
+
+It does **not** make them an answer surface. Reach a claim the normal way, through
+an atom's `cites:: [[ext-…#^cNN]]`. Searching extracts directly is a **last**
+fallback, after atoms, glossary, and sources have all come up empty:
+
+```bash
+VAULT=/home/bcmcpher/Projects/claude/memex-vault
+grep -ril "keyword" "$VAULT/extracts/"
+```
+
+Every hit is reported as **unpromoted evidence, not vault knowledge**:
+
+> "No atom covers this. `extracts/ext-2026-04-27-lewis-rag.md` has 4 claims about
+> it (`^c12`, `^c19`, `^c23`, `^c31`) — evidence was collected and never curated
+> into a concept. Run `memex-deep-extract` mode B to promote it, or
+> `memex-topic-emerge` if the same concepts recur across several extracts."
+
+That framing is the whole point. It answers a question nothing else in the vault
+can — *where has evidence been collected that no concept has been formed from?* —
+while keeping the curation discipline intact. Presenting an extract hit as an
+answer would quietly make the vault's knowledge whatever happened to get scraped.
+
 ---
 
 ## Handling No Results
@@ -144,7 +172,8 @@ If the vault has nothing on the topic:
 1. Say so clearly — don't fabricate connections
 2. Check if the topic exists in `glossary/` as a bare definition
 3. Check `_meta/log.md` for any recently ingested but unprocessed sources (`stage: read` or `unread`) that touch the topic
-4. Suggest running ingest for relevant URLs, or creating a stub atom to anchor future sources
+4. Check `extracts/` last, and report any hit as unpromoted evidence (above)
+5. Suggest running ingest for relevant URLs, or creating a stub atom to anchor future sources
 
 ## Reporting Confidence
 
@@ -152,3 +181,10 @@ When answering from the vault, signal confidence based on source stage:
 - Atom with multiple `processed` sources → high confidence
 - Atom with `confidence: low` or only `unread` sources → flag as tentative
 - No atom, only sources → summarize directly from sources and note the gap
+- No atom, only extracts → **unpromoted evidence**, never presented as knowledge
+
+Note that source *count* is a weak signal: per `_meta/schema.md` § Confidence
+Values, the unit is independent claims across independent sources, and three
+posts about one paper are one piece of evidence. An atom whose `cites::` are
+block-anchored (`[[ext-…#^cNN]]`) has been checked at claim level; one whose
+citations are all bare has been counted, not checked. Say which.

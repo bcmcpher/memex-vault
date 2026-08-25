@@ -413,7 +413,7 @@ Items 13 and 14 are lint defects rather than Phase 2 work, fixed here because
 this phase is what exposed them and because a lint that dies partway cannot gate
 anything — which was Phase 0's entire point.
 
-### Phase 3 — Evidence layer
+### Phase 3 — Evidence layer *(in progress — see Resume below)*
 
 See `_meta/deep-extract-design.md`. Summary: a new `extracts/` node type, one file
 per deep-extracted source, holding quote-grounded claims addressable by Obsidian
@@ -428,6 +428,118 @@ extract claims map onto OKF §5.1 footnote-keyed per-claim attribution
 (`[^source-id]` joined to `sources[].id`) — the planned block-reference addressing
 is the same idea, and the exporter renders one as the other. No design change;
 recorded so Phase 8 does not reinvent it.
+
+#### Design calls made during implementation (2026-08-25, confirmed with the user)
+
+Five conflicts between `deep-extract-design.md` and this roadmap, resolved before
+building. All five are already reflected in the code and docs on branch
+`phase-3-evidence-layer`.
+
+1. **Archive normalization gets its own script.** `memex-ingest` already wrote
+   `.archive/` files with no normalization, so any extract taken from an
+   ingest-written archive would have thrown false grounding FAILs. New
+   `_meta/normalize.sh` (bash/awk, deterministic, idempotent); *every* skill that
+   writes an archive pipes through it. Rejected: having deep-extract normalize in
+   place on first use, which would leave the guarantee dependent on which skill
+   saved the file.
+2. **Anki is deferred entirely to Phase 5.** The design doc's change list included
+   `anki/.gitkeep`, the `.obsidian/app.json` exclusion, and the `memex-compose`
+   render mode; the roadmap makes Anki its own phase. Roadmap wins — Phase 3
+   touches nothing Anki-related.
+3. **The confidence rubric (P2) landed here, not in Phase 4.** Extracts make it
+   expressible, so it was written while the schema was open. **Phase 4 therefore
+   shrinks to the `memex-trust-audit` rebuild** — `related::` promotion already
+   landed in Phase 1, so that phase now has one item.
+4. **`grounded:` and `source:` dropped from extract frontmatter.** `grounded: true`
+   is a cached lint verdict stored in the file it judges: it goes stale, and a
+   fabricating writer can simply assert it. `source:` was a third copy of a fact
+   the filename and `extracted-from::` already carry. `medium:` was dropped on the
+   same reasoning. `claims:` survives with a lint cross-check, because Dataview
+   cannot count block ids.
+5. **Extract filenames take an `ext-` prefix.** The design mandated mirroring the
+   source filename *exactly*, which collides head-on with Phase 2's own
+   Disambiguation Policy — Obsidian resolves wikilinks by filename, so every
+   `cites:: [[<source-slug>]]` already on an atom would silently go ambiguous the
+   moment its extract appeared. Confirmed in a fixture: two files, one name.
+   `extracts/ext-<source-slug>.md`.
+
+#### Defect found while implementing
+
+**`_meta/lint.sh` section 5 failed every fresh clone.** `.archive/` is gitignored,
+so a clone has none of it, and the archive-mismatch check FAILed on the first
+`raw::` it met — the exact trap `deep-extract-design.md` argues the *grounding*
+check must avoid, already live one section earlier since Phase 0. Now split: if
+`.archive/` is absent entirely that is the clone case and SKIPs; a file missing
+while the folder exists is a real mismatch and still FAILs. The gate is preserved
+everywhere it means anything.
+
+#### Resume instructions
+
+Branch: **`phase-3-evidence-layer`**. `bash _meta/lint.sh` exits 0. Committed as
+WIP; the work below is what remains.
+
+**Done and verified:**
+
+- `_meta/normalize.sh` — new. Idempotence and folding tested against hyphenated
+  line breaks, soft hyphens, ligatures, smart quotes, nested lists, code fences.
+- `_templates/extract.md`, `extracts/.gitkeep` — new.
+- `_meta/domain.md` — `extracts|Extract` in the OKF Types table.
+- `_meta/schema.md` — Extract node type; `extracted-from::` / `mentions::`
+  (also added to Valid Relation Fields); block anchors on `cites::`; new
+  § Extract Claims; **rewritten § Confidence Values** (independent-claims rubric,
+  inferred source tiers, `medium` cap without extracts); Archive section rewritten
+  around `normalize.sh`; `ext-` in Naming Conventions; orphan definition now names
+  `extracts/` as non-curated.
+- `_meta/lint.sh` — section 2 extract fields; **section 5 clone fix**; section 7e
+  scans `extracts/`; **new section 12** (12a `extracted-from::` resolves + filename
+  matches, 12b `claims:` cross-check + duplicate ids, 12c every claim has a quote,
+  12d `grep -F` grounding with ellipsis hint, 12e dangling block anchors,
+  12f `high` without block-anchored `cites::`); extracts in the summary counts.
+  Verified in a fixture vault: positive grounds, fabricated quote FAILs with
+  exit 1, absent `.archive/` SKIPs with exit 0, missing-file-in-present-folder
+  FAILs, `claims:` drift and duplicate ids fire.
+- `_meta/index.md` — `## Extracts`, "extracts with unpromoted claims", "processed
+  sources with no extract"; `extracts` added to the provenance and missing-`type:`
+  queries; a pointer to lint 12f where Dataview cannot see block subpaths.
+- `skills/memex-deep-extract/SKILL.md` — new, both modes.
+- `skills/*/references/vault-schema.md` — 14 copies, byte-identical (verified:
+  one md5).
+- `skills/memex-ingest/SKILL.md` — archives written through `normalize.sh`.
+- `skills/memex-search/SKILL.md` — extracts as a gap-finding surface only.
+- `skills/memex-trust-audit/SKILL.md` — UNGROUNDED finding, independence test,
+  extract-existence check on G13.
+- `skills/memex-stale/SKILL.md` — Check 4, processed sources never extracted.
+- `README.md` — layer diagram, folder tree, node types, `ext-` rationale, skill
+  lifecycle and reference table, graph colouring, archival section.
+
+**Remaining:**
+
+1. **`_meta/deep-extract-design.md` — finish the correction pass.** Started; the
+   header note, the `ext-` filename rule, and the frontmatter block are done. Still
+   to do: (a) an *Implementation decisions* section at the end recording the five
+   calls above; (b) the OKF §5.1 footnote-attribution correspondence the addendum
+   asks for; (c) mark the Anki section as Phase 5, deferred; (d) rewrite § Changes
+   required (Phase 3) to match what shipped — `normalize.sh` added, `anki/` and
+   `.obsidian/app.json` and `memex-compose` removed, confidence rubric moved in;
+   (e) resolve the two Open questions (the ≥ 3 stub threshold stays a stated
+   default the skill announces per run; the `memex-search` fallback shipped, with
+   hits reported as unpromoted evidence).
+2. **Mark Phase 3 `**Done.**`** in the phase-order table and change this heading to
+   *(complete)*, once item 1 is finished.
+3. **Amend Phase 4's entry** to note it is now only the `memex-trust-audit`
+   rebuild — the rubric landed here and `related::` promotion landed in Phase 1.
+4. **Amend Phase 6's entry** — `memex-init` must scaffold `extracts/` and the
+   `ext-` naming rule, not just `_meta/domain.md` and `_okf/`.
+5. **Amend Phase 8's entry** — the exporter must map `extracts/` onto OKF §5.1
+   footnote-keyed attribution, and `_meta/normalize.sh` is a second script it
+   should not duplicate.
+6. **Commit properly and merge to `main`.** `main` is currently 3 commits ahead of
+   `origin/main` and unpushed; the user has never asked for a push.
+
+**Still unverified, carried forward from Phases 1–2:** no Dataview query in
+`_meta/index.md` has ever been executed — no Obsidian here, and the vault has 0
+atoms and 0 extracts. The three new extract queries use the `meta(l).path` inlinks
+idiom already present in the file, but they are unrun.
 
 ### Phase 4 — Confidence rubric + `related::` promotion
 
