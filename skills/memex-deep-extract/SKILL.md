@@ -5,7 +5,9 @@ description: Read one source claim by claim and write a quote-grounded extract, 
 
 # Karpathy Wiki Deep Extract
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
+**Vault root:** `$VAULT`, resolved at run time as
+`VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
+fork of this vault works unedited.
 
 This skill builds and harvests the vault's **evidence layer**. Sources are stored
 at document granularity — a human-written `## Summary` and `## Key Points` — so
@@ -53,7 +55,7 @@ no atom, no glossary entry, no topic, no `part-of::`, no confidence change.
 Read the source note. Look for `raw::`.
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 grep "^raw::" "$VAULT/sources/paper/<slug>.md"
 ```
 
@@ -143,7 +145,7 @@ Map claim types onto it:
 Three tiers, cheapest first. No embeddings, no vector store — grep and judgement.
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 ls "$VAULT/atoms/" | grep -i "concept-keyword"                  # exact slug
 grep -rl "aliases:.*concept-keyword" "$VAULT/atoms/"            # alias
 grep -rl "concept-keyword" "$VAULT/glossary/"                   # already a term

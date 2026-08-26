@@ -5,7 +5,9 @@ description: Search and navigate the personal Karpathy-style Obsidian wiki vault
 
 # Karpathy Wiki Search
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
+**Vault root:** `$VAULT`, resolved at run time as
+`VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
+fork of this vault works unedited.
 
 The vault is a layered graph. Search always flows top-down — never scan all sources directly.
 
@@ -42,6 +44,7 @@ Topic files do not list their atoms. Membership is declared on each atom's
 `part-of::` and surfaced by Dataview, so to walk from a topic to its atoms:
 
 ```bash
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 grep -rlE "^part-of::.*\[\[<topic>\]\]" "$VAULT/atoms/"
 ```
 
@@ -119,20 +122,22 @@ To answer specific structural questions, follow these chains:
 If concept map and atom traversal yield no results, fall back to text search:
 
 ```bash
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
+
 # Keyword in atom bodies
-grep -ril "keyword" /home/bcmcpher/Projects/claude/memex-vault/atoms/
+grep -ril "keyword" "$VAULT/atoms/"
 
 # Keyword in glossary definitions
-grep -ril "keyword" /home/bcmcpher/Projects/claude/memex-vault/glossary/
+grep -ril "keyword" "$VAULT/glossary/"
 
 # Keyword in source summaries
-grep -ril "keyword" /home/bcmcpher/Projects/claude/memex-vault/sources/
+grep -ril "keyword" "$VAULT/sources/"
 
 # Find all atoms in a domain by tag
-grep -rl "tags:.*deep-learning" /home/bcmcpher/Projects/claude/memex-vault/atoms/
+grep -rl "tags:.*deep-learning" "$VAULT/atoms/"
 
 # Find all uses of a specific relationship
-grep -r "extends:: \[\[" /home/bcmcpher/Projects/claude/memex-vault/atoms/
+grep -r "extends:: \[\[" "$VAULT/atoms/"
 ```
 
 Always report when you fell back to grep, so the user knows the graph coverage is incomplete for this topic.
@@ -148,7 +153,7 @@ an atom's `cites:: [[ext-…#^cNN]]`. Searching extracts directly is a **last**
 fallback, after atoms, glossary, and sources have all come up empty:
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 grep -ril "keyword" "$VAULT/extracts/"
 ```
 

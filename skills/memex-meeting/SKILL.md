@@ -5,7 +5,9 @@ description: Save meeting notes to the vault as a structured source note. Use wh
 
 # Karpathy Wiki Meeting
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
+**Vault root:** `$VAULT`, resolved at run time as
+`VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
+fork of this vault works unedited.
 
 This skill takes meeting notes — spoken, typed, or pasted — and creates a properly structured source note in `sources/meeting/`. It extracts decisions, action items, and follow-up sources, wires connections to existing atoms, and seeds stubs for new concepts that emerged. Unlike digital sources, meeting notes have no URL and use their own template.
 
@@ -40,7 +42,7 @@ Use the meeting date (not today's date if the meeting was yesterday or earlier).
 
 Check for duplicates before creating:
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 ls "$VAULT/sources/meeting/" | grep "<date>"
 ```
 
@@ -132,7 +134,7 @@ For each technical term that surfaced in the meeting that needs precise definiti
 
 Before proposing a stub, check whether the term already exists in the vault or as a pending candidate:
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 ls "$VAULT/glossary/" | grep -i "term-keyword"
 grep -rl "term: " "$VAULT/_meta/candidates/" 2>/dev/null | xargs grep -l "term-keyword" 2>/dev/null
 ```

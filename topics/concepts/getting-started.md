@@ -50,12 +50,12 @@ Note the direction: atoms declare their topic with `part-of::`, and topics disco
 
 Use Claude Code: *"save this article: [url] — [why you saved it]"*
 
-Or manually with Templater (`Ctrl+T`):
-- `source-web` for articles and blog posts
-- `source-video` for YouTube and talks
-- `source-paper` for academic papers and preprints
-- `source-docs` for library/API documentation
-- `source-meeting` for notes from discussions and calls
+Or manually from a template — there are two, and `medium:` is what distinguishes
+a web page from a paper, not the template:
+- `source-digital.md` for anything with a URL — articles, talks, papers, docs.
+  Set `medium:` to `web`, `video`, `paper`, or `docs` after creating.
+- `source-meeting.md` for discussions and calls. It carries `date:` instead of
+  `url:` and `saved:`.
 
 All source files go in `sources/<medium>/` with the naming pattern `YYYY-MM-DD-kebab-title.md`.
 
@@ -91,7 +91,7 @@ Or manually: start here (or any concept map), read the derived atom list, open a
 
 | Task | Frequency | How |
 |------|-----------|-----|
-| Ingest + summarize new sources | As needed | Templater or Claude Code `memex-ingest` |
+| Ingest + summarize new sources | As needed | `memex-ingest`, or a template by hand |
 | Process read sources into atoms | Weekly | Check `_meta/index.md` → "Read but Not Processed" table |
 | Review orphan atoms | Weekly | Check `_meta/index.md` → "Orphan Atoms" table |
 | Run programmatic lint | Weekly | `bash _meta/lint.sh` |

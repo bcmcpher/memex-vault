@@ -107,14 +107,36 @@ backing_sources() {
     } | grep -v '^$' | sort -u || true
 }
 
+# Source media come from _meta/domain.md § Source Types rather than a literal
+# list here: a fork that adds sources/hearing/ must get the same filename and
+# frontmatter checks as the shipped five without editing this script. Falls back
+# to the shipped set if the block is missing, so a half-edited domain.md degrades
+# to the old behaviour instead of silently checking nothing.
+#
+# `meeting` is the one medium name with behaviour attached — section 2 checks it
+# for date: instead of url:/saved:. A fork that renames it keeps every other
+# check and loses that one; _meta/domain.md § Source Types says so.
+source_media=$(awk '
+    /^## Source Types/ {f=1; b=0; next}
+    f && /^## /        {f=0; b=0}
+    f && /^```/        {b=!b; next}
+    f && b             {print}
+' "$VAULT/_meta/domain.md" 2>/dev/null | sed 's/[[:space:]]*$//' \
+  | grep -v "^$" | grep -v "^#" || true)
+
+[ -z "$source_media" ] && source_media="web video paper docs meeting"
+
 # ── 1. Naming convention ─────────────────────────────────────────────────────
 
 echo ""
 echo "── 1. Naming Conventions ──────────────────────────────────────────────────"
 
-for medium in web video paper docs meeting; do
+for medium in $source_media; do
     dir="$VAULT/sources/$medium"
-    [ -d "$dir" ] || continue
+    if [ ! -d "$dir" ]; then
+        warn "_meta/domain.md declares source type '$medium' but sources/$medium/ does not exist"
+        continue
+    fi
     while IFS= read -r -d '' f; do
         name="$(basename "$f")"
         if ! [[ "$name" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}-.+ ]]; then
@@ -122,6 +144,17 @@ for medium in web video paper docs meeting; do
         fi
     done < <(find "$dir" -name "*.md" ! -name ".gitkeep" -print0)
 done
+
+# The mirror: a folder under sources/ that _meta/domain.md never declares. Its
+# notes are legal on disk but invisible to every medium-driven check above, and
+# section 11a has no type: to hold them to. Silent holes are the failure mode a
+# fork hits, so name them.
+while IFS= read -r -d '' dir; do
+    medium="$(basename "$dir")"
+    if ! echo "$source_media" | grep -qx "$medium"; then
+        warn "sources/$medium/ exists but is not declared in _meta/domain.md § Source Types — its notes are unchecked"
+    fi
+done < <(find "$VAULT/sources" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null)
 
 while IFS= read -r -d '' f; do
     name="$(basename "$f")"
@@ -145,7 +178,8 @@ check_field() {
     fi
 }
 
-for medium in web video paper docs; do
+for medium in $source_media; do
+    [ "$medium" = "meeting" ] && continue   # checked separately just below
     dir="$VAULT/sources/$medium"
     [ -d "$dir" ] || continue
     while IFS= read -r -d '' f; do

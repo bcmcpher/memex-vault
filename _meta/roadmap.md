@@ -101,7 +101,9 @@ the fork guide.
 **S2. No worked example** — deferred by design decision above.
 
 **S3. No specialization guide or onboarding skill.** No "how to make this yours"
-workflow. *Fix:* `memex-init` interactive skill.
+workflow. *Fix:* `memex-init` interactive skill. **Shipped in Phase 6**, which also
+found the reason a fork actually broke: 18 skills hard-coding the template author's
+vault path.
 
 ### Tier 2 — Structural
 
@@ -246,8 +248,8 @@ everything it serialises exists.
 | **3** | Evidence layer: `extracts/` + `memex-deep-extract` | E1, M5 | Depends on 0 (grounding gate), 1 (`part-of::` traversal), 2 (M1, M2). Also absorbed P2 — the rubric was cheapest to write while the schema was open. **Done.** |
 | **4** | `memex-trust-audit` rebuild on the claim rubric | — | Shrunk: P2's rubric landed in Phase 3, P3's `related::` promotion in Phase 1. **Done.** |
 | **5** | Anki render mode on `memex-compose` | — | **Deferred** (2026-08-25) — low priority, unlikely to be revisited before more critical refactoring. Unblocked whenever it is wanted; the design is written. |
-| **6** | `memex-init` onboarding skill | S3 | Moved later so it scaffolds `extracts/` once, correctly. No longer scaffolds `anki/` — Phase 5 is deferred. Onboards the audited plugin list: Dataview only |
-| **7** | `memex-tend` orchestrator | P4 | Now sequencing 18 skills, one of them expensive |
+| **6** | `memex-init` onboarding skill | S3 | **Done.** Also made the 18 existing skills path-independent and taught lint to read § Source Types |
+| **7** | `memex-tend` orchestrator | P4 | Now sequencing 19 skills, one of them expensive. Never sequences `memex-init` — it runs once, before there is anything to tend |
 | **8** | OKF export layer: `_meta/okf-export.py` + `memex-export` | O3 | Needs the schema settled (2), `extracts/` to exist (3), and `verified:` populated (4) |
 | **9** | OKF import: `memex-import` | — | Scheduled but deferred — no consumer yet, and its shape depends on what real-world bundles look like |
 
@@ -646,7 +648,7 @@ verbatim quote. Card identity keys off the extract block id, so the plugin's
 `!_exports/anki/` negation cannot re-include anything, and the note IDs are
 durable state rather than an ephemeral render.
 
-### Phase 6 — `memex-init`
+### Phase 6 — `memex-init` *(complete)*
 
 Interactive one-time specialization skill. Five questions (domain name, source
 types, projects?, research questions?, initial tags) → write `_meta/domain.md`,
@@ -669,8 +671,9 @@ Constraints: does not delete unused folders, does not modify `schema.md`,
 re-runnable without overwriting the topic stub.
 
 *OKF addendum:* also scaffolds the `okf_types` block in the generated
-`_meta/domain.md`, creates `_okf/`, and adds `_okf/` to Obsidian's excluded-files
-list (see the warning in Phase 8).
+`_meta/domain.md` and adds `_okf/` to Obsidian's excluded-files list (see the
+warning in Phase 8). ~~creates `_okf/`~~ — **superseded during implementation**:
+the exclusion is written, the folder is not. See *Decisions* below.
 
 *Plugin addendum (audit, 2026-08-25):* the onboarding text must state the
 corrected plugin contract, not the pre-Phase-4 one. **Dataview is the only hard
@@ -685,6 +688,61 @@ Analysis** — both were listed as required through Phase 4 with zero dependents
 anywhere in `_meta/`, `_templates/`, or the skills, and Graph Analysis has had no
 release since January 2022. A fork that installs the old list pays four plugin
 dependencies for one real one. See `README.md` § Obsidian Plugins.
+
+
+**What shipped.**
+
+1. `skills/memex-init/SKILL.md` — five questions (domain name, source types,
+   projects?, research questions?, initial tags), then: rewrite the four
+   instance-specific fenced blocks of `_meta/domain.md` **in place**, scaffold one
+   `sources/<medium>/` per declared type, seed one concept map, rewrite
+   `getting-started.md`, add the `_okf` exclusion, run lint, log. No
+   `references/` directory and no fifteenth `vault-schema.md` copy — the skill
+   writes vocabulary, not typed nodes, and the sync burden is real.
+2. **All 18 pre-existing skills made path-independent.** They hard-coded
+   `/home/bcmcpher/Projects/claude/memex-vault` on 54 lines, so a fork's skills
+   pointed at the template author's vault — the actual thing that broke a fork,
+   and not on any list. Now `VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"`,
+   with the header of each skill saying so. `README.md`'s "editing **one file**"
+   promise is true as of this phase; it was not before.
+3. `_meta/lint.sh` sections 1 and 2 read § Source Types from `_meta/domain.md`
+   instead of the literal `web video paper docs meeting`. A fork adding
+   `sources/hearing/` got **zero** filename or frontmatter checking, silently,
+   while `README.md` claimed lint reads all vocabulary from `domain.md`. Two new
+   WARNs close both halves of the mismatch: a declared type with no folder, and a
+   folder under `sources/` that § Source Types never declares. Falls back to the
+   shipped five if the block is missing, so a half-edited `domain.md` degrades to
+   the old behaviour rather than checking nothing.
+4. `topics/concepts/getting-started.md` — the "Creating a new source" list named
+   five templates (`source-web`, `source-video`, `source-paper`, `source-docs`,
+   `source-meeting`). Four of them have never existed: there are two source
+   templates and `medium:` is per note. Fixed, since `memex-init` step 10 rewrites
+   this section and would have propagated the error into every fork.
+5. `_meta/domain.md` § Source Types — documents the contract lint now enforces,
+   and records that **`meeting` is the one reserved medium name** (checked for
+   `date:` rather than `url:`/`saved:`).
+
+**Decisions.**
+
+- **`_okf/` is not scaffolded, only excluded.** The roadmap said create it; that
+  contradicts the reasoning used to drop `anki/` one commit earlier. The
+  *exclusion* is what is ordering-sensitive — it has to exist before the first
+  export, or every note appears twice in search and graph. The folder is the
+  exporter's to create. Same argument, same answer, now applied consistently.
+- **`memex-init` does not call `memex-topic-init`.** That skill's value is
+  searching existing atoms and sources; a fresh fork has none, so it would run
+  five searches over empty folders to produce the same stub. Delegation would cost
+  tokens and return less.
+- **Nothing is ever deleted.** A dropped source type keeps its folder and earns a
+  WARN. Deleting an empty folder is free; deleting one that turned out to hold
+  notes is not, and the skill cannot tell the difference under `.gitignore`.
+- **`_meta/schema.md` is off limits**, stated twice in the skill. A fork that edits
+  the constitution has forked the format, not the domain.
+
+**Still unverified:** no fork has been run end to end. The skill's steps are
+individually exercised — lint's new source-media path was fixture-tested against a
+vault declaring `web`/`hearing` — but the five-question flow has never been walked
+by a user. First real fork is the test.
 
 ### Phase 7 — `memex-tend`
 
@@ -735,6 +793,13 @@ entry. No generative work — the skill is a guard rail, not an author.
 > be added to Obsidian's *Settings → Files & Links → Excluded files*, or every
 > note appears twice in search, quick-switcher, graph view, and every Dataview
 > query. This is the one way the OKF work could regress Obsidian functionality.
+>
+> *Phase 6 status:* `memex-init` now writes that exclusion into
+> `.obsidian/app.json` at fork time, before anything can export. **The exporter
+> creates `_okf/` itself on first run** — Phase 6 deliberately does not scaffold
+> the empty folder. The exporter must therefore `mkdir -p` its own output, and
+> must also verify the exclusion is present in a vault that predates `memex-init`,
+> refusing to export rather than silently doubling the vault.
 
 **Verification:** export, then assert §11's three MUSTs mechanically — every
 non-reserved `.md` under `_okf/` has parseable frontmatter with a non-empty

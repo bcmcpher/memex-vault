@@ -5,7 +5,9 @@ description: Repair dangling part-of:: links and promote stale related:: links t
 
 # Karpathy Wiki Reconcile
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
+**Vault root:** `$VAULT`, resolved at run time as
+`VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
+fork of this vault works unedited.
 
 This skill runs two repair passes over the graph:
 
@@ -37,7 +39,7 @@ For the full relationship taxonomy, read: `references/vault-schema.md`
 ### 1. Discover
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 grep -rn "^part-of::" "$VAULT/atoms/"
 ```
 

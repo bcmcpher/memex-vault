@@ -407,13 +407,19 @@ replace `ingest` (which summarizes) or `connect` (which wires whole sources).
 | `memex-log-query` | Navigate | "what did I ingest this week", "show unprocessed sources", "log stats" |
 | `memex-glossary` | Support | "scan this note for jargon", "what terms need defining", "build glossary from [atom]" |
 | `memex-candidates` | Support | "show pending candidates", "what's waiting to be applied", "recover my session" |
+| `memex-init` | Support | "initialize my vault", "set up this vault", "specialize this template", "I just forked this" |
 
 ---
 
 ## Specializing This Template
 
 This repo is a template. Forking it for a different subject — law, medicine,
-a company's internal docs — should mean editing **one file**.
+a company's internal docs — means editing **one file**.
+
+Run **`memex-init`** and it edits that file for you: five questions, then it
+rewrites the vocabulary, scaffolds the folders that vocabulary implies, seeds one
+topic to enter at, and leaves the vault passing `_meta/lint.sh`. Everything below
+describes what it writes, and what to change by hand if you would rather.
 
 That file is **`_meta/domain.md`**. It holds everything instance-specific:
 
@@ -430,8 +436,13 @@ That file is **`_meta/domain.md`**. It holds everything instance-specific:
 means editing a script.
 
 **What you keep:** `_meta/schema.md` (relation types, stage values, naming
-patterns), all 18 skills, all 8 templates, `_meta/lint.sh`, and
+patterns), all 19 skills, all 8 templates, `_meta/lint.sh`, and
 `_meta/normalize.sh`. These are the structure every memex-vault shares.
+
+**Paths need no editing.** Every skill resolves the vault root at run time —
+`VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — so a fork works at any
+path with no search-and-replace. Set `MEMEX_VAULT` only if the vault is not a git
+repository, or if you run the skills from outside it.
 
 **What you should also change, in practice:**
 
@@ -446,7 +457,10 @@ bash _meta/lint.sh   # must exit 0
 ```
 
 A renamed type that lint does not know about fails immediately, so a half-done
-rename cannot go quiet.
+rename cannot go quiet. The source-type vocabulary is read from `_meta/domain.md`
+too: add `hearing` to § Source Types and lint applies every naming and frontmatter
+check to `sources/hearing/`, and warns if the folder is missing — or if a folder
+under `sources/` was never declared, whose notes would otherwise go unchecked.
 
 ---
 

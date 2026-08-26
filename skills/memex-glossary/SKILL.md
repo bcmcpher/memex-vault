@@ -5,7 +5,9 @@ description: Scan a vault note (atom, source, or topic) and propose technical te
 
 # Karpathy Wiki Glossary
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
+**Vault root:** `$VAULT`, resolved at run time as
+`VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
+fork of this vault works unedited.
 
 This skill reads a vault note and surfaces the technical terms in it that deserve precise, stable definitions in `glossary/`. Its purpose is to distinguish between terms that are already covered (have atoms or glossary entries) and terms that are used but undefined — jargon that a future reader would need to look up.
 
@@ -43,7 +45,7 @@ If the input is ambiguous, ask: "Which note or area should I scan?"
 ### 1. Read the target note(s)
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 cat "$VAULT/<note-path>"
 ```
 

@@ -5,7 +5,9 @@ description: Wire captured sources into the knowledge graph. Use when the user w
 
 # Karpathy Wiki Connect
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
+**Vault root:** `$VAULT`, resolved at run time as
+`VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
+fork of this vault works unedited.
 
 This skill takes inbox-only captures and integrates them into the knowledge graph. It enriches metadata by fetching URLs, wires Dataview connection fields, promotes atoms, updates topic maps, and marks sources as processed. One note at a time, with user confirmation before any write.
 
@@ -19,7 +21,7 @@ For the relationship taxonomy and full field definitions, read: `references/vaul
 Find all source notes that are `stage: unread` or `stage: unprocessed` AND have no populated Dataview relation fields in their `## Connections` block (inbox-only captures):
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 
 # Find unread sources
 grep -rl "stage: unread\|stage: unprocessed" "$VAULT/sources/"
@@ -101,7 +103,7 @@ Process notes **one at a time** — complete all steps for one note before movin
 For each key concept, check `atoms/` for existing matches:
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 ls "$VAULT/atoms/" | grep -i "concept-keyword"
 grep -rl "concept-keyword" "$VAULT/atoms/"
 ```
@@ -123,7 +125,7 @@ A term belongs in `glossary/` when its value is definitional rather than evident
 
 Before proposing a stub, check whether the term already exists in the vault or as a pending candidate:
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 ls "$VAULT/glossary/" | grep -i "term-keyword"
 grep -rl "term: " "$VAULT/_meta/candidates/" 2>/dev/null | xargs grep -l "term-keyword" 2>/dev/null
 ```

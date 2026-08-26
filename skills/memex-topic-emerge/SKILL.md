@@ -5,7 +5,9 @@ description: Discover emerging topic clusters from existing atoms by scanning st
 
 # Karpathy Wiki Topic Emerge
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
+**Vault root:** `$VAULT`, resolved at run time as
+`VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
+fork of this vault works unedited.
 
 This skill scans `atoms/` for structural clustering signals and proposes topic maps from the bottom up. It complements `memex-topic-init` (which is human-directed: you know the domain, you scaffold it) with graph-directed discovery: the vault tells you what's clustering, you confirm it. Run it after accumulating 10+ atoms without a covering topic, or monthly as part of graph maintenance.
 
@@ -28,7 +30,7 @@ For a domain you already have in mind, use `memex-topic-init` instead — it's f
 Collect three types of signals from `atoms/`:
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 
 # Tags per atom
 grep -rh "^tags:" "$VAULT/atoms/"

@@ -76,7 +76,16 @@ stale
 ## Source Types
 
 Valid values for `medium:` on a source note. Each must have a matching folder
-under `sources/`.
+under `sources/`. `_meta/lint.sh` reads this list — add a medium here, create the
+folder, add the matching `sources/<medium>|Source` row under § OKF Types, and
+every naming and frontmatter check applies to it with no script edit. Lint warns
+about either half of a mismatch: a declared medium with no folder, and a folder
+under `sources/` that this list never declares.
+
+**`meeting` is the one reserved name.** Sources in `sources/meeting/` are checked
+for `date:` instead of `url:` and `saved:`, because a meeting has no URL. Rename
+it and the notes stay legal — they just lose that one check. Keep the name unless
+the fork has no meetings at all.
 
 ```
 web
