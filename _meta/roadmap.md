@@ -6,17 +6,42 @@ Revised: 2026-08-25. Supersedes the 2026-07-09 revision, which superseded
 Infrastructure doc — not a vault node. No frontmatter, and nothing should link to
 it with a wikilink.
 
-Companions: `_meta/deep-extract-design.md` holds the full design for Phase 3.
-`_meta/okf-alignment.md` holds the full design for Phases 8–9, plus the
-frontmatter changes they need from Phase 2.
+Companions: `_meta/deep-extract-design.md` holds the full design for Phase 3, and
+for Phase 5 (deferred). `_meta/okf-alignment.md` holds the full design for
+Phases 8–9, plus the frontmatter changes they need from Phase 2.
 
 ---
 
 ## Summary Verdict
 
-**Bones are excellent** — typed relations, candidate gating, schema-as-constitution,
-17-skill lifecycle coverage. **Skin is missing** — no specialization path, no
-orchestrator.
+**As of 2026-08-25, seven of the ten phases are complete** — 0, 1, 2, 3, 4, 6, 7.
+One remains: **Phase 8**, the OKF export layer. Two are deferred: Phase 5 (Anki,
+unscheduled) and Phase 9 (OKF import, scheduled but waiting on a real consumer).
+Everything a vault needs to be *used* is built; what is missing is the ability to
+hand it to something that is not Obsidian.
+
+The verdict this document opened with in May 2026 was:
+
+> **Bones are excellent** — typed relations, candidate gating,
+> schema-as-constitution, 17-skill lifecycle coverage. **Skin is missing** — no
+> specialization path, no orchestrator.
+
+Both halves of "skin is missing" are now built: `memex-init` (Phase 6) and
+`memex-tend` (Phase 7). The skill count went 17 → 20 in the interval, which is
+what made the orchestrator worth building rather than merely worth filing.
+
+Three things were learned in the doing, none of which were on any list:
+
+- **A fork was broken for a reason S3 never named.** Every skill hard-coded the
+  template author's absolute vault path. The onboarding skill was the visible half
+  of the problem; path portability was the half that mattered.
+- **`lint.sh` was blind to any vocabulary a fork added.** It read tags and node
+  types from `_meta/domain.md` but hard-coded the five source media, while the
+  README claimed otherwise. A fork's new source folder got no checks at all,
+  silently.
+- **Lint is the vault's only executable state oracle.** `_meta/index.md` answers
+  the same questions but only inside Obsidian. That constraint, discovered while
+  designing Phase 7, is what determined the orchestrator's whole design.
 
 The 2026-07 revision adds two things:
 
@@ -54,6 +79,10 @@ The 2026-08 revision adds one:
 | Node-type discriminator | One `type:` key at node granularity. `medium:` stays the source subtype; `topic-type:` retired as a redundant second discriminator |
 | Exporter language | Python 3, stdlib only. No pip, no venv |
 | Export output | `_okf/`, git-tracked, with a mandatory Obsidian exclusion |
+| Vault root in skills | Resolved at run time — `${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}` — never hard-coded. A fork works at any path with no search-and-replace |
+| Empty folders for unbuilt features | Never scaffolded. `anki/` and `_okf/` are both created by the thing that writes to them; only the `_okf` *exclusion* is written early, because it is ordering-sensitive |
+| Orchestrator authority | `memex-tend` routes and reports; it never invokes `memex-deep-extract`, `memex-compose`, `memex-refactor`, or `memex-init`. Triage is its default mode |
+| Vault state outside Obsidian | `_meta/lint.sh` is the only executable oracle. `_meta/index.md` answers the same questions in Dataview, which renders only in Obsidian, so no skill may depend on it |
 
 ---
 
@@ -101,9 +130,12 @@ the fork guide.
 **S2. No worked example** — deferred by design decision above.
 
 **S3. No specialization guide or onboarding skill.** No "how to make this yours"
-workflow. *Fix:* `memex-init` interactive skill. **Shipped in Phase 6**, which also
-found the reason a fork actually broke: 18 skills hard-coding the template author's
-vault path.
+workflow. *Fix:* `memex-init` interactive skill.
+
+*Status: fixed in Phase 6*, which also found the reason a fork actually broke and
+the finding never named: 18 skills hard-coding the template author's absolute vault
+path, on 54 lines. The onboarding skill was the visible half of S3; path
+portability was the half that made a fork unusable.
 
 ### Tier 2 — Structural
 
@@ -142,6 +174,11 @@ at `medium`.
 **P3. `related::` will erode typed-relation value.** No skill audits or promotes
 `related::` links. *Fix:* a promotion pass in `memex-reconcile` surfacing links
 older than 30 days for typed-relation assignment.
+
+*Status: fixed in Phase 1*, which absorbed it while rewriting the relation
+handling. `skills/memex-reconcile/SKILL.md` runs the promotion pass; Phase 7
+routes lint section 7's stale-`related::` findings to it. The status line was
+never written at the time — recorded here 2026-08-25 during roadmap revision.
 
 **P4. No orchestration layer — now more urgent.** 17 peer skills becomes 18.
 Deep-extract is the most expensive skill in the vault and must never fire
@@ -267,6 +304,36 @@ and every commit message in the history. A tidier sequence is not worth
 invalidating that.
 
 ---
+
+## Where to Start Next
+
+**Phase 8 is the only unblocked phase.** Its full design is in
+`_meta/okf-alignment.md`; the roadmap entry below carries three amendments made
+while later phases shipped — extracts map onto OKF §5.1 footnote-keyed
+attribution, the exporter must not duplicate `_meta/normalize.sh`, and it creates
+`_okf/` itself because Phase 6 deliberately does not scaffold the empty folder.
+It is also the first phase that is real code rather than a skill document.
+
+Everything else outstanding is deferred: Phase 5 (Anki), Phase 9 (OKF import),
+M3 (temporal claim fields), M4 (typed open questions). None blocks anything.
+
+### Verification debt
+
+Four things are built but never exercised. They are listed together because they
+share one cause — **the vault has 0 atoms, 0 sources, 0 extracts, and 0 glossary
+terms.** It is a template that has never been used as a vault, so every check that
+needs content to act on has been proven only against fixtures.
+
+| What | Since | How it gets verified |
+|---|---|---|
+| Every Dataview query in `_meta/index.md` | Phases 1–2 | Open the vault in Obsidian once there are notes |
+| `memex-init`'s five-question flow | Phase 6 | The first real fork |
+| `memex-tend`'s ordering | Phase 7 | The first vault with enough findings to sequence |
+| `memex-deep-extract` end to end | Phase 3 | The first deep extraction of a real source |
+
+This is not a defect list. Fixture-testing caught two real bugs in Phase 6 that a
+content-ful vault would have caught the same way. But no amount of it substitutes
+for one pass over real notes, and that pass has never happened.
 
 ## Phase Detail
 
