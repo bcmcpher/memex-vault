@@ -296,12 +296,18 @@ better inputs and zero code changes.
 
 ---
 
-## Anki: a new mode of `memex-compose` *(Phase 5 — deferred)*
+## Anki: a new mode of `memex-compose` *(Phase 5 — deferred, unscheduled)*
 
 > **Not Phase 3.** `_meta/roadmap.md` gives Anki its own phase, and the roadmap
 > wins: Phase 3 touched nothing Anki-related — no `anki/` folder, no
 > `.obsidian/app.json` change, no `memex-compose` render mode. The section below
 > stands as the Phase 5 design and is unchanged by the build.
+>
+> **Phase 5 was then deferred outright (2026-08-25)** — low priority against the
+> refactoring ahead of it. This section is kept whole rather than trimmed: its
+> one dependency, extract claims, already exists, so the work is unblocked
+> whenever it is wanted and does not need re-deriving. See `_meta/roadmap.md`
+> § Phase 5.
 
 The claim layer is what makes flashcards good. Without it you can export glossary
 terms and atom summaries — thin, definitional, mostly things you already know. A
@@ -378,7 +384,7 @@ Decks go in a versioned top-level `anki/`, added to `.obsidian/app.json`'s
 | A remediation path for "under-extracted source" | lint 8d and `memex-trust-audit` G13 — the lint already detects this and nothing could fix it |
 | `memex-compose` footnotes resolving to verbatim quotes | strengthens its "nothing is invented" invariant |
 | Concept co-occurrence inside a claim as a 4th clustering signal | `memex-topic-emerge` — finds topics *before* atoms exist |
-| Flashcards carrying real propositions with provenance | Phase 5 |
+| Flashcards carrying real propositions with provenance | Phase 5 — *deferred, unscheduled* |
 | `raw::` / `.archive/` acquires its first real consumer | `_meta/ccm-mapping.md` lazy raw surface |
 
 ### Extracts and `memex-search`

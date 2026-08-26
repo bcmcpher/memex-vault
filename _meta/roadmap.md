@@ -245,15 +245,21 @@ everything it serialises exists.
 | **2** | Schema split + atom style spec + disambiguation policy + OKF frontmatter | S1, M1, M2, O1, O2 | M1 and M2 are hard prereqs for Phase 3. O1 and O2 land here because this phase already rewrites every template and writing skill — separately means touching both twice. **Done.** |
 | **3** | Evidence layer: `extracts/` + `memex-deep-extract` | E1, M5 | Depends on 0 (grounding gate), 1 (`part-of::` traversal), 2 (M1, M2). Also absorbed P2 — the rubric was cheapest to write while the schema was open. **Done.** |
 | **4** | `memex-trust-audit` rebuild on the claim rubric | — | Shrunk: P2's rubric landed in Phase 3, P3's `related::` promotion in Phase 1. **Done.** |
-| **5** | Anki render mode on `memex-compose` | — | Consumer of Phase 3. The glossary-only half has no dependency and can ship any time. |
-| **6** | `memex-init` onboarding skill | S3 | Moved later so it scaffolds `extracts/` and `anki/` once, correctly |
+| **5** | Anki render mode on `memex-compose` | — | **Deferred** (2026-08-25) — low priority, unlikely to be revisited before more critical refactoring. Unblocked whenever it is wanted; the design is written. |
+| **6** | `memex-init` onboarding skill | S3 | Moved later so it scaffolds `extracts/` once, correctly. No longer scaffolds `anki/` — Phase 5 is deferred |
 | **7** | `memex-tend` orchestrator | P4 | Now sequencing 18 skills, one of them expensive |
 | **8** | OKF export layer: `_meta/okf-export.py` + `memex-export` | O3 | Needs the schema settled (2), `extracts/` to exist (3), and `verified:` populated (4) |
 | **9** | OKF import: `memex-import` | — | Scheduled but deferred — no consumer yet, and its shape depends on what real-world bundles look like |
 
-Deferred, unscheduled: **M3** (temporal claim fields), **M4** (typed open
-questions). Both become cheap once Phase 3 exists; neither blocks anything.
-Phase 9 is scheduled but deferred on the same footing.
+Deferred, unscheduled: **Phase 5** (Anki), **M3** (temporal claim fields), **M4**
+(typed open questions). M3 and M4 became cheap once Phase 3 existed; neither
+blocks anything. Phase 9 is scheduled but deferred on the same footing.
+
+Phase numbers are **not** reassigned when a phase is deferred. Phases 6–9 keep
+their numbers with 5 skipped, because the numbers are referenced across
+`_meta/deep-extract-design.md`, `_meta/okf-alignment.md`, several skill files,
+and every commit message in the history. A tidier sequence is not worth
+invalidating that.
 
 ---
 
@@ -614,7 +620,21 @@ grounds that a score is subjective, unportable, and goes stale. That is P2's own
 conclusion reached independently, so name the frontmatter fields to match rather
 than inventing parallel ones.
 
-### Phase 5 — Anki
+### Phase 5 — Anki *(deferred, unscheduled)*
+
+**Deferred 2026-08-25 at the user's call:** a low-priority idea, unlikely to be
+revisited before more critical components are refactored. Nothing is lost by
+waiting — the design below is complete, and its one real dependency (extract
+claims to make cards from) landed in Phase 3, so this can be picked up whenever
+it is wanted rather than needing to be re-derived.
+
+Two notes for whoever resumes it. The **glossary half has no dependency at all**
+— Basic cards from `stage: reviewed` terms work against today's vault — so it is
+shippable on its own if the claim half still looks like too much. And Phase 6 no
+longer scaffolds `anki/`; if this lands, `memex-init` needs that folder and its
+`.obsidian/app.json` exclusion added back.
+
+The design, unchanged:
 
 `memex-compose` gains an `anki` render mode writing Obsidian_to_Anki plain text to
 a versioned top-level `anki/`. Cloze cards from extract claims, Basic cards from
@@ -630,8 +650,12 @@ durable state rather than an ephemeral render.
 
 Interactive one-time specialization skill. Five questions (domain name, source
 types, projects?, research questions?, initial tags) → write `_meta/domain.md`,
-create a first topic stub, scaffold `extracts/` and `anki/`, update
-`getting-started.md`, log the run.
+create a first topic stub, scaffold `extracts/`, update `getting-started.md`,
+log the run.
+
+`anki/` was on that scaffold list until Phase 5 was deferred. Scaffolding a
+folder for a feature that may never ship leaves every generated vault with an
+empty directory nothing writes to — add it back if and when Phase 5 lands.
 
 *Phase 3 addendum:* scaffolding `extracts/` is not just the folder. A generated
 vault also needs `_templates/extract.md`, the `extracts|Extract` row in the
