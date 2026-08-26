@@ -374,8 +374,16 @@ replace `ingest` (which summarizes) or `connect` (which wires whole sources).
 | Audit a topic's structure | "review my [topic] concept map" | review |
 | Export a topic as a document | "compose [topic]" | compose |
 | Check recent ingest activity | "what did I ingest this week?" | log-query |
+| Decide what maintenance to do | "what should I run now?" | tend |
 
 **Maintenance cadence**
+
+Ask **`memex-tend`** — *"what should I run now?"* It runs `_meta/lint.sh` once,
+routes the findings to the skills that can act on them, and proposes them in
+dependency order. It reports before it runs anything, and never invokes
+`memex-deep-extract`.
+
+The cadence it encodes, if you would rather drive by hand:
 
 - **After each ingest session:** run `memex-connect` to close any inbox items
 - **Weekly:** open `_meta/index.md` — scan orphan atoms and stale unread sources
@@ -408,6 +416,7 @@ replace `ingest` (which summarizes) or `connect` (which wires whole sources).
 | `memex-glossary` | Support | "scan this note for jargon", "what terms need defining", "build glossary from [atom]" |
 | `memex-candidates` | Support | "show pending candidates", "what's waiting to be applied", "recover my session" |
 | `memex-init` | Support | "initialize my vault", "set up this vault", "specialize this template", "I just forked this" |
+| `memex-tend` | Support | "what should I run now", "tend my vault", "vault health check", "weekly maintenance" |
 
 ---
 
@@ -436,7 +445,7 @@ That file is **`_meta/domain.md`**. It holds everything instance-specific:
 means editing a script.
 
 **What you keep:** `_meta/schema.md` (relation types, stage values, naming
-patterns), all 19 skills, all 8 templates, `_meta/lint.sh`, and
+patterns), all 20 skills, all 8 templates, `_meta/lint.sh`, and
 `_meta/normalize.sh`. These are the structure every memex-vault shares.
 
 **Paths need no editing.** Every skill resolves the vault root at run time —

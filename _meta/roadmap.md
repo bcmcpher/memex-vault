@@ -148,6 +148,9 @@ Deep-extract is the most expensive skill in the vault and must never fire
 automatically. Holding Anki to a `memex-compose` mode rather than a 19th skill is
 a deliberate concession to this finding. *Fix:* `memex-tend`.
 
+*Status: fixed in Phase 7*, at 20 skills rather than 18 — the count grew through
+Phases 6 and 7 while the finding sat open, which is the finding proving itself.
+
 ### Tier 3 — Missing concepts
 
 **M1. No atom voice/claim style spec — now a hard prerequisite.** "Wikipedia-stub
@@ -249,7 +252,7 @@ everything it serialises exists.
 | **4** | `memex-trust-audit` rebuild on the claim rubric | — | Shrunk: P2's rubric landed in Phase 3, P3's `related::` promotion in Phase 1. **Done.** |
 | **5** | Anki render mode on `memex-compose` | — | **Deferred** (2026-08-25) — low priority, unlikely to be revisited before more critical refactoring. Unblocked whenever it is wanted; the design is written. |
 | **6** | `memex-init` onboarding skill | S3 | **Done.** Also made the 18 existing skills path-independent and taught lint to read § Source Types |
-| **7** | `memex-tend` orchestrator | P4 | Now sequencing 19 skills, one of them expensive. Never sequences `memex-init` — it runs once, before there is anything to tend |
+| **7** | `memex-tend` orchestrator | P4 | **Done.** Routes lint findings to skills; never invokes deep-extract, compose, refactor, or init |
 | **8** | OKF export layer: `_meta/okf-export.py` + `memex-export` | O3 | Needs the schema settled (2), `extracts/` to exist (3), and `verified:` populated (4) |
 | **9** | OKF import: `memex-import` | — | Scheduled but deferred — no consumer yet, and its shape depends on what real-world bundles look like |
 
@@ -744,7 +747,7 @@ individually exercised — lint's new source-media path was fixture-tested again
 vault declaring `web`/`hearing` — but the five-question flow has never been walked
 by a user. First real fork is the test.
 
-### Phase 7 — `memex-tend`
+### Phase 7 — `memex-tend` *(complete)*
 
 Orchestration meta-skill. Sequences the maintenance skills after a batch ingest
 and answers "what should I run now?" Must explicitly never auto-invoke
@@ -752,6 +755,54 @@ and answers "what should I run now?" Must explicitly never auto-invoke
 
 *OKF addendum:* sequences `memex-export` as a terminal step, and never before
 `_meta/lint.sh` passes.
+
+**What shipped.**
+
+`skills/memex-tend/SKILL.md` — a router, not an author. It writes exactly one
+thing, its own `_meta/log.md` entry; every vault change is made by the skill it
+hands off to, under that skill's own confirmation rules.
+
+1. **State comes from three executable sources**, not from `_meta/index.md`. The
+   index is Dataview, which renders only inside Obsidian, and this skill runs where
+   there is none. So: `_meta/lint.sh` for what is wrong, `_meta/candidates/` for
+   what a previous session left unfinished, and `_meta/log.md` for when each skill
+   last ran. One lint pass produces every signal, which is the efficiency argument
+   for having an orchestrator at all — the alternative is five skills each scanning
+   the vault to discover they have nothing to do.
+2. **A routing table from lint section to skill**, covering all 13 sections.
+   Findings with no skill are named as hand fixes rather than routed to a skill that
+   cannot fix them — sections 1, 5, and 11 are mostly this.
+3. **The order is a dependency chain, not a calendar.** `memex-candidates` first
+   (unapplied proposals make every other skill read an incomplete vault), FAILs
+   before any skill runs (a claim quoting text its source never contained makes
+   trust-audit's evidence wrong, not merely incomplete), then connect → reconcile →
+   trust-audit → conflicts → stale. Each step changes what the next one sees.
+4. **Four modes**: triage (the default — report and stop), full pass, post-ingest,
+   pre-share. Pre-share is the sequence `README.md` already recommended by hand.
+5. **Re-lint after every writing skill**, and report the delta. A step that
+   *increases* the finding count is a result, not an error: reconcile promoting
+   `related::` to typed relations surfaces conflicts that were previously
+   invisible.
+
+**Decisions.**
+
+- **Four skills are never invoked**, and the reasons differ. `memex-deep-extract` is
+  the expensive one and the one lint 8 actively tempts an orchestrator toward — the
+  under-extracted-source WARN is exactly the signal that would justify firing it, so
+  the prohibition had to be written where that signal is routed, not only in a
+  preamble. `memex-compose` is publishing, not maintenance. `memex-refactor` makes
+  irreversible judgement calls about what a concept *is*. `memex-init` already ran.
+- **Triage is the default mode.** "What should I run now?" is answered with a plan
+  and a stop, not with a plan and a chain. The value of an orchestrator is deciding
+  whether to spend the tokens, which it cannot do by spending them.
+- **Proposing nothing is a valid outcome.** Skills whose lint sections are clean are
+  marked skipped and not proposed. An eight-step plan on a healthy vault teaches the
+  user to ignore the skill.
+
+**Still unverified:** the routing table is written against lint's current 13
+sections and was checked against real output on a fixture vault, but no tend pass
+has been run on a vault with enough findings to exercise the ordering. The vault has
+0 atoms.
 
 ### Phase 8 — OKF export layer
 
