@@ -5,7 +5,9 @@ description: Review and apply pending candidate files from incomplete skill sess
 
 # Memex Candidates
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
+**Vault root:** `$VAULT`, resolved at run time as
+`VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
+fork of this vault works unedited.
 **Candidates dir:** `_meta/candidates/`
 
 This skill resurfaces proposed vault writes from sessions that ended before the user confirmed them. Candidates are written by `memex-ingest`, `memex-connect`, `memex-meeting`, and `memex-glossary` before each file write. Approved candidates are applied and deleted; rejected ones are discarded.
@@ -25,7 +27,7 @@ This skill resurfaces proposed vault writes from sessions that ended before the 
 ### 1. Scan for pending candidates
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 ls -t "$VAULT/_meta/candidates/" | grep -v "^\.gitkeep$"
 ```
 

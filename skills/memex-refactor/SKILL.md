@@ -5,7 +5,9 @@ description: Evolve atom structure through revise, split, or merge operations. U
 
 # Karpathy Wiki Refactor
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
+**Vault root:** `$VAULT`, resolved at run time as
+`VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
+fork of this vault works unedited.
 
 This skill handles three types of atom evolution: **revise** (update body in place), **split** (one atom becomes two), and **merge** (two atoms become one). All three require a user-supplied reason and confirm each write step before executing. Atoms are never deleted — retired atoms become stubs with `supersedes::` pointing to their successors.
 
@@ -31,7 +33,7 @@ Update an atom's body content without changing its identity, relations, or graph
 
 **Step R1. Read the current atom**
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 cat "$VAULT/atoms/<atom-name>.md"
 ```
 

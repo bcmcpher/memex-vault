@@ -5,7 +5,9 @@ description: Audit atom confidence against the claim-level evidence rubric, and 
 
 # Karpathy Wiki Trust Audit
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
+**Vault root:** `$VAULT`, resolved at run time as
+`VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
+fork of this vault works unedited.
 
 This skill answers two separate questions about an atom, and keeps them separate:
 
@@ -39,7 +41,7 @@ Ask the user: "Which topic should I audit, or use `--vault` for all atoms?"
 
 If a topic name is given:
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 # Membership is derived — read it off the atoms, not the topic file
 grep -rlE "^part-of::.*\[\[<topic>\]\]" "$VAULT/atoms/"
 ```

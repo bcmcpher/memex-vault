@@ -5,7 +5,9 @@ description: Ingest a new source into the personal Karpathy-style Obsidian wiki 
 
 # Karpathy Wiki Ingest
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
+**Vault root:** `$VAULT`, resolved at run time as
+`VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
+fork of this vault works unedited.
 
 This vault uses a layered structure: raw sources feed concept atoms, which feed topic maps. Your job here is to create a well-formed source note, connect it to existing atoms, and optionally seed new atoms — keeping the graph growing without duplicating work.
 
@@ -92,7 +94,7 @@ Never reproduce full article text. Summaries only.
 Ask which existing atoms or concepts this source relates to. Check for likely candidates:
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 ls "$VAULT/atoms/" | grep -i "keyword"
 grep -rl "keyword" "$VAULT/atoms/"
 ```
@@ -160,7 +162,7 @@ If the source defines a specific technical term precisely — and that term's va
 
 Before proposing a stub, check whether the term already exists in the vault or as a pending candidate:
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 ls "$VAULT/glossary/" | grep -i "term-keyword"
 grep -rl "term: " "$VAULT/_meta/candidates/" 2>/dev/null | xargs grep -l "term-keyword" 2>/dev/null
 ```
@@ -268,7 +270,7 @@ Body: the exact text to append.
 If the user wants to preserve the full source text locally (for offline access or link-rot protection), save it — **always piped through the normalizer**:
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 <fetch the full text> | bash "$VAULT/_meta/normalize.sh" > "$VAULT/.archive/YYYY-MM-DD-slug.md"
 ```
 

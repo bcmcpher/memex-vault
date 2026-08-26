@@ -5,7 +5,9 @@ description: Query the ingest history log for activity summaries and cross-refer
 
 # Karpathy Wiki Log Query
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
+**Vault root:** `$VAULT`, resolved at run time as
+`VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
+fork of this vault works unedited.
 
 This skill parses `_meta/log.md` to answer activity and stage questions about the vault. It does not modify the log, does not scan source files directly (except for cross-reference checks), and does not generate synthesis reports (that belongs to `memex-compose`).
 
@@ -53,7 +55,7 @@ Identify the query type from the table above. A query may combine multiple filte
 ### 2. Read and parse `_meta/log.md`
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 cat "$VAULT/_meta/log.md"
 ```
 

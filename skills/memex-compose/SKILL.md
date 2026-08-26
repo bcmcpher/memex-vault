@@ -5,7 +5,9 @@ description: Synthesize a topic's knowledge into a structured Markdown export. U
 
 # Karpathy Wiki Compose
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
+**Vault root:** `$VAULT`, resolved at run time as
+`VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
+fork of this vault works unedited.
 
 This skill synthesizes vault knowledge into a structured export document. Every sentence in the output traces to an atom or source body — nothing is invented. Run `memex-reconcile` and `memex-trust-audit` before composing a topic you plan to share; the quality of the output depends directly on graph integrity and trustworthy confidence signals.
 
@@ -37,7 +39,7 @@ Ask:
 
 Locate the topic file:
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 find "$VAULT/topics" -name "<topic>.md" 2>/dev/null
 ```
 
@@ -49,7 +51,7 @@ Read the topic file for its `## Overview` and `cites::`. Collect its atom set by
 reverse lookup — membership lives on the atoms:
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 # Topic membership is derived — read it off the atoms, not the topic file.
 grep -rlE "^part-of::.*\[\[<topic>\]\]" "$VAULT/atoms/"
 ```
@@ -188,7 +190,7 @@ composed: YYYY-MM-DD
 atom-count: N
 source-count: M
 glossary-term-count: K
-vault: /home/bcmcpher/Projects/claude/memex-vault
+vault: <absolute path to the vault root>
 ---
 ```
 

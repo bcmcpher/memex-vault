@@ -5,7 +5,9 @@ description: Save a URL to the vault with a lightweight fetch — always gets th
 
 # Karpathy Wiki Save
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
+**Vault root:** `$VAULT`, resolved at run time as
+`VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
+fork of this vault works unedited.
 
 This skill gets a source into the vault with a real title and a short summary — enough to be useful immediately, without doing the full graph wiring that `memex-connect` handles. It always fetches the URL, asks whether the source has been read, and branches from there: unread sources land as clean inbox items; read sources optionally support a collaborative summary-building session to capture your understanding before you move on.
 
@@ -31,7 +33,8 @@ If the URL is ambiguous, ask once: "Is this a paper, video, docs page, or genera
 ### 1. Accept URL
 Take the URL. Check for an existing source note first — avoid duplicates:
 ```bash
-grep -rl "<url>" /home/bcmcpher/Projects/claude/memex-vault/sources/
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
+grep -rl "<url>" "$VAULT/sources/"
 ```
 If a match is found, show it and stop — no action needed.
 

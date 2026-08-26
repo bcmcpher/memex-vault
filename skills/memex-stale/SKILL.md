@@ -5,7 +5,9 @@ description: Surface temporal decay in the vault — sources that have sat unrea
 
 # Karpathy Wiki Stale Audit
 
-**Vault root:** `/home/bcmcpher/Projects/claude/memex-vault`
+**Vault root:** `$VAULT`, resolved at run time as
+`VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
+fork of this vault works unedited.
 
 This skill is a read-only decay detector. It finds four categories of staleness and reports them as a prioritized list. It never modifies vault files — it tells you what to act on, and which skill to use.
 
@@ -19,7 +21,7 @@ Run it monthly, before a compose session, or whenever the vault feels like it ha
 Sources saved with `stage: unread` where `saved:` is more than 90 days ago.
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 
 # Find all unread sources with their saved dates
 grep -rl "stage: unread" "$VAULT/sources/" | xargs grep -l "saved:" | while read f; do
@@ -58,7 +60,7 @@ at that grain — so nothing citing it can be grounded, and no atom resting on i
 can reach `confidence: high`.
 
 ```bash
-VAULT=/home/bcmcpher/Projects/claude/memex-vault
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 for f in "$VAULT"/sources/*/*.md; do
     grep -q "^stage: processed" "$f" || continue
     [ -f "$VAULT/extracts/ext-$(basename "$f")" ] || echo "$f"
