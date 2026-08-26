@@ -187,36 +187,74 @@ Full taxonomy with decision tree for skeptical relations: `_meta/schema.md`
 
 ---
 
-## Required Obsidian Plugins
+## Obsidian Plugins
 
-### Core (built-in, enable in Settings → Core Plugins)
+Exactly one plugin is load-bearing. Everything else is convenience: the vault is
+readable, writable, and checkable without any of them, because `_meta/lint.sh`
+answers in plain text what `_meta/index.md` answers in Dataview.
 
-| Plugin | Why |
-|--------|-----|
-| **Backlinks** | See all notes that link to the current note — essential for reverse graph traversal |
-| **Graph view** | Visualize the knowledge graph |
-| **Properties** | Visual frontmatter editor |
-| **Tags** | Tag-based filtering |
+### Required
 
-### Community (Settings → Community Plugins → Browse)
+| Plugin | Kind | Why | Install name |
+|--------|------|-----|--------------|
+| **Dataview** | Community | The only hard dependency. Powers every `_meta/index.md` catalog and every relationship query. | `dataview` |
+| **Canvas** | Core | Only if you keep `canvas/`. Disabling it makes that folder dead. | built-in |
 
-| Plugin | Why | Install name |
-|--------|-----|--------------|
-| **Templater** | Required — auto-fills `saved` date, file title, and Dataview queries in templates | `templater-obsidian` |
-| **Dataview** | Required — powers `index.md` catalogs and inline relationship field queries | `dataview` |
-| **Folder Notes** | Makes folder-level overview notes work cleanly | `folder-notes` |
-| **Graph Analysis** | Adds co-citation and link prediction to the graph view | `graph-analysis` |
+**Dataview is not replaceable by Bases.** Core Bases reads YAML frontmatter
+properties; this vault's typed relations (`cites::`, `part-of::`, `supports::`,
+`contradicts::` …) are Dataview inline fields in the note *body*, which Bases
+cannot see. The frontmatter-only catalogs in `_meta/index.md` would port to a
+Base; the link-graph queries — orphan detection, topic membership, unpromoted
+extracts — would not. Enable Bases if you want it, but not instead of Dataview.
+
+### Optional (quality-of-life)
+
+| Plugin | Kind | Why | Install name |
+|--------|------|-----|--------------|
+| **Backlinks** | Core | Sidebar pane showing what links here. Convenience only — Dataview's `file.inlinks` reads Obsidian's metadata cache and works whether or not this is enabled | built-in |
+| **Graph view** | Core | Visualize the knowledge graph; see the group colouring below | built-in |
+| **Properties** | Core | Frontmatter sidebar pane. In-document property editing is built into the editor and does not depend on it | built-in |
+| **Tags** | Core | Tag pane. The vault reads `tags` through Dataview, never through the pane | built-in |
+| **Templater** | Community | Only if you hand-author notes in the Obsidian UI. Core **Templates** covers everything the shipped templates use — see below | `templater-obsidian` |
+
+### Deliberately not required
+
+**Folder Notes** and **Graph Analysis** were listed as requirements through
+Phase 4 and have been removed. Nothing in `_meta/`, `_templates/`, or any skill
+referenced either, and the vault contains no folder notes. Graph Analysis has
+additionally had no release since January 2022, and the job it does —
+co-citation and link prediction — is covered here by `memex-connect` and
+`memex-candidates`, which write their results to disk rather than into a pane
+that disappears. Install either if you like them; neither is part of the vault
+contract.
 
 ---
 
 ## Obsidian Configuration
 
-### 1. Templater setup
-`Settings → Templater`:
+### 1. Templates
+The shipped templates in `_templates/` use exactly two Templater substitutions:
+`<% tp.date.now("YYYY-MM-DD") %>` and `<% tp.file.title %>`. Both have core
+equivalents, so either plugin will do.
+
+**With Templater** (`Settings → Templater`):
 - **Template folder location:** `_templates`
 - Enable **Trigger Templater on new file creation** (optional but recommended)
 - Set a hotkey for **Create new note from template** (e.g., `Ctrl+T`)
-- All digital sources use `source-digital.md`; set `medium:` manually after creation
+
+**With core Templates instead** (`Settings → Templates`): set the same template
+folder, then in your local copies swap `<% tp.date.now("YYYY-MM-DD") %>` for
+`{{date:YYYY-MM-DD}}` and `<% tp.file.title %>` for `{{title}}` — core Templates
+does not understand `<% %>` and will leave it in the note verbatim. You lose
+apply-on-creation: create the note first, then run **Insert template**.
+
+Either way, all digital sources use `source-digital.md`; set `medium:` manually
+after creation.
+
+Neither plugin is on the skill path. `memex-ingest`, `memex-save`,
+`memex-meeting`, `memex-topic-init`, and `memex-deep-extract` copy the template
+*structure* and fill the placeholders themselves, so template syntax never
+reaches a generated note.
 
 ### 2. Dataview setup
 `Settings → Dataview`:

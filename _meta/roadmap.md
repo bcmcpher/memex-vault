@@ -246,7 +246,7 @@ everything it serialises exists.
 | **3** | Evidence layer: `extracts/` + `memex-deep-extract` | E1, M5 | Depends on 0 (grounding gate), 1 (`part-of::` traversal), 2 (M1, M2). Also absorbed P2 — the rubric was cheapest to write while the schema was open. **Done.** |
 | **4** | `memex-trust-audit` rebuild on the claim rubric | — | Shrunk: P2's rubric landed in Phase 3, P3's `related::` promotion in Phase 1. **Done.** |
 | **5** | Anki render mode on `memex-compose` | — | **Deferred** (2026-08-25) — low priority, unlikely to be revisited before more critical refactoring. Unblocked whenever it is wanted; the design is written. |
-| **6** | `memex-init` onboarding skill | S3 | Moved later so it scaffolds `extracts/` once, correctly. No longer scaffolds `anki/` — Phase 5 is deferred |
+| **6** | `memex-init` onboarding skill | S3 | Moved later so it scaffolds `extracts/` once, correctly. No longer scaffolds `anki/` — Phase 5 is deferred. Onboards the audited plugin list: Dataview only |
 | **7** | `memex-tend` orchestrator | P4 | Now sequencing 18 skills, one of them expensive |
 | **8** | OKF export layer: `_meta/okf-export.py` + `memex-export` | O3 | Needs the schema settled (2), `extracts/` to exist (3), and `verified:` populated (4) |
 | **9** | OKF import: `memex-import` | — | Scheduled but deferred — no consumer yet, and its shape depends on what real-world bundles look like |
@@ -671,6 +671,20 @@ re-runnable without overwriting the topic stub.
 *OKF addendum:* also scaffolds the `okf_types` block in the generated
 `_meta/domain.md`, creates `_okf/`, and adds `_okf/` to Obsidian's excluded-files
 list (see the warning in Phase 8).
+
+*Plugin addendum (audit, 2026-08-25):* the onboarding text must state the
+corrected plugin contract, not the pre-Phase-4 one. **Dataview is the only hard
+requirement**, and core **Bases** does not replace it — Bases reads YAML
+frontmatter, while every typed relation in this schema is a Dataview inline field
+in the note body. Core **Canvas** matters only if the fork keeps `canvas/`.
+**Templater is optional**: the shipped templates use only `tp.date.now` and
+`tp.file.title`, both of which have core-Templates equivalents, and the skills
+replace the placeholders themselves rather than invoking either plugin.
+`memex-init` must **not** tell a fork to install **Folder Notes** or **Graph
+Analysis** — both were listed as required through Phase 4 with zero dependents
+anywhere in `_meta/`, `_templates/`, or the skills, and Graph Analysis has had no
+release since January 2022. A fork that installs the old list pays four plugin
+dependencies for one real one. See `README.md` § Obsidian Plugins.
 
 ### Phase 7 — `memex-tend`
 
