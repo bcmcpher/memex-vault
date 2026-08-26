@@ -172,11 +172,30 @@ SORT created DESC
 
 ### Notes never verified by a human
 
+`verified:` is written by `memex-trust-audit` alone, and only on an explicit
+human yes. An atom listed here has never been checked by a person — which is the
+honest default, not a defect. `confidence: high` rows are the ones worth reading
+first: strong evidence nobody has looked over.
+
 ```dataview
 TABLE type, confidence, created
 FROM "atoms"
 WHERE !verified
 SORT confidence DESC, created ASC
+```
+
+### Sign-offs that predate the note
+
+Someone confirmed the atom, and the atom changed afterwards. The sign-off is
+stale rather than void — it still records that a human read *a* version — so it
+is never rewritten. Re-confirm on the next audit. Lint section 13c reports the
+same set.
+
+```dataview
+TABLE confidence, updated, verified
+FROM "atoms"
+WHERE verified AND updated > max(map(verified, (v) => v.at))
+SORT updated DESC
 ```
 
 ---

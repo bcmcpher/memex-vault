@@ -244,7 +244,7 @@ everything it serialises exists.
 | **1** | `covers::` → Dataview migration | P1 | Breaking; all skills must be consistent first. **Done.** |
 | **2** | Schema split + atom style spec + disambiguation policy + OKF frontmatter | S1, M1, M2, O1, O2 | M1 and M2 are hard prereqs for Phase 3. O1 and O2 land here because this phase already rewrites every template and writing skill — separately means touching both twice. **Done.** |
 | **3** | Evidence layer: `extracts/` + `memex-deep-extract` | E1, M5 | Depends on 0 (grounding gate), 1 (`part-of::` traversal), 2 (M1, M2). Also absorbed P2 — the rubric was cheapest to write while the schema was open. **Done.** |
-| **4** | `memex-trust-audit` rebuild on the claim rubric | — | Shrunk: P2's rubric landed in Phase 3, P3's `related::` promotion in Phase 1. One item left |
+| **4** | `memex-trust-audit` rebuild on the claim rubric | — | Shrunk: P2's rubric landed in Phase 3, P3's `related::` promotion in Phase 1. **Done.** |
 | **5** | Anki render mode on `memex-compose` | — | Consumer of Phase 3. The glossary-only half has no dependency and can ship any time. |
 | **6** | `memex-init` onboarding skill | S3 | Moved later so it scaffolds `extracts/` and `anki/` once, correctly |
 | **7** | `memex-tend` orchestrator | P4 | Now sequencing 18 skills, one of them expensive |
@@ -537,12 +537,13 @@ atoms and 0 extracts. The three new extract queries use the `meta(l).path` inlin
 idiom already present in the file, but they are unrun. **This is the first thing
 to check when the vault is next opened in Obsidian.**
 
-### Phase 4 — `memex-trust-audit` rebuild
+### Phase 4 — `memex-trust-audit` rebuild *(complete)*
 
-**This phase is down to one item.** Both of its original two landed early: the
+**This phase came down to one item.** Both of its original two landed early: the
 confidence rubric was written in Phase 3, where extracts first made it
 expressible, and the `related::` promotion pass went in with Phase 1's
-`memex-reconcile` rewrite.
+`memex-reconcile` rewrite. What was left was the skill that consumes the rubric —
+and, as it turned out, five lint checks that had quietly stopped agreeing with it.
 
 1. ~~`_meta/schema.md` — confidence derives from independent claims across
    independent sources; source-type weighting (peer-reviewed > preprint > curated
@@ -551,9 +552,60 @@ expressible, and the `related::` promotion pass went in with Phase 1's
    time rather than stored — see the OKF addendum below, which is why.
 2. ~~`skills/memex-reconcile/SKILL.md` — `related::` promotion pass for links
    older than 30 days.~~ **Done in Phase 1.**
-3. `skills/memex-trust-audit/SKILL.md` — rebuild checks on the claim-count rubric,
-   and become the writer of `verified:` entries (`{ by: human:<id>, at: <date> }`
-   on human sign-off), using the field defined in Phase 2.
+3. ~~`skills/memex-trust-audit/SKILL.md` — rebuild checks on the claim-count
+   rubric, and become the writer of `verified:` entries
+   (`{ by: human:<id>, at: <date> }` on human sign-off), using the field defined
+   in Phase 2.~~ **Done.**
+
+#### What shipped
+
+- `skills/memex-trust-audit/SKILL.md` — rebuilt. The six-check threshold table is
+  replaced by *gather evidence → compute justified confidence → compare to
+  declared*: citations are split into claims and bare sources, every block anchor
+  is resolved through its extract's `extracted-from::`, sources are grouped by
+  the independence test, and tiers are inferred per group. Findings fall out of
+  the comparison. New: CONTRADICTED, NEVER VERIFIED, STALE SIGN-OFF.
+- **The sign-off pass is new** — step 7, and the vault's only writer of
+  `verified:`. Its first rule is that the skill may never write an entry on its
+  own judgement: `human:<id>` asserts a named person read the atom, and inferring
+  that from an audit result forges a record about a human. Sign-off is asked
+  separately from `confidence:`, offered only for atoms actually examined that
+  session, and never bumps `updated:`.
+- `_meta/schema.md` § `verified:` — three normative rules (append-only, does not
+  touch `updated:`, asked separately from `confidence:`), plus the stale-sign-off
+  definition. Propagated to all 14 `skills/*/references/vault-schema.md` copies
+  (verified: one md5).
+- `_meta/lint.sh` — new **section 13** (13a `generated:` shape and actor form,
+  13b `verified:` list shape and `human:` requirement, 13c stale sign-off); new
+  **8e**, `high` with a live `contradicts::`/`refutes::`, which is the rubric's
+  third requirement for `high` and had gone unchecked since Phase 3.
+- `_meta/index.md` — a stale-sign-off query beside the never-verified one.
+- `README.md` — `verified:` semantics, skill map, and trigger table.
+
+#### Defect found while implementing
+
+**Four lint checks could not see through an extract citation.** 7c, 7d, 8b and 8c
+each resolved `cites::` targets straight against `sources/`, which was correct
+until Phase 3 made `cites:: [[ext-slug#^cNN]]` the *preferred* form for
+well-grounded atoms. On any atom citing an extract they resolved nothing: 7d and
+8c then reported "all cited sources are stage: unread" on atoms whose sources
+were processed — a false positive aimed squarely at the best-cited notes in the
+vault — while 7c and 8b silently under-reported. 8a had the mirror problem: it
+counted `cites::` *lines*, so three anchors into one extract read as three
+sources and let a `low`-grade atom sit at `high`.
+
+All five now share one `backing_sources()` helper that resolves anchors through
+`extracted-from::` and deduplicates. Independence is deliberately *not* tested
+there — it is a judgement, `memex-trust-audit` owns it, and the lint count is
+an upper bound that can only under-report.
+
+**`lint.sh` could exit 1 without reaching a verdict.** An unguarded `grep` inside
+a command substitution in the new section 13 tripped `pipefail` and `set -e`; the
+script died mid-section and returned 1 — which since Phase 0 means "this vault
+has a FAIL." A linter bug was indistinguishable from vault corruption, and the
+fixture that caught it looked exactly like a genuine failure. Fixed, and guarded:
+an early exit now returns **2** with a message saying it is a bug in the linter,
+so exit 1 keeps meaning what Phase 0 made it mean.
 
 *OKF addendum:* the source-type weighting in step 1 is this vault's credibility
 signal. OKF §5.1 stores exactly that — objective per-source signals (`author`,

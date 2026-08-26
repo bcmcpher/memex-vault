@@ -518,9 +518,34 @@ verified:
     at: 2026-08-25
 ```
 
-`verified:` is **defined here in Phase 2 and written in Phase 4**, where
-`memex-trust-audit` becomes its writer. A note with no `verified:` key has simply
-never been checked, which is the honest default.
+`skills/memex-trust-audit` is its writer, and the only one. A note with no
+`verified:` key has simply never been checked, which is the honest default.
+
+Three rules govern it.
+
+**Append-only.** Entries are added, never rewritten or removed. A sign-off is a
+statement about a moment — "I read this on this date and it was right" — and
+editing one falsifies a record about a person. Two sign-offs by the same person
+on different dates are two entries, correctly.
+
+**Sign-off does not touch `updated:`.** This is the rule most likely to be
+broken by accident, and it is load-bearing in two places. `memex-stale` reads
+`updated:` to find atoms drifting away from their sources; if confirming an atom
+were to refresh it, verification would launder staleness into freshness. And
+this file's own *stale confidence* signal — an incoming `challenges::` or
+`refutes::` dated after `updated:` — would be cleared by the act of signing off,
+which is exactly backwards: a human confirming an atom should not erase the
+evidence that someone else disputed it. Checking a note is not revising it.
+
+**Sign-off is asked separately from `confidence:`.** They are different
+questions — how much evidence exists, versus who has looked — and bundling them
+into one prompt produces confirmations nobody meant to give. Same discipline
+`memex-refactor` applies to `confidence:` and content edits.
+
+A sign-off therefore goes **stale** rather than expiring: when `updated:` is
+later than the newest `verified.at`, someone signed off on a version of the note
+that no longer exists. That is a warning, not a failure — lint section 13 reports
+it, and the entry stays.
 
 See `## Confidence Values` above for why `verified:` and `confidence:` are
 orthogonal and must not be collapsed into one field.

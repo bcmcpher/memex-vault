@@ -102,7 +102,10 @@ mandatory. `medium:` is the *sub*type of a source (`web`, `video`, `paper`,
 
 Workflow position is `stage:`, not `status:` — see `_meta/schema.md` § Stage
 Values for why that distinction is load-bearing. Provenance is `generated:`
-(who made this note) and `verified:` (who has since checked it).
+(who made this note) and `verified:` (who has since checked it). `verified:` is
+append-only, written by `memex-trust-audit` on an explicit human yes and never
+inferred — and signing off deliberately does *not* bump `updated:`, because
+checking a note is not revising it.
 
 Extract filenames carry an `ext-` prefix (`extracts/ext-2026-04-27-lewis-rag.md`
 for `sources/paper/2026-04-27-lewis-rag.md`). Obsidian resolves wikilinks by
@@ -270,7 +273,7 @@ STRUCTURE ───────────────────────�
 
 MAINTAIN ────────────────────────────────────────────────
   reconcile      fix dangling part-of; promote stale related:: to typed relations
-  trust-audit    review and update atom confidence levels
+  trust-audit    audit confidence against the claim rubric; record human sign-off
   conflicts      surface and document unacknowledged tensions
   stale          read-only decay audit (unread age, stale atoms, underconfident topics)
 
@@ -322,6 +325,7 @@ replace `ingest` (which summarizes) or `connect` (which wires whole sources).
 | Ground an atom's confidence in real quotes | "promote the claims in [extract]" | deep-extract |
 | Fix graph drift after bulk ingest | "reconcile my vault" | reconcile |
 | Review confidence levels | "trust audit [topic]" | trust-audit |
+| Record that you checked an atom | "sign off on [atom]" | trust-audit |
 | Find undocumented tensions | "find conflicts in my vault" | conflicts |
 
 **Searching and synthesizing**
@@ -356,7 +360,7 @@ replace `ingest` (which summarizes) or `connect` (which wires whole sources).
 | `memex-topic-emerge` | Structure | "what topics are emerging", "discover clusters", "find natural groupings", "suggest topic maps" |
 | `memex-refactor` | Structure | "refactor atom", "split [atom]", "merge [A] and [B]", "revise [atom]" |
 | `memex-reconcile` | Maintain | "reconcile my vault", "check graph integrity", "fix bidirectional links" |
-| `memex-trust-audit` | Maintain | "audit confidence", "trust audit [topic]", "are my atoms overconfident" |
+| `memex-trust-audit` | Maintain | "audit confidence", "trust audit [topic]", "are my atoms overconfident", "sign off on [atom]" |
 | `memex-conflicts` | Maintain | "find conflicts", "what's in tension", "surface contradictions" |
 | `memex-stale` | Maintain | "find stale notes", "decay check", "what's been sitting unread" |
 | `memex-compose` | Compose | "compose [topic]", "write up my notes on", "export my research on" |
