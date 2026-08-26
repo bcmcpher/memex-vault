@@ -265,13 +265,24 @@ Body: the exact text to append.
 ---
 
 ## Archive (optional)
-If the user wants to preserve the full source text locally (for offline access or link-rot protection), save it to:
+If the user wants to preserve the full source text locally (for offline access or link-rot protection), save it — **always piped through the normalizer**:
+
+```bash
+VAULT=/home/bcmcpher/Projects/claude/memex-vault
+<fetch the full text> | bash "$VAULT/_meta/normalize.sh" > "$VAULT/.archive/YYYY-MM-DD-slug.md"
 ```
-.archive/YYYY-MM-DD-slug.md
-```
+
 Then add to the source note: `raw:: .archive/YYYY-MM-DD-slug.md`
 
 The `.archive/` folder is gitignored and excluded from Obsidian's indexer — it won't appear in the graph.
+
+**Never write an archive by hand or with a plain redirect.** `_meta/normalize.sh` folds ligatures, smart quotes and dashes to ASCII, rejoins words split across line breaks, and unwraps each paragraph onto one line. `memex-deep-extract` grounds every extracted claim by running `grep -F` for its quote against this file, and `_meta/lint.sh` section 12 FAILs when a quote is missing. Raw `pdftotext` or scraped-HTML output fails that check on almost every multi-line quote, so an un-normalized archive turns the vault's anti-fabrication guarantee into noise.
+
+Normalization has to happen at write time in *every* skill that writes an archive. If one writer skips it, whether a quote grounds depends on which skill happened to save the file. The script is deterministic and idempotent, so re-running it on an archive of unknown provenance is always safe:
+
+```bash
+bash "$VAULT/_meta/normalize.sh" --in-place "$VAULT/.archive/YYYY-MM-DD-slug.md"
+```
 
 ---
 

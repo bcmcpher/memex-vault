@@ -17,6 +17,7 @@ is what a fork changes.
 | Source (paper) | `sources/paper/` | `Source` | One file per URL | `title`, `url`, `medium`, `authors`, `year`, `saved`, `stage` |
 | Source (docs) | `sources/docs/` | `Source` | One file per URL | `title`, `url`, `medium`, `tool`, `saved`, `stage` |
 | Source (meeting) | `sources/meeting/` | `Source` | One file per meeting | `title`, `medium`, `date`, `stage` |
+| Extract | `extracts/` | `Extract` | One file per deep-extracted source | `title`, `extracted`, `claims` |
 | Atom | `atoms/` | `Atom` | One concept per file | `title`, `created`, `confidence` |
 | Glossary | `glossary/` | `Glossary Term` | One term per file | `title`, `term`, `domain`, `stage` |
 | Concept map | `topics/concepts/` | `Concept Map` | One domain per file | `title` |
@@ -37,6 +38,12 @@ renames `Atom` to `Note` edits that one table.
 `_exports/` and `_meta/candidates/` carry no `type:` — neither is a knowledge
 node. Exports are generated artifacts and candidates are ephemeral proposals;
 both are excluded from the OKF bundle.
+
+**Extracts are evidence, not knowledge.** An extract records what one source
+said, claim by claim, each claim carrying a verbatim quote checkable against the
+archived text. Atoms remain the curated layer: one hand-written concept per file.
+Nothing is ever promoted from `extracts/` to `atoms/` automatically — see
+§ Extract Claims and `_meta/deep-extract-design.md`.
 
 ---
 
@@ -82,6 +89,33 @@ Relationships are grouped by **epistemic role**: affirmative (source builds on t
 | `rebuts::` | This note references that source as counter-evidence to a claim |
 
 **Provenance anchors:** Use `[[note#Section]]` heading anchors on `cites::` to record which section of a source supports the specific claim in this atom. Valid section names match the source note's `##` headings: `Summary`, `Key Points`, `Why Saved`, `Decisions Made`, `Key Concepts Discussed`. Example: `cites:: [[2026-04-27-flash-attention#Key Points]]`. Bare `[[note]]` remains valid when the whole source is relevant or the section is indeterminate. Multiple sources may mix anchored and bare forms on the same field.
+
+**Block anchors.** The same field addresses a single extracted claim with an
+Obsidian block reference: `cites:: [[2026-04-27-slug#^c07]]`. Heading anchors
+point at a section a human wrote; block anchors point at one proposition with a
+verbatim quote attached. This is the finest provenance grain the vault has, and
+it is what makes a claim-derived `confidence:` possible — see § Confidence
+Values. The target lives in `extracts/` and carries the `ext-` prefix
+(`cites:: [[ext-2026-04-27-slug#^c07]]`), so the citation reads *this atom rests
+on that specific sentence of that source*, and hovering it in Obsidian previews
+the claim with its quote.
+
+### Extract → Source / Concepts
+| Field | Meaning |
+|-------|---------|
+| `extracted-from::` | This extract is the claim-level reading of that source. Exactly one target, always. |
+| `mentions::` | A concept this extract's claims talk about. **Not** an assertion that the concept is atomized, and never a substitute for `part-of::` or `supports::` |
+
+`mentions::` is deliberately weak. It exists so an extract is reachable from the
+graph at all, and so `memex-search` can answer "the vault has evidence about X
+but has formed no concept about it." It is the only relation field that points at
+targets which may not exist yet, and it therefore **does not rescue an atom from
+orphanhood** — `extracts/` is not a curated folder (see the orphan definition
+below). An atom whose only inbound link is an extract's `mentions::` is still an
+orphan in both `_meta/lint.sh` and `_meta/index.md`, which is the correct reading:
+evidence was collected, nobody curated it.
+
+Both fields are written only by `memex-deep-extract`, and only in `extracts/`.
 
 ### Any Note → Glossary
 | Field | Meaning |
@@ -206,16 +240,167 @@ is not. What varies is how well-evidenced it is, which is `confidence:`.
 
 ---
 
+## Extract Claims
+
+An **extract** is the claim-level reading of one source:
+`extracts/ext-<source-slug>.md`. One extract per source, written by
+`memex-deep-extract` and by nothing else. Full rationale in
+`_meta/deep-extract-design.md`.
+
+The `ext-` prefix is not decoration. Without it the extract and its source share
+a filename, and § Disambiguation Policy above exists precisely because Obsidian
+resolves wikilinks by filename: every `cites:: [[2026-04-27-lewis-rag]]` already
+written on an atom would become ambiguous the moment the extract appeared, with
+no error anywhere. The prefix keeps the mapping mechanical in both directions —
+strip `ext-` for the source, prepend it for the extract — while leaving one name
+per file.
+
+An extract stores **no fact that lives elsewhere**. There is no `source:` and no
+`medium:` field: the filename mirrors the source and `extracted-from::` carries
+the edge, so a third copy would only be a third thing to keep in step. There is
+no `grounded:` field either — grounding is what lint computes, and a note that
+asserts its own verification is exactly what a fabricating writer would emit.
+
+```yaml
+---
+type: Extract
+title: "Extract: Retrieval-Augmented Generation for Knowledge-Intensive NLP"
+description: Claim-level extraction of the RAG paper (extracts/ext-2026-04-27-lewis-rag.md).
+extracted: 2026-07-09
+claims: 47
+---
+```
+
+`claims:` is the one derived number kept in frontmatter, because Dataview cannot
+count block ids and the index needs the figure. Lint section 12 cross-checks it
+against the actual count, so it cannot drift silently.
+
+### Claim format
+
+Claims are **bullet list items**. Obsidian accepts a block identifier only at the
+end of a bullet or of a paragraph's last line, so the bullet is not a style
+choice.
+
+```markdown
+- RAG-Sequence conditions on a single retrieved document for the whole output; RAG-Token may draw each token from a different document. ^c07
+    - type: contrast
+    - about: `rag-sequence`, `rag-token`
+    - quote: "...each target token may be drawn from a different document."
+```
+
+Sub-bullets use **plain single-colon keys, never Dataview `::` fields**, and this
+is load-bearing rather than cosmetic:
+
+- Dataview inline fields in a body **lift to page level**. Fifty claims would
+  collapse `type` / `about` / `quote` into three merged page-level arrays, so the
+  quote for `^c07` would be unrecoverable anyway. Per-claim retrieval is text
+  parsing — `grep`, `awk` — and the format should be honest about that.
+- A bare `about:: [[atom]]` would fire once per claim, pushing ~50 unapproved
+  edges into the atom graph before a human saw any of them.
+
+Single-colon keys are inert to Dataview and to lint's unknown-relation-field
+scan, and stay inert if that scan is ever widened.
+
+| Key | Required | Meaning |
+|-----|----------|---------|
+| `type:` | yes | `finding` / `definition` / `limitation` / `contrast` / `method` |
+| `about:` | yes | Backticked concept slugs this claim concerns |
+| `quote:` | yes | Verbatim text from the normalized archive |
+
+`type:` is the bridge from free extraction into the vault's closed vocabulary:
+`finding → supports::`, `definition → glossary`, `limitation → limits::`,
+`contrast → contrasts-with::`, `method → uses::`.
+
+Staging tables (`## Concepts`, `## Proposed Relations`) use **backticked slugs,
+never `[[wikilinks]]`**. A proposed relation is not a graph edge; rendering it as
+a link would create edges nobody approved.
+
+### Grounding
+
+Every claim carries a verbatim `quote:`, and `_meta/lint.sh` section 12 runs
+`grep -F` for it against the source's `raw::` archive. A quote that is not in the
+archive is a **FAIL**: fabrication is deep extraction's characteristic failure
+mode, and this is the whole defense.
+
+The check only works against normalized text, so `.archive/` files are written
+through `_meta/normalize.sh` — by every skill that writes one, not just by
+`memex-deep-extract`. Two rules follow for the writer:
+
+- **A quote is single-line.** Normalization puts each paragraph on one line, so
+  a quote cannot span a paragraph boundary.
+- **No ellipsis inside a quote.** Emit two `quote:` lines instead. An elided span
+  is unmatchable, and allowing it would reopen the hole the check exists to close.
+
+A **missing** archive is a SKIP, not a FAIL. `.archive/` is gitignored, so it is
+absent on every fresh clone, and *unverifiable* is not *fabricated*. The
+guarantee is therefore local-only — worth stating plainly rather than pretending
+it runs in CI.
+
+---
+
 ## Confidence Values
 
 Atoms only. Measures **evidence strength**, not workflow position and not human
 sign-off.
 
-| Value | Meaning |
-|-------|---------|
-| `low` | Single source, speculative |
-| `medium` | Multiple sources or well-established |
-| `high` | Extensively sourced, cross-validated |
+### The unit is an independent claim, not a source
+
+Counting sources is the wrong measure and no weighting fixes it: three blog posts
+summarizing the same paper are one piece of evidence, and a single paper making
+four separately-tested assertions is four. The unit is a **claim** — one
+proposition, with a verbatim quote, from `extracts/` — grouped by **independent**
+source.
+
+Two sources are **not** independent when any of these holds:
+
+- one `cites::` the other, directly or through a chain in the vault;
+- they share an author (`authors:`, `channel:`, `tool:`);
+- one is a restatement of the other — a blog post about a paper, a talk given on
+  a paper, vendor docs describing a vendor's own release.
+
+Where that is unclear, treat them as dependent. Overstating independence is how
+`high` becomes meaningless, and `high` is the only value that changes anyone's
+behaviour.
+
+### Rubric
+
+| Value | Requires |
+|-------|----------|
+| `low` | One supporting claim, or several claims that trace back to one source |
+| `medium` | ≥ 2 supporting claims from ≥ 2 independent sources, at least one of them reviewed or primary |
+| `high` | ≥ 3 supporting claims from ≥ 3 independent sources, at least two reviewed or primary, **and** no unaddressed `contradicts::` or `refutes::` on the atom |
+
+**`high` requires claim-level grounding.** At least one `cites::` on a `high`
+atom must be block-anchored — `cites:: [[extract#^c07]]` — so the assertion
+resolves to specific sentences of specific sources rather than to a pile of
+filenames. Lint section 12 warns when it does not.
+
+### Where no extract exists
+
+Most atoms will never be deep-extracted: `memex-deep-extract` is the most
+expensive skill in the vault and is deliberately selective. Those atoms fall back
+to counting **independent sources** rather than claims, using the same
+independence test, and are **capped at `medium`**. That is not a penalty; it is
+the accurate reading. Nobody has checked what those sources actually said, so the
+vault cannot distinguish three real corroborations from three restatements.
+
+### Source-type weighting
+
+The secondary term. It is inferred from signals the source note already carries —
+**no rigor score is ever stored in frontmatter.** A stored score is a judgement
+frozen at capture time that nothing will ever revisit; the signals below are
+facts that stay true.
+
+| Tier | Inferred from |
+|------|---------------|
+| Reviewed | `medium: paper` with a `venue:` |
+| Primary | `medium: paper` without a `venue:` (preprint), or `medium: video` of a talk by the work's own authors |
+| Curated | `medium: docs` — accurate about the tool, and about nothing else |
+| Unreviewed | `medium: web`, and everything else |
+
+"Reviewed or primary" in the rubric above means the first two tiers.
+
+### Relationship to `verified:`
 
 `confidence:` is orthogonal to `verified:` (below): confidence measures how much
 evidence stands behind a claim, `verified:` records who checked it. A `high`
@@ -348,6 +533,7 @@ orthogonal and must not be collapsed into one field.
 |------|---------|---------|
 | Sources (all except meeting) | `YYYY-MM-DD-kebab-title.md` | `2026-04-27-attention-is-all-you-need.md` |
 | Meetings | `YYYY-MM-DD-kebab-context.md` | `2026-04-27-team-rag-sync.md` |
+| Extracts | `ext-<source-filename>.md` | `ext-2026-04-27-attention-is-all-you-need.md` |
 | Atoms | `kebab-concept-name.md` | `transformer-architecture.md` |
 | Glossary | `term.md` (lowercase, hyphenated) | `self-attention.md` |
 | Concept maps | `kebab-domain.md` | `deep-learning.md` |
@@ -364,6 +550,28 @@ Full source text may optionally be saved to `.archive/YYYY-MM-DD-slug.md`. This 
 raw:: .archive/2026-04-27-slug.md
 ```
 
+**Archives are always written through `_meta/normalize.sh`**, which folds
+ligatures, smart quotes, dashes and exotic spaces to ASCII, rejoins words split
+by line-break hyphenation, and unwraps each paragraph onto one line:
+
+```bash
+curl -s "$URL" | pandoc -f html -t plain | bash _meta/normalize.sh > .archive/2026-04-27-slug.md
+bash _meta/normalize.sh --in-place .archive/2026-04-27-slug.md   # bring a legacy archive up to standard
+```
+
+This is not tidiness. Extract quotes are checked against the archive with
+`grep -F` (§ Extract Claims), and raw `pdftotext` or scraped-HTML output fails
+that check on every multi-line quote. Normalization has to happen at write time,
+in every skill that writes an archive — if one writer skips it, whether a quote
+grounds depends on which skill happened to save the file. The script is
+deterministic and idempotent, so re-running it on an archive of unknown
+provenance is always safe.
+
+`_meta/lint.sh` section 5 FAILs when `raw::` names a file that is missing while
+`.archive/` exists — that is a real mismatch. When `.archive/` is absent
+altogether, both section 5 and the grounding check SKIP: that is what a fresh
+clone looks like, and a clone must not fail lint.
+
 ---
 
 ## Workflow Stages
@@ -378,6 +586,7 @@ Skills that write vault notes, and what they produce:
 | `memex-meeting` | Meeting source note + atom/glossary stubs | Full | Yes |
 | `memex-topic-init` | New topic map + atom back-wires | Full | Yes |
 | `memex-topic-emerge` | Proposed topic maps from atom clusters + atom back-wires | Full | Yes |
+| `memex-deep-extract` | Mode A: one file in `extracts/`, nothing else. Mode B: atom edits from reviewed claims | Mode B only | Yes |
 | `memex-refactor` | Rewrites/splits/merges existing atoms | Varies | Yes |
 | `memex-glossary` | Glossary entries from existing notes | `defines::` only | No |
 | `memex-candidates` | Applies pending candidates from `_meta/candidates/` | Varies | No |
@@ -435,7 +644,10 @@ A source note with `stage: unread` and no populated Dataview fields in `## Conne
 
 An atom is an **orphan** when it has no `cites::` *and* no inbound wikilink from a **curated folder** — `sources/`, `atoms/`, `topics/`, or `glossary/`. It neither cites evidence nor is referenced by anything, so it is disconnected from the graph in both directions.
 
-Links from `_meta/`, `_exports/`, and `.archive/` never count. `_meta/log.md` records `atoms:: [[Atom A]]` for every atom it touches, so counting it would mark every ingested atom as connected and make the check vacuous. Both `_meta/lint.sh` (section 4) and `_meta/index.md` implement this definition; changing one without the other makes them disagree silently.
+Links from `_meta/`, `_exports/`, `extracts/`, and `.archive/` never count.
+`extracts/` is excluded on purpose: an extract's `mentions::` records that
+evidence was collected, not that anyone curated a concept, so an atom whose only
+inbound link is a `mentions::` is still disconnected in the sense that matters. `_meta/log.md` records `atoms:: [[Atom A]]` for every atom it touches, so counting it would mark every ingested atom as connected and make the check vacuous. Both `_meta/lint.sh` (section 4) and `_meta/index.md` implement this definition; changing one without the other makes them disagree silently.
 
 An atom's `part-of::` is **orphaned** when it names a topic file that does not
 exist. Since membership is derived from this field alone, a typo'd or stale
@@ -456,6 +668,8 @@ These thresholds are soft signals surfaced as WARNings, not hard failures. They 
 | Atom: no populated relations | Atom | any | Fully isolated atom; check for orphan or missing wiring |
 | Atom: bloated | Atom | `cites::` > 5 AND `related::` > 4 AND body > 100 lines | May cover multiple concepts; consider splitting |
 | Topic map: too many atoms | Concept map | > 15 atoms with `part-of::` pointing at it | May span multiple domains; consider sub-topics |
+| Extract: `claims:` count wrong | Extract | frontmatter ≠ `^cNN` block ids in body | Hand edit drifted from the frontmatter; recount |
+| Atom: `high` without grounding | Atom | `confidence: high` and no `cites:: [[…#^…]]` | Confidence rests on filenames, not sentences; run `memex-deep-extract` |
 
 Note: high `cites::` count on a **source** note is not a smell. A survey paper or conference talk legitimately references many prior works.
 
@@ -483,6 +697,8 @@ rebuts
 defines
 related
 raw
+extracted-from
+mentions
 ```
 
 ---

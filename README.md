@@ -19,11 +19,19 @@ derived knowledge graph of notes is decidedly not an interpersonal consensus.
 This vault is a **layered knowledge graph**, not a flat bookmark list. Sources are never searched directly — instead, they feed upward into concept atoms, which feed upward into topic maps. Search flows top-down:
 
 ```
-topics/concepts/  →  atoms/  →  sources/
-  (broad domain)      (concept)   (specific reference)
+topics/concepts/  →  atoms/  →  extracts/  →  sources/  →  .archive/
+  (broad domain)     (concept)    (claim)      (document)   (raw text)
 ```
 
 Every connection between notes is typed (e.g., `extends::`, `supports::`, `refutes::`), making the graph navigable by relationship kind — not just by link existence.
+
+Density rises left to right and curation falls. `atoms/` and above are
+hand-curated: one concept per file, written by a human. `extracts/` is the
+**evidence layer** — what a source actually said, claim by claim, each claim
+carrying a verbatim quote that `_meta/lint.sh` checks against the archived text.
+It is optional and selective; a vault with no extracts works exactly as before,
+its atoms simply capped at `confidence: medium`. Nothing is ever promoted from
+`extracts/` to `atoms/` automatically.
 
 ---
 
@@ -36,6 +44,7 @@ vault/
 │   ├── source-meeting.md     # Meeting notes (no URL; different schema)
 │   ├── atom.md
 │   ├── glossary.md
+│   ├── extract.md
 │   ├── topic-concept.md
 │   ├── topic-project.md
 │   └── topic-research.md
@@ -45,7 +54,8 @@ vault/
 │   ├── log.md                # Append-only ingest history
 │   ├── schema.md             # Relationship types, naming conventions (authoritative)
 │   ├── domain.md             # Instance vocabulary — tags, node types (edit on fork)
-│   └── lint.sh               # Programmatic health checks
+│   ├── lint.sh               # Programmatic health checks
+│   └── normalize.sh          # Archive text normalizer — every .archive/ write pipes through it
 │
 ├── sources/                  # One file per URL or meeting — summary only
 │   ├── web/
@@ -54,6 +64,8 @@ vault/
 │   ├── docs/
 │   └── meeting/
 │
+├── extracts/                 # Evidence layer — one file per deep-extracted source,
+│                             #   quote-grounded claims addressed as [[ext-slug#^c07]]
 ├── atoms/                    # One concept per file (Wikipedia stub granularity)
 ├── glossary/                 # One term definition per file
 │
@@ -74,6 +86,7 @@ vault/
 | Folder | `type:` | Role | Granularity |
 |--------|---------|------|-------------|
 | `sources/` | `Source` | URL + why-saved + short summary. Never full article text. | One per URL or meeting |
+| `extracts/` | `Extract` | Evidence layer. What one source said, claim by claim, each with a verbatim quote. Never hand-curated. | One per deep-extracted source |
 | `atoms/` | `Atom` | Concept-level synthesis. Holds claims, links sources, connects to other atoms. | One concept per file |
 | `glossary/` | `Glossary Term` | Precise term definitions. Lighter than atoms. | One term per file |
 | `topics/concepts/` | `Concept Map` | Domain map — aggregates atoms, provides broad entry point. | One domain per file |
@@ -90,6 +103,11 @@ mandatory. `medium:` is the *sub*type of a source (`web`, `video`, `paper`,
 Workflow position is `stage:`, not `status:` — see `_meta/schema.md` § Stage
 Values for why that distinction is load-bearing. Provenance is `generated:`
 (who made this note) and `verified:` (who has since checked it).
+
+Extract filenames carry an `ext-` prefix (`extracts/ext-2026-04-27-lewis-rag.md`
+for `sources/paper/2026-04-27-lewis-rag.md`). Obsidian resolves wikilinks by
+filename, so without the prefix every `cites:: [[2026-04-27-lewis-rag]]` already
+written on an atom would go ambiguous the moment the extract appeared.
 
 ---
 
@@ -209,9 +227,13 @@ Already configured in `.obsidian/app.json`. The `.archive/` folder will not appe
 ### 4. Graph view coloring (optional but recommended)
 `Settings → Graph view → Groups`:
 - Add group: `path:sources/` → color orange
+- Add group: `path:extracts/` → color grey
 - Add group: `path:atoms/` → color blue
 - Add group: `path:glossary/` → color green
 - Add group: `path:topics/` → color purple
+
+Grey for extracts is deliberate: they are evidence, not curated knowledge, and
+should read as background in the graph rather than as nodes to navigate by.
 
 ---
 
@@ -241,6 +263,7 @@ CAPTURE ────────────────────────
 
 STRUCTURE ───────────────────────────────────────────────
   connect        inbox notes → enrich metadata + wire connections
+  deep-extract   source → quote-grounded claims (mode A); claims → atoms (mode B)
   topic-init     create a new topic map (top-down)
   topic-emerge   discover emerging topic clusters from atoms (bottom-up)
   refactor       revise / split / merge existing atoms
@@ -266,6 +289,13 @@ SUPPORT ────────────────────────
 
 Run reconcile before trust-audit; run both before compose. The output quality of compose depends directly on graph integrity (reconcile) and trustworthy confidence signals (trust-audit).
 
+`deep-extract` is the exception to "run it regularly": it is by far the most
+expensive skill here, so it is user-invoked, one source at a time, never
+automatic and never vault-wide. Reach for it when a source is dense enough that a
+document-level summary loses what it said, or when `stale` / `trust-audit` names
+a specific source as under-extracted. Ingest first, then extract — it does not
+replace `ingest` (which summarizes) or `connect` (which wires whole sources).
+
 ---
 
 ### Workflow Patterns
@@ -288,6 +318,8 @@ Run reconcile before trust-audit; run both before compose. The output quality of
 | Update an atom's body | "revise atom [name]" | refactor |
 | Atom covers two things | "split [atom] into [A] and [B]" | refactor |
 | Merge redundant atoms | "merge [A] and [B]" | refactor |
+| Read one dense source claim by claim | "deep extract [paper]" | deep-extract |
+| Ground an atom's confidence in real quotes | "promote the claims in [extract]" | deep-extract |
 | Fix graph drift after bulk ingest | "reconcile my vault" | reconcile |
 | Review confidence levels | "trust audit [topic]" | trust-audit |
 | Find undocumented tensions | "find conflicts in my vault" | conflicts |
@@ -319,6 +351,7 @@ Run reconcile before trust-audit; run both before compose. The output quality of
 | `memex-ingest` | Capture | "ingest this", "add to wiki with atoms", "full ingest" |
 | `memex-meeting` | Capture | "log this meeting", "save meeting notes", "record this discussion" |
 | `memex-connect` | Structure | "process my inbox", "wire up my notes" |
+| `memex-deep-extract` | Structure | "deep extract [source]", "what did [paper] actually say", "promote the claims in [extract]" |
 | `memex-topic-init` | Structure | "create topic map", "start a new topic", "initialize [domain]" |
 | `memex-topic-emerge` | Structure | "what topics are emerging", "discover clusters", "find natural groupings", "suggest topic maps" |
 | `memex-refactor` | Structure | "refactor atom", "split [atom]", "merge [A] and [B]", "revise [atom]" |
@@ -355,8 +388,8 @@ That file is **`_meta/domain.md`**. It holds everything instance-specific:
 means editing a script.
 
 **What you keep:** `_meta/schema.md` (relation types, stage values, naming
-patterns), all 17 skills, all 7 templates, and `_meta/lint.sh`. These are the
-structure every memex-vault shares.
+patterns), all 18 skills, all 8 templates, `_meta/lint.sh`, and
+`_meta/normalize.sh`. These are the structure every memex-vault shares.
 
 **What you should also change, in practice:**
 
@@ -393,12 +426,41 @@ rename cannot go quiet.
 
 Full article/transcript text is **not stored in the vault** by default. The `.archive/` folder provides an opt-in escape hatch:
 
-1. Save full text to `.archive/YYYY-MM-DD-slug.md`
+1. Save full text through the normalizer:
+   ```bash
+   <fetch> | bash _meta/normalize.sh > .archive/YYYY-MM-DD-slug.md
+   ```
 2. Add `raw:: .archive/YYYY-MM-DD-slug.md` to the source note
 
 The archive is gitignored and excluded from Obsidian's indexer.
 
-**When to use it:** High-value sources at risk of link rot; long-form content you expect to re-read in full; papers you need offline.
+**Always pipe through `_meta/normalize.sh`.** It folds ligatures, smart quotes,
+dashes and exotic spaces to ASCII, rejoins words split across line breaks, and
+unwraps each paragraph onto one line. `memex-deep-extract` grounds every claim by
+running `grep -F` for its verbatim quote against this file, and `_meta/lint.sh`
+section 12 FAILs on a miss — raw `pdftotext` output would fail that check on
+almost every multi-line quote and turn the anti-fabrication guarantee into noise.
+The script is deterministic and idempotent, so bringing a legacy archive up to
+standard is safe:
+
+```bash
+bash _meta/normalize.sh --in-place .archive/YYYY-MM-DD-slug.md
+```
+
+**When to use archival:** High-value sources at risk of link rot; long-form
+content you expect to re-read in full; papers you need offline. It is also a hard
+prerequisite for `memex-deep-extract` — a claim with no checkable quote is not a
+claim, so the skill refuses to run without an archive.
+
+**Because `.archive/` is gitignored, the grounding guarantee is local-only.** On a
+fresh clone the archive is simply absent, and both the archive-mismatch check and
+the grounding check SKIP rather than fail — *unverifiable* is not *fabricated*.
+That is stated plainly rather than pretended around: grounding cannot run in CI.
+
+Extract quotes themselves *are* committed, unlike the archives they come from.
+They are short attributed excerpts — ordinary citation, and the reason the
+guarantee is auditable by anyone reading the repo. Keep them that way: quote the
+sentence that carries the claim, not the paragraph around it.
 
 ---
 

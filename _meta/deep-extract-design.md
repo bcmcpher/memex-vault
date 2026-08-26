@@ -1,6 +1,9 @@
 # Deep Extract — Design
 
 Written: 2026-07-09. Design for roadmap Phase 3 (finding E1).
+**Implemented 2026-08-25.** Six things changed between the design and the build;
+they are recorded in *Implementation decisions* at the end, and the body below has
+been corrected to match what actually shipped.
 
 Infrastructure doc — not a vault node. No frontmatter, and nothing should link to
 it with a wikilink.
@@ -67,12 +70,20 @@ carefully. See "Making the grounding check real."
 
 ## The new layer: `extracts/`
 
-One file per deep-extracted source, filename mirroring the source **exactly**:
+One file per deep-extracted source, filename derived from the source's with an
+`ext-` prefix:
 
 ```
 sources/paper/2026-04-27-lewis-rag-retrieval-augmented-generation.md
-extracts/2026-04-27-lewis-rag-retrieval-augmented-generation.md
+extracts/ext-2026-04-27-lewis-rag-retrieval-augmented-generation.md
 ```
+
+The prefix is load-bearing. Mirroring the filename *exactly* — which this document
+originally specified — puts two notes in the vault under one name, and Phase 2's
+own § Disambiguation Policy opens by stating that Obsidian resolves wikilinks by
+filename. Every `cites:: [[2026-04-27-lewis-rag-…]]` already written on an atom
+would have gone ambiguous the moment its extract appeared, silently. The prefix
+keeps the mapping mechanical in both directions while leaving one name per file.
 
 Density sits between `.archive/` (raw text, gitignored) and `sources/` (prose
 summary). In the `_meta/ccm-mapping.md` framing this is the missing rung of the
@@ -102,12 +113,14 @@ both at the top of the note.
 
 ````markdown
 ---
+type: Extract
 title: "Extract: Retrieval-Augmented Generation for Knowledge-Intensive NLP"
-source: 2026-04-27-lewis-rag-retrieval-augmented-generation
-medium: paper
+description: Claim-level extraction of the RAG paper.
 extracted: 2026-07-09
 claims: 47
-grounded: true
+generated:
+  by: memex-deep-extract/claude-opus-5
+  at: 2026-07-09
 ---
 
 extracted-from:: [[2026-04-27-lewis-rag-retrieval-augmented-generation]]
@@ -146,6 +159,16 @@ mentions:: [[retrieval-augmented-generation]], [[dense-passage-retrieval]]
 Staging tables use **backticked slugs, never `[[wikilinks]]`**. A proposed relation
 is not yet a graph edge; rendering it as a link would create edges the human never
 approved.
+
+Three fields from the original sketch are gone. `source:` and `medium:` were
+derivable — the filename and `extracted-from::` already name the source twice, and
+`medium:` belongs to the source note — so keeping them would have rebuilt the
+duplication Phase 1 spent its whole budget removing. `grounded: true` was worse: a
+cached lint verdict stored inside the file it judges, which goes stale on the next
+edit and which a fabricating writer can simply assert. Grounding is what lint
+computes, never what a note claims about itself. `claims:` survives, because
+Dataview cannot count block ids and the index needs the figure — and lint
+cross-checks it so it cannot drift.
 
 `type:` is the bridge from free extraction into the vault's closed vocabulary:
 `finding → supports::`, `definition → glossary`, `limitation → limits::`,
@@ -273,7 +296,12 @@ better inputs and zero code changes.
 
 ---
 
-## Anki: a new mode of `memex-compose`
+## Anki: a new mode of `memex-compose` *(Phase 5 — deferred)*
+
+> **Not Phase 3.** `_meta/roadmap.md` gives Anki its own phase, and the roadmap
+> wins: Phase 3 touched nothing Anki-related — no `anki/` folder, no
+> `.obsidian/app.json` change, no `memex-compose` render mode. The section below
+> stands as the Phase 5 design and is unchanged by the build.
 
 The claim layer is what makes flashcards good. Without it you can export glossary
 terms and atom summaries — thin, definitional, mostly things you already know. A
@@ -374,32 +402,54 @@ path without disturbing the primary traversal.
 
 ---
 
-## Changes required (Phase 3)
+## Changes required (Phase 3) — *as shipped*
 
 Every `lint.sh` scan is folder-scoped (`find "$VAULT/atoms"`, `.../sources`,
 `.../topics`, `.../glossary`). **A new `extracts/` folder is therefore inert to all
 existing sections** — no defensive edits to naming, frontmatter, or bloat
-heuristics are needed. Only additive work.
+heuristics are needed. That held; the work was additive throughout.
 
 **Create**
 - `skills/memex-deep-extract/SKILL.md` + `references/vault-schema.md` copy
 - `_templates/extract.md`
-- `extracts/.gitkeep`, `anki/.gitkeep`
+- `extracts/.gitkeep`
+- `_meta/normalize.sh` — not in the original list. The design assumed
+  `memex-deep-extract` would normalize at archive time, but `memex-ingest` was
+  already writing un-normalized archives, so extracts taken from them would have
+  thrown false grounding FAILs. Normalization is now a standalone script and
+  **every** archive-writing skill pipes through it. See *Implementation
+  decisions* 1.
 
 **Modify**
-- `_meta/schema.md` — extract node type; `extracted-from` and `mentions` relation
-  fields; document `[[note#^claim-id]]` block anchors; confidence rubric
-- `_meta/lint.sh` — new grounding section (FAIL on missing quote, SKIP on missing
-  archive)
-- `_meta/index.md` — add an "extracts with unpromoted claims" query
-- `.obsidian/app.json` — add `anki` to `userIgnoreFilters`
-- `skills/memex-compose/SKILL.md` — `anki` render mode
+- `_meta/schema.md` — extract node type; `extracted-from::` and `mentions::`
+  relation fields; `[[note#^claim-id]]` block anchors; § Extract Claims;
+  **§ Confidence Values rewritten** on the independent-claims rubric; § Archive
+  rewritten around `normalize.sh`; `ext-` in Naming Conventions; the orphan
+  definition amended to name `extracts/` as non-curated
+- `_meta/domain.md` — `extracts|Extract` in the OKF Types table
+- `_meta/lint.sh` — new section 12 (grounding: FAIL on a missing quote, SKIP on a
+  missing archive), plus section 2 extract fields, the section 5 clone fix, and
+  7e scanning `extracts/`
+- `_meta/index.md` — `## Extracts`, "extracts with unpromoted claims", "processed
+  sources with no extract"
+- `skills/memex-ingest/SKILL.md` — archives written through `normalize.sh`
 - `skills/memex-search/SKILL.md` — extracts as a gap-finding fallback surface only
 - `skills/memex-trust-audit/SKILL.md` and `skills/memex-stale/SKILL.md` — recommend
   `memex-deep-extract` for under-extracted sources
-- `README.md` — layer diagram, new skill, new folders
+- `skills/*/references/vault-schema.md` — **14 identical copies.** The list above
+  originally named only the one new copy; the per-skill schema reference fans out
+  to every skill, and Phase 1 under-counted the same way. All 14 kept
+  byte-identical (verified: one md5)
+- `README.md` — layer diagram, new skill, new folders, `ext-` rationale
 
-**Explicitly unchanged:** `skills/memex-conflicts/SKILL.md`.
+**Moved in:** the confidence rubric (roadmap **P2**) was scheduled for Phase 4 but
+written here, while the schema was already open. Phase 4 shrinks accordingly.
+
+**Moved out, to Phase 5:** `anki/.gitkeep`, `.obsidian/app.json`'s
+`userIgnoreFilters`, and `skills/memex-compose/SKILL.md`'s render mode.
+
+**Explicitly unchanged:** `skills/memex-conflicts/SKILL.md`. That held — no edit
+was needed or made.
 
 **Reference while writing:** `skills/memex-ingest/SKILL.md` (richest writer, the
 candidate-gating pattern), `skills/memex-refactor/SKILL.md` (in-place atom edits,
@@ -432,17 +482,46 @@ multi-mode skill shape), `skills/memex-compose/SKILL.md` (read-only traversal).
     `_meta/candidates/` file first. Kill the session mid-promotion; confirm
     `memex-candidates` resurfaces the pending ones.
 11. `grep -c '\^c' extracts/*.md` equals the `claims:` frontmatter count.
-12. Run compose in `anki` mode, import via Obsidian_to_Anki, re-run and re-import.
-    Cards must **update, not duplicate**.
+12. ~~Run compose in `anki` mode, import via Obsidian_to_Anki, re-run and
+    re-import. Cards must **update, not duplicate**.~~ **Phase 5.**
 13. `memex-search` a term appearing only in an extract. It must report "unpromoted
     evidence," not present it as vault knowledge.
+
+---
+
+## OKF correspondence
+
+Recorded so Phase 8 does not reinvent it. **No design change follows from this
+section** — it names a correspondence that already exists.
+
+Open Knowledge Format v0.2 §5.1 attributes claims *per claim* rather than per
+document, using a footnote key joined to a `sources[]` entry id:
+
+```markdown
+RAG-Token may draw each token from a different document.[^lewis-2020]
+```
+
+That is the same object as a claim block id. An extract's `^c07` addresses one
+proposition, `extracted-from::` names the source, and `quote:` carries the
+verbatim evidence — so the exporter renders one as the other mechanically:
+`^c07` becomes the footnote key, `extracted-from::` resolves to the
+`sources[].id`, and the `quote:` sub-bullet becomes the footnote body. Nothing
+needs to be stored twice, and no frontmatter field exists to keep in sync.
+
+The corollary matters more than the mapping: **block-reference addressing was the
+right call independently**, and the format the vault picked for Obsidian's sake
+turns out to be the format the interchange standard wants. Full analysis in
+`_meta/okf-alignment.md`; the exporter is roadmap Phase 8.
 
 ---
 
 ## Non-goals
 
 - No embeddings, no SemHash, no Python, no vector store. Resolution is grep plus an
-  LLM. The vault's one-bash-script property is worth keeping.
+  LLM. The vault's bash-and-an-LLM property is worth keeping — Phase 3 added
+  `_meta/normalize.sh` as a second bash script beside `lint.sh`, and that is the
+  shape any further tooling should take. (Phase 8's exporter is stdlib Python by
+  its own separate decision; it is not part of this pipeline.)
 - No n-ary hyperedges. Hyper-Extract's `participants: [A, B, C]` model is elegant,
   but the vault's relation vocabulary is binary throughout, and a claim's `about:`
   list already carries the n-ary grouping informally.
@@ -452,9 +531,79 @@ multi-mode skill shape), `skills/memex-compose/SKILL.md` (read-only traversal).
 
 ---
 
-## Open questions
+## Open questions — *resolved*
 
-- The `≥ 3 claims` stub threshold is a guess. Tune it against a real paper before
-  it becomes a default.
-- Whether `extracts/` should ever be a `memex-search` fallback at all, or stay
-  reachable only through `cites::`. The gap-finding argument is strong but untested.
+Both were settled during the build.
+
+- **The `≥ 3 claims` stub threshold.** It stays a **stated default**, not a hidden
+  constant: mode B announces the threshold it is using at the top of each run, so
+  a user can see it and override it for that run. It is still untuned against a
+  real paper — but that is a tuning task with a visible knob, not an open design
+  question, and shipping it silent was the only outcome worth avoiding.
+- **Whether `extracts/` should be a `memex-search` fallback at all.** It shipped,
+  under the gap-finding rule above. `skills/memex-search/SKILL.md` checks
+  `extracts/` **last**, after the topic → atom → source traversal, and reports
+  every hit as *unpromoted evidence, not vault knowledge*. The curation
+  discipline is preserved by the ordering and by the labelling, not by refusing
+  the capability.
+
+---
+
+## Implementation decisions
+
+Six ways the build diverged from the design above. The first five were confirmed
+with the user before building; the sixth was forced by a defect found while
+testing. All six are reflected in the body of this document and in
+`_meta/roadmap.md` § Phase 3.
+
+**1. Archive normalization became its own script.** The design had
+`memex-deep-extract` write normalized archives on first use. But `memex-ingest`
+was already writing archives with no normalization at all, so any extract taken
+from an ingest-written archive would have thrown false grounding FAILs — the
+exact failure mode "Making the grounding check real" exists to prevent.
+
+*Shipped:* `_meta/normalize.sh` — bash/awk, deterministic, idempotent — and every
+skill that writes `.archive/` pipes through it. *Rejected:* normalizing in place
+on first extract, which leaves the guarantee dependent on which skill happened to
+save the file.
+
+**2. Anki deferred entirely to Phase 5.** The design's change list included
+`anki/.gitkeep`, the `.obsidian/app.json` exclusion, and the `memex-compose`
+render mode. `_meta/roadmap.md` makes Anki its own phase. The roadmap won; Phase 3
+touched nothing Anki-related.
+
+**3. The confidence rubric (P2) landed here, not in Phase 4.** Extracts are what
+make the rubric expressible, and the schema was already open, so
+`_meta/schema.md` § Confidence Values was rewritten in this phase: the unit is
+**independent claims across independent sources**, source tiers are inferred at
+audit time and never stored, and an atom with no extract is capped at `medium`.
+Phase 4 consequently shrinks to the `memex-trust-audit` rebuild.
+
+**4. `grounded:`, `source:`, and `medium:` dropped from extract frontmatter.**
+`grounded: true` is a cached lint verdict stored inside the file it judges — it
+goes stale on the next edit, and a fabricating writer can simply assert it.
+Grounding is what lint computes, never what a note claims about itself. `source:`
+and `medium:` were derivable: the filename and `extracted-from::` name the source
+twice already, and `medium:` belongs to the source note.
+
+*Kept:* `claims:`, because Dataview cannot count block ids and the index needs the
+figure — with a lint cross-check (12b) so it cannot drift.
+
+**5. Extract filenames take an `ext-` prefix.** The design mandated mirroring the
+source filename *exactly*. That collides head-on with Phase 2's own
+§ Disambiguation Policy, which opens by stating that Obsidian resolves wikilinks
+by filename: every `cites:: [[<source-slug>]]` already written on an atom would
+have gone silently ambiguous the moment its extract appeared. Confirmed in a
+fixture — two files, one name. *Shipped:* `extracts/ext-<source-slug>.md`, which
+keeps the mapping mechanical in both directions while leaving one name per file.
+
+**6. The missing-archive SKIP rule had to extend past the grounding check.**
+Obstacle 3 above applies the SKIP-on-missing-archive rule to *grounding*. Testing
+found `_meta/lint.sh` **section 5** — the archive-mismatch check, a FAIL site
+since Phase 0 — walking into the same trap one section earlier: `.archive/` is
+gitignored, so every fresh clone FAILed on the first `raw::` it met.
+
+*Shipped:* the rule is now split by cause. `.archive/` absent entirely is the
+clone case and **SKIPs**; a file missing while the folder exists is a real
+mismatch and still **FAILs**. *Unverifiable* is not *corrupt*, and the gate is
+preserved everywhere it means anything.

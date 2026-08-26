@@ -56,6 +56,7 @@ Apply these six checks per atom:
 
 | Check | Condition | Finding label |
 |-------|-----------|---------------|
+| Ungrounded high | `confidence: high` AND no `cites:: [[ext-…#^cNN]]` | UNGROUNDED |
 | Overconfident (high) | `confidence: high` AND `cites::` count < 3 | OVERCONFIDENT |
 | Overconfident (medium) | `confidence: medium` AND only 1 cited source | OVERCONFIDENT |
 | Upgrade candidate | `confidence: low` AND 2+ cited sources with `stage: processed` | UPGRADE |
@@ -64,6 +65,28 @@ Apply these six checks per atom:
 | Stale sources | Newest cited source `saved:` date > 18 months ago | STALE SOURCES |
 
 An atom can have multiple findings. Collect all before presenting.
+
+**Source count is the weak measure, and no weighting fixes it.** Per
+`_meta/schema.md` § Confidence Values the unit is **independent claims across
+independent sources**: three blog posts about one paper are one piece of
+evidence, and one paper making four separately-tested assertions is four. Before
+proposing any upgrade, apply the independence test — sources are not independent
+when one `cites::` the other, they share an author, or one restates the other.
+Where it is unclear, treat them as dependent.
+
+The checks above count sources because that is all the graph exposes without
+extracts. Say so when you report: an UPGRADE finding on an atom with no
+block-anchored citations is a *candidate*, not a verdict, and it cannot reach
+`high` at all — `high` requires claim-level grounding.
+
+```bash
+# does this atom rest on specific sentences, or on filenames?
+grep -cE '^cites::.*\[\[[^]|]+#\^' "$VAULT/atoms/<atom>.md"
+```
+
+An UNGROUNDED finding's remedy is always the same: run `memex-deep-extract` on
+the atom's cited sources, then mode B to re-cite at claim granularity. This is
+the only path to `high` in the vault.
 
 ### 3. Source extraction completeness (G13)
 
@@ -74,6 +97,17 @@ grep -c "^supports::" "$source_file"
 wc -l < "$source_file"
 ```
 If body > 100 lines AND `introduces::` count = 0 AND `supports::` count < 2 → flag as **UNDER-EXTRACTED**: "long processed source with few atom connections — may have more concepts worth extracting."
+
+Also check whether the source has an extract at all:
+
+```bash
+ls "$VAULT/extracts/ext-$(basename "$source_file")" 2>/dev/null
+```
+
+A long processed source with no extract is the clearest case: nobody has read it
+claim by claim, so nothing downstream of it can be grounded. **The remedy is
+`memex-deep-extract` mode A.** Until Phase 3 this finding had no fix attached —
+it named a problem and stopped.
 
 Report under-extracted sources as a separate group, not mixed with atom findings.
 
@@ -109,8 +143,14 @@ Group atoms by finding type, most actionable first:
 
 ## Under-extracted sources
   sources/paper/2026-01-01-big-survey.md
-  - 187 lines, stage: processed, 0 introduces:: 1 supports::
-  → May have more extractable concepts
+  - 187 lines, stage: processed, 0 introduces:: 1 supports::, no extract
+  → Run: memex-deep-extract mode A
+
+## Ungrounded high-confidence atoms
+  atoms/scaling-laws.md
+  - confidence: high, 4 cites::, none block-anchored
+  → Confidence rests on filenames, not sentences
+  → Run: memex-deep-extract on the cited sources, then mode B
 ```
 
 If a scope has no findings, report that clearly and stop.

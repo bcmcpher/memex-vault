@@ -36,6 +36,54 @@ SORT medium ASC, saved DESC
 
 ---
 
+---
+
+## Extracts
+
+The evidence layer: one file per deep-extracted source, holding quote-grounded
+claims addressable by block reference. Extracts are **not** an answer surface —
+reach a claim through an atom's `cites::`. What they answer directly is the
+inverse question, which nothing else in the vault can: *where has evidence been
+collected that no concept has been formed from?*
+
+```dataview
+TABLE description, claims, extracted
+FROM "extracts"
+SORT extracted DESC
+```
+
+### Extracts with unpromoted claims
+
+No atom cites this extract, so every claim in it is evidence nobody has curated.
+Feed these to `memex-deep-extract` mode B, or to `memex-topic-emerge` when the
+same concepts recur across several of them.
+
+Inbound links are filtered to `atoms/` for the same reason as the orphan query
+above: `_meta/log.md` links would otherwise clear every extract permanently.
+
+```dataview
+TABLE claims, extracted
+FROM "extracts"
+WHERE length(filter(file.inlinks, (l) =>
+    regexmatch("^atoms/.*", meta(l).path))) = 0
+SORT claims DESC
+```
+
+### Processed sources with no extract
+
+An extract links to its source with `extracted-from::`, so a source with no
+inbound link from `extracts/` has never been read claim by claim. This is the
+remediation queue behind `_meta/lint.sh` 8d's "under-extracted source" warning,
+which until now flagged a problem with no fix attached.
+
+```dataview
+TABLE description, medium, saved
+FROM "sources"
+WHERE stage = "processed" AND length(filter(file.inlinks, (l) =>
+    regexmatch("^extracts/.*", meta(l).path))) = 0
+SORT saved DESC
+```
+
 ## Atoms
 
 ```dataview
@@ -117,7 +165,7 @@ straight from a Templater template legitimately appear here.
 
 ```dataview
 TABLE type, created
-FROM "atoms" OR "sources" OR "topics" OR "glossary"
+FROM "atoms" OR "sources" OR "topics" OR "glossary" OR "extracts"
 WHERE !generated
 SORT created DESC
 ```
@@ -156,6 +204,13 @@ FROM "atoms"
 WHERE !row["part-of"]
 ```
 
+### High-confidence atoms without claim-level grounding
+
+Not a Dataview query: `confidence: high` requires at least one block-anchored
+`cites:: [[ext-…#^cNN]]` (`_meta/schema.md` § Confidence Values), and Dataview
+cannot filter on a link's block subpath reliably enough to trust here.
+`_meta/lint.sh` section 12f reports it.
+
 ### Notes missing a type
 
 `type:` is required on every curated node (`_meta/schema.md` § Node Types).
@@ -163,6 +218,6 @@ This table should always be empty; `_meta/lint.sh` fails on the same condition.
 
 ```dataview
 LIST
-FROM "atoms" OR "sources" OR "topics" OR "glossary"
+FROM "atoms" OR "sources" OR "topics" OR "glossary" OR "extracts"
 WHERE !type
 ```

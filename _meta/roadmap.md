@@ -114,6 +114,11 @@ warning has no remediation path, and `.archive/` has no consumer at all.
 *Fix:* an `extracts/` node type plus a `memex-deep-extract` skill. Full design in
 `_meta/deep-extract-design.md`.
 
+*Status: fixed in Phase 3.* `extracts/` holds quote-grounded claims addressable by
+block reference; `_meta/lint.sh` section 12 `grep -F`s every quote against the
+normalized archive, so fabrication is mechanically detectable. `.archive/` finally
+has a consumer.
+
 **P1. `covers::` / `part-of::` duplication.** Same membership data in two places;
 `memex-reconcile` exists solely to sync them. Make `covers::` a Dataview-generated
 view from `part-of::`.
@@ -125,6 +130,12 @@ weighting to the rubric." That treats the symptom. Source *count* is the wrong
 unit no matter how it is weighted — three blog posts agreeing is not `high`. With
 E1, confidence derives from **independent claims across independent sources**,
 with source-type weighting as a secondary term. **P2 now depends on E1.**
+
+*Status: fixed in Phase 3*, not Phase 4 as scheduled — extracts made the rubric
+expressible and the schema was already open. `_meta/schema.md` § Confidence
+Values: the unit is independent claims across independent sources, source tiers
+are inferred at audit time and never stored, and an atom with no extract is capped
+at `medium`.
 
 **P3. `related::` will erode typed-relation value.** No skill audits or promotes
 `related::` links. *Fix:* a promotion pass in `memex-reconcile` surfacing links
@@ -168,6 +179,10 @@ type an `open-question` claim, giving atom-level questions a home.
 **M5. Source↔atom drift not audited — partially subsumed by E1.** An extract's
 claims make the source `supports::` ↔ atom `cites::` correspondence checkable
 rather than merely assertable.
+
+*Status: fixed in Phase 3*, to the extent E1 subsumes it. `memex-trust-audit`
+gained an UNGROUNDED finding and an extract-existence check on G13; `memex-stale`
+Check 4 surfaces processed sources that were never extracted.
 
 ### Tier 4 — Interoperability
 
@@ -228,8 +243,8 @@ everything it serialises exists.
 | **0** | Lint integrity: split `fails` from `warns`, `exit 1`, one orphan definition | L1, L2 | Small. Nothing downstream can treat lint as a gate until this lands. **Done.** |
 | **1** | `covers::` → Dataview migration | P1 | Breaking; all skills must be consistent first. **Done.** |
 | **2** | Schema split + atom style spec + disambiguation policy + OKF frontmatter | S1, M1, M2, O1, O2 | M1 and M2 are hard prereqs for Phase 3. O1 and O2 land here because this phase already rewrites every template and writing skill — separately means touching both twice. **Done.** |
-| **3** | Evidence layer: `extracts/` + `memex-deep-extract` | E1, M5 | Depends on 0 (grounding gate), 1 (`part-of::` traversal), 2 (M1, M2) |
-| **4** | Confidence rubric grounded in claims + `related::` promotion | P2, P3 | P2's real fix only exists after Phase 3 |
+| **3** | Evidence layer: `extracts/` + `memex-deep-extract` | E1, M5 | Depends on 0 (grounding gate), 1 (`part-of::` traversal), 2 (M1, M2). Also absorbed P2 — the rubric was cheapest to write while the schema was open. **Done.** |
+| **4** | `memex-trust-audit` rebuild on the claim rubric | — | Shrunk: P2's rubric landed in Phase 3, P3's `related::` promotion in Phase 1. One item left |
 | **5** | Anki render mode on `memex-compose` | — | Consumer of Phase 3. The glossary-only half has no dependency and can ship any time. |
 | **6** | `memex-init` onboarding skill | S3 | Moved later so it scaffolds `extracts/` and `anki/` once, correctly |
 | **7** | `memex-tend` orchestrator | P4 | Now sequencing 18 skills, one of them expensive |
@@ -413,7 +428,7 @@ Items 13 and 14 are lint defects rather than Phase 2 work, fixed here because
 this phase is what exposed them and because a lint that dies partway cannot gate
 anything — which was Phase 0's entire point.
 
-### Phase 3 — Evidence layer
+### Phase 3 — Evidence layer *(complete)*
 
 See `_meta/deep-extract-design.md`. Summary: a new `extracts/` node type, one file
 per deep-extracted source, holding quote-grounded claims addressable by Obsidian
@@ -429,11 +444,111 @@ extract claims map onto OKF §5.1 footnote-keyed per-claim attribution
 is the same idea, and the exporter renders one as the other. No design change;
 recorded so Phase 8 does not reinvent it.
 
-### Phase 4 — Confidence rubric + `related::` promotion
+#### Design calls made during implementation (2026-08-25, confirmed with the user)
 
-1. `_meta/schema.md` — confidence derives from independent claims across
+Five conflicts between `deep-extract-design.md` and this roadmap, resolved before
+building. All five are reflected in the code and docs.
+
+> The canonical write-up is now `_meta/deep-extract-design.md` § Implementation
+> decisions, which carries these five plus a sixth found while testing — the lint
+> section 5 clone case below. The summaries here are kept because the *conflict*
+> was between the two documents, and this is the other side of it.
+
+1. **Archive normalization gets its own script.** `memex-ingest` already wrote
+   `.archive/` files with no normalization, so any extract taken from an
+   ingest-written archive would have thrown false grounding FAILs. New
+   `_meta/normalize.sh` (bash/awk, deterministic, idempotent); *every* skill that
+   writes an archive pipes through it. Rejected: having deep-extract normalize in
+   place on first use, which would leave the guarantee dependent on which skill
+   saved the file.
+2. **Anki is deferred entirely to Phase 5.** The design doc's change list included
+   `anki/.gitkeep`, the `.obsidian/app.json` exclusion, and the `memex-compose`
+   render mode; the roadmap makes Anki its own phase. Roadmap wins — Phase 3
+   touches nothing Anki-related.
+3. **The confidence rubric (P2) landed here, not in Phase 4.** Extracts make it
+   expressible, so it was written while the schema was open. **Phase 4 therefore
+   shrinks to the `memex-trust-audit` rebuild** — `related::` promotion already
+   landed in Phase 1, so that phase now has one item.
+4. **`grounded:` and `source:` dropped from extract frontmatter.** `grounded: true`
+   is a cached lint verdict stored in the file it judges: it goes stale, and a
+   fabricating writer can simply assert it. `source:` was a third copy of a fact
+   the filename and `extracted-from::` already carry. `medium:` was dropped on the
+   same reasoning. `claims:` survives with a lint cross-check, because Dataview
+   cannot count block ids.
+5. **Extract filenames take an `ext-` prefix.** The design mandated mirroring the
+   source filename *exactly*, which collides head-on with Phase 2's own
+   Disambiguation Policy — Obsidian resolves wikilinks by filename, so every
+   `cites:: [[<source-slug>]]` already on an atom would silently go ambiguous the
+   moment its extract appeared. Confirmed in a fixture: two files, one name.
+   `extracts/ext-<source-slug>.md`.
+
+#### Defect found while implementing
+
+**`_meta/lint.sh` section 5 failed every fresh clone.** `.archive/` is gitignored,
+so a clone has none of it, and the archive-mismatch check FAILed on the first
+`raw::` it met — the exact trap `deep-extract-design.md` argues the *grounding*
+check must avoid, already live one section earlier since Phase 0. Now split: if
+`.archive/` is absent entirely that is the clone case and SKIPs; a file missing
+while the folder exists is a real mismatch and still FAILs. The gate is preserved
+everywhere it means anything.
+
+#### What shipped
+
+Branch `phase-3-evidence-layer`, merged to `main`. `bash _meta/lint.sh` exits 0.
+
+- `_meta/normalize.sh` — new. Idempotence and folding tested against hyphenated
+  line breaks, soft hyphens, ligatures, smart quotes, nested lists, code fences.
+- `_templates/extract.md`, `extracts/.gitkeep` — new.
+- `_meta/domain.md` — `extracts|Extract` in the OKF Types table.
+- `_meta/schema.md` — Extract node type; `extracted-from::` / `mentions::`
+  (also added to Valid Relation Fields); block anchors on `cites::`; new
+  § Extract Claims; **rewritten § Confidence Values** (independent-claims rubric,
+  inferred source tiers, `medium` cap without extracts); Archive section rewritten
+  around `normalize.sh`; `ext-` in Naming Conventions; orphan definition now names
+  `extracts/` as non-curated.
+- `_meta/lint.sh` — section 2 extract fields; **section 5 clone fix**; section 7e
+  scans `extracts/`; **new section 12** (12a `extracted-from::` resolves + filename
+  matches, 12b `claims:` cross-check + duplicate ids, 12c every claim has a quote,
+  12d `grep -F` grounding with ellipsis hint, 12e dangling block anchors,
+  12f `high` without block-anchored `cites::`); extracts in the summary counts.
+  Verified in a fixture vault: positive grounds, fabricated quote FAILs with
+  exit 1, absent `.archive/` SKIPs with exit 0, missing-file-in-present-folder
+  FAILs, `claims:` drift and duplicate ids fire.
+- `_meta/index.md` — `## Extracts`, "extracts with unpromoted claims", "processed
+  sources with no extract"; `extracts` added to the provenance and missing-`type:`
+  queries; a pointer to lint 12f where Dataview cannot see block subpaths.
+- `skills/memex-deep-extract/SKILL.md` — new, both modes.
+- `skills/*/references/vault-schema.md` — 14 copies, byte-identical (verified:
+  one md5).
+- `skills/memex-ingest/SKILL.md` — archives written through `normalize.sh`.
+- `skills/memex-search/SKILL.md` — extracts as a gap-finding surface only.
+- `skills/memex-trust-audit/SKILL.md` — UNGROUNDED finding, independence test,
+  extract-existence check on G13.
+- `skills/memex-stale/SKILL.md` — Check 4, processed sources never extracted.
+- `README.md` — layer diagram, folder tree, node types, `ext-` rationale, skill
+  lifecycle and reference table, graph colouring, archival section.
+- `_meta/deep-extract-design.md` — corrected to match what shipped, with an
+  § Implementation decisions section recording all six divergences, an § OKF
+  correspondence section for Phase 8, and both Open questions resolved.
+
+**Still unverified, carried forward from Phases 1–2:** no Dataview query in
+`_meta/index.md` has ever been executed — no Obsidian here, and the vault has 0
+atoms and 0 extracts. The three new extract queries use the `meta(l).path` inlinks
+idiom already present in the file, but they are unrun. **This is the first thing
+to check when the vault is next opened in Obsidian.**
+
+### Phase 4 — `memex-trust-audit` rebuild
+
+**This phase is down to one item.** Both of its original two landed early: the
+confidence rubric was written in Phase 3, where extracts first made it
+expressible, and the `related::` promotion pass went in with Phase 1's
+`memex-reconcile` rewrite.
+
+1. ~~`_meta/schema.md` — confidence derives from independent claims across
    independent sources; source-type weighting (peer-reviewed > preprint > curated
-   blog > unreviewed post) as a secondary term.
+   blog > unreviewed post) as a secondary term.~~ **Done in Phase 3**, as
+   `_meta/schema.md` § Confidence Values. Source tiers are *inferred* at audit
+   time rather than stored — see the OKF addendum below, which is why.
 2. ~~`skills/memex-reconcile/SKILL.md` — `related::` promotion pass for links
    older than 30 days.~~ **Done in Phase 1.**
 3. `skills/memex-trust-audit/SKILL.md` — rebuild checks on the claim-count rubric,
@@ -465,6 +580,14 @@ Interactive one-time specialization skill. Five questions (domain name, source
 types, projects?, research questions?, initial tags) → write `_meta/domain.md`,
 create a first topic stub, scaffold `extracts/` and `anki/`, update
 `getting-started.md`, log the run.
+
+*Phase 3 addendum:* scaffolding `extracts/` is not just the folder. A generated
+vault also needs `_templates/extract.md`, the `extracts|Extract` row in the
+generated `_meta/domain.md` § OKF Types, and the **`ext-<source-slug>` naming
+rule** stated in the onboarding text — the prefix exists to keep extracts from
+colliding with their own sources under Obsidian's filename-based wikilink
+resolution, so a fork that drops it breaks every `cites::` the first time an
+extract appears. See `_meta/deep-extract-design.md` § Implementation decisions 5.
 
 Constraints: does not delete unused folders, does not modify `schema.md`,
 re-runnable without overwriting the topic stub.
@@ -501,6 +624,18 @@ per directory from `title` + `description`, and typed relations render as labell
 bullets under a `# Relations` heading. `sources[]` is derived from `cites::`,
 `rebuts::`, and `raw::`; duplicating it into frontmatter would recreate exactly
 the P1 sync problem Phase 1 exists to remove.
+
+*Phase 3 addendum, two items.* **(a)** `extracts/` now exists and the exporter
+must carry it: extract claims map onto OKF §5.1 footnote-keyed per-claim
+attribution — `^c07` becomes the footnote key, `extracted-from::` resolves to the
+`sources[].id`, and the claim's `quote:` sub-bullet becomes the footnote body.
+Block-reference addressing and footnote attribution are the same idea, so this is
+a rendering, not a redesign; the correspondence is written up in
+`_meta/deep-extract-design.md` § OKF correspondence. **(b)** `_meta/normalize.sh`
+already exists and is the vault's canonical text-folding implementation. The
+exporter must call it or leave normalization alone entirely — a second,
+Python-side copy of the folding rules would drift from the one lint greps
+against, and the grounding guarantee is only worth what that agreement is worth.
 
 Then a thin `skills/memex-export/SKILL.md` wrapping the script: run `lint.sh`
 first, refuse to export a failing vault, run the exporter, write a `_meta/log.md`
