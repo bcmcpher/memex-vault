@@ -19,11 +19,14 @@
 #  11. Schema conformance (type: present and correct, stage: in vocabulary,
 #      status: absent)
 #  12. Extract grounding (every claim's quote present in the normalized archive)
+#  13. Provenance blocks (generated:/verified: shape, actor form, stale sign-off)
 #   Summary counts
 #
 # Exit status:
 #   0 — no FAIL-level findings (warnings may still be present)
 #   1 — one or more FAIL-level findings
+#   2 — the linter itself broke before reaching a verdict; says nothing about the
+#       vault. Kept distinct from 1 so a bug here can never be read as corruption.
 #
 # WARN is a soft signal for human review. FAIL means the vault is corrupt in a way
 # no reviewer should have to notice: a misnamed source, a raw:: pointing at a file
@@ -42,6 +45,23 @@ NC='\033[0m'
 
 issues=0
 fails=0
+finished=false
+
+# Phase 0 made exit 1 mean "a FAIL-level finding exists". A `set -e` abort exits
+# 1 too, so a bug in this script reads to any caller as a corrupt vault. This
+# trap keeps the two apart: only a run that reaches the summary is a verdict.
+# (Not hypothetical — an unguarded `grep` in a command substitution did exactly
+# this in section 13 during Phase 4, and the fixture reported a clean exit 1.)
+on_exit() {
+    local code=$?
+    if [ "$code" -ne 0 ] && [ "$finished" = false ]; then
+        echo -e "\n  ${RED}ERROR${NC} lint.sh exited before reaching a verdict — this is a bug in"
+        echo    "        the linter, not a finding about the vault. Do not read it as a FAIL."
+        echo    "        Re-run with 'bash -x _meta/lint.sh' to find the aborting command."
+        exit 2
+    fi
+}
+trap on_exit EXIT
 
 warn()  { echo -e "  ${YEL}WARN${NC}  $1"; ((issues++)) || true; }
 error() { echo -e "  ${RED}FAIL${NC}  $1"; ((issues++)) || true; ((fails++)) || true; }
@@ -51,6 +71,41 @@ ok()    { echo -e "  ${GRN}OK${NC}    $1"; }
 # the ingest log records `atoms:: [[Atom A]]` for every atom it touches, so counting
 # it would make the orphan check below vacuous the moment the log has an entry.
 CURATED=(sources atoms topics glossary)
+
+# Resolve an atom's cites:: into the distinct source files standing behind them.
+# A citation is one of two shapes: a bare source ([[slug]] or [[slug#Section]]),
+# or a claim inside an extract ([[ext-slug#^cNN]]), which resolves through that
+# extract's extracted-from::.
+#
+# Phase 3 made the second shape the *preferred* one — `high` confidence requires
+# it — so a check that only understands the first silently skips the best-cited
+# atoms in the vault. Four checks were written that way (7c, 7d, 8b, 8c) and each
+# was quietly wrong on any atom citing an extract: 7d and 8c reported "all cited
+# sources unread" because they resolved nothing at all.
+#
+# Emits one absolute path per line, deduplicated. Prints nothing when an atom has
+# no resolvable citations.
+backing_sources() {
+    local f="$1" target note ext_file src
+    {
+        while IFS= read -r target; do
+            note="${target%%#*}"
+            [ -z "$note" ] && continue
+            case "$note" in
+                ext-*)
+                    ext_file="$VAULT/extracts/${note}.md"
+                    if [ -f "$ext_file" ]; then
+                        src=$(grep -m1 "^extracted-from::" "$ext_file" 2>/dev/null \
+                              | grep -oE '\[\[[^]|]+' | tr -d '[' | head -1 || true)
+                        [ -n "$src" ] && note="$src"
+                    fi
+                    ;;
+            esac
+            find "$VAULT/sources" -name "${note}.md" 2>/dev/null | head -1
+        done < <(grep -E "^cites::" "$f" 2>/dev/null \
+                 | grep -oE '\[\[[^]]+\]\]' | sed 's/^\[\[//; s/\]\]$//' || true)
+    } | grep -v '^$' | sort -u || true
+}
 
 # ── 1. Naming convention ─────────────────────────────────────────────────────
 
@@ -308,17 +363,13 @@ if cutoff18=$(date -d "18 months ago" +%Y-%m-%d 2>/dev/null) || cutoff18=$(date 
     while IFS= read -r -d '' f; do
         atom_name="$(basename "$f" .md)"
         newest_saved=""
-        while IFS= read -r line; do
-            while IFS= read -r src_name; do
-                src_file=$(find "$VAULT/sources" -name "${src_name}.md" 2>/dev/null | head -1)
-                [ -z "$src_file" ] && continue
-                saved=$(grep "^saved:" "$src_file" 2>/dev/null | head -1 | sed 's/^saved:[[:space:]]*//' || true)
-                [ -z "$saved" ] && continue
-                if [ -z "$newest_saved" ] || [[ "$saved" > "$newest_saved" ]]; then
-                    newest_saved="$saved"
-                fi
-            done < <(echo "$line" | grep -oE '\[\[[^]|]+' | tr -d '[')
-        done < <(grep "^cites::" "$f" 2>/dev/null || true)
+        while IFS= read -r src_file; do
+            saved=$(grep "^saved:" "$src_file" 2>/dev/null | head -1 | sed 's/^saved:[[:space:]]*//' || true)
+            [ -z "$saved" ] && continue
+            if [ -z "$newest_saved" ] || [[ "$saved" > "$newest_saved" ]]; then
+                newest_saved="$saved"
+            fi
+        done < <(backing_sources "$f")
         if [ -n "$newest_saved" ] && [[ "$newest_saved" < "$cutoff18" ]]; then
             warn "atoms/${atom_name}.md — newest cited source saved $newest_saved (>18 months ago); may be stale"
         fi
@@ -328,20 +379,18 @@ fi
 # 7d. Unvalidated atom: all cited sources are stage: unread
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
-    cites_lines=$(grep -E "^cites::[[:space:]]*\[\[" "$f" 2>/dev/null || true)
-    [ -z "$cites_lines" ] && continue
+    resolved=$(backing_sources "$f")
+    # No resolvable source is a dangling-link problem, not an unread one — do not
+    # report it here, or every extract-only atom reads as unvalidated.
+    [ -z "$resolved" ] && continue
     all_unread=true
-    while IFS= read -r line; do
-        while IFS= read -r src_name; do
-            src_file=$(find "$VAULT/sources" -name "${src_name}.md" 2>/dev/null | head -1)
-            [ -z "$src_file" ] && continue
-            src_stage=$(grep "^stage:" "$src_file" 2>/dev/null | head -1 | sed 's/^stage:[[:space:]]*//' || true)
-            if [ "$src_stage" != "unread" ]; then
-                all_unread=false
-                break 2
-            fi
-        done < <(echo "$line" | grep -oE '\[\[[^]|]+' | tr -d '[')
-    done <<< "$cites_lines"
+    while IFS= read -r src_file; do
+        src_stage=$(grep "^stage:" "$src_file" 2>/dev/null | head -1 | sed 's/^stage:[[:space:]]*//' || true)
+        if [ "$src_stage" != "unread" ]; then
+            all_unread=false
+            break
+        fi
+    done <<< "$resolved"
     if $all_unread; then
         warn "atoms/${atom_name}.md — all cited sources are stage: unread (confidence based on unread material)"
     fi
@@ -375,14 +424,23 @@ ok "structural integrity check complete"
 echo ""
 echo "── 8. Confidence and Coverage ─────────────────────────────────────────────"
 
-# 8a. Overconfident atom: confidence: high with fewer than 3 cites::
+# 8a. Overconfident atom: confidence: high backed by fewer than 3 distinct sources.
+#
+# Counts *distinct backing sources* via backing_sources(), not cites:: lines.
+# Since Phase 3 an atom can cite [[ext-slug#^c01]], [[ext-slug#^c07]] and
+# [[ext-slug#^c12]] — three citations, three claims, but ONE source, which is
+# `low` under the rubric and sailed past the old line count.
+#
+# Independence is NOT tested here: "same author", "one restates the other" and
+# "one cites the other through a chain" are judgements, and `memex-trust-audit`
+# owns them. This count is therefore an upper bound — it can only under-report.
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
     confidence=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | sed 's/^confidence:[[:space:]]*//' || true)
     if [ "$confidence" = "high" ]; then
-        cites_count=$(grep -cE "^cites::[[:space:]]*\[\[" "$f" 2>/dev/null || true)
-        if [ "$cites_count" -lt 3 ]; then
-            warn "atoms/${atom_name}.md — confidence: high with only $cites_count cites:: (needs 3+ for high confidence)"
+        source_count=$(backing_sources "$f" | grep -c . || true)
+        if [ "$source_count" -lt 3 ]; then
+            warn "atoms/${atom_name}.md — confidence: high backed by only $source_count distinct source(s) (needs 3+ independent for high)"
         fi
     fi
 done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
@@ -393,16 +451,12 @@ while IFS= read -r -d '' f; do
     confidence=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | sed 's/^confidence:[[:space:]]*//' || true)
     if [ "$confidence" = "low" ]; then
         processed_count=0
-        while IFS= read -r line; do
-            while IFS= read -r src_name; do
-                src_file=$(find "$VAULT/sources" -name "${src_name}.md" 2>/dev/null | head -1)
-                [ -z "$src_file" ] && continue
-                src_stage=$(grep "^stage:" "$src_file" 2>/dev/null | head -1 | sed 's/^stage:[[:space:]]*//' || true)
-                if [ "$src_stage" = "processed" ]; then
-                    processed_count=$((processed_count + 1))
-                fi
-            done < <(echo "$line" | grep -oE '\[\[[^]|]+' | tr -d '[')
-        done < <(grep "^cites::" "$f" 2>/dev/null || true)
+        while IFS= read -r src_file; do
+            src_stage=$(grep "^stage:" "$src_file" 2>/dev/null | head -1 | sed 's/^stage:[[:space:]]*//' || true)
+            if [ "$src_stage" = "processed" ]; then
+                processed_count=$((processed_count + 1))
+            fi
+        done < <(backing_sources "$f")
         if [ "$processed_count" -ge 2 ]; then
             warn "atoms/${atom_name}.md — confidence: low but $processed_count processed sources support it (upgrade candidate)"
         fi
@@ -413,20 +467,16 @@ done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 # (complements Section 7d — same detection, framed as a confidence signal)
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
-    cites_lines=$(grep -E "^cites::[[:space:]]*\[\[" "$f" 2>/dev/null || true)
-    [ -z "$cites_lines" ] && continue
+    resolved=$(backing_sources "$f")
+    [ -z "$resolved" ] && continue
     all_unread=true
-    while IFS= read -r line; do
-        while IFS= read -r src_name; do
-            src_file=$(find "$VAULT/sources" -name "${src_name}.md" 2>/dev/null | head -1)
-            [ -z "$src_file" ] && continue
-            src_stage=$(grep "^stage:" "$src_file" 2>/dev/null | head -1 | sed 's/^stage:[[:space:]]*//' || true)
-            if [ "$src_stage" != "unread" ]; then
-                all_unread=false
-                break 2
-            fi
-        done < <(echo "$line" | grep -oE '\[\[[^]|]+' | tr -d '[')
-    done <<< "$cites_lines"
+    while IFS= read -r src_file; do
+        src_stage=$(grep "^stage:" "$src_file" 2>/dev/null | head -1 | sed 's/^stage:[[:space:]]*//' || true)
+        if [ "$src_stage" != "unread" ]; then
+            all_unread=false
+            break
+        fi
+    done <<< "$resolved"
     if $all_unread; then
         warn "atoms/${atom_name}.md — confidence assigned but all cited sources are still unread"
     fi
@@ -448,6 +498,27 @@ while IFS= read -r -d '' f; do
         fi
     fi
 done < <(find "$VAULT/sources" -name "*.md" ! -name ".gitkeep" -print0)
+
+# 8e. Contradicted high-confidence atom: confidence: high with a live conflict.
+#
+# The rubric's third requirement for `high` — "no unaddressed contradicts:: or
+# refutes::" — went unchecked until Phase 4. Both directions count: an atom the
+# vault disputes is disputed whether it holds the link or the other atom does.
+#
+# Distinct from 9a, which asks whether *any* conflict link was explained in prose
+# regardless of confidence. This asks whether `high` is still earned.
+while IFS= read -r -d '' f; do
+    atom_name="$(basename "$f" .md)"
+    confidence=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | sed 's/^confidence:[[:space:]]*//' || true)
+    [ "$confidence" = "high" ] || continue
+    outgoing=$(grep -cE "^(contradicts|refutes)::[[:space:]]*\[\[" "$f" 2>/dev/null || true)
+    incoming=$(grep -rlE "^(contradicts|refutes)::.*\[\[${atom_name}(#[^]]*)?\]\]" \
+               "$VAULT/atoms" 2>/dev/null | grep -cv "^${f}$" || true)
+    total=$((outgoing + incoming))
+    if [ "$total" -gt 0 ]; then
+        warn "atoms/${atom_name}.md — confidence: high with $total live contradicts::/refutes:: relation(s) (high requires none unaddressed)"
+    fi
+done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
 ok "confidence and coverage check complete"
 
@@ -767,6 +838,86 @@ done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
 ok "extract grounding check complete"
 
+# ── 13. Provenance blocks ────────────────────────────────────────────────────
+#
+# `generated:` and `verified:` (_meta/schema.md § Provenance) both use the OKF
+# actor convention, and `verified:` gained a writer in Phase 4 —
+# `memex-trust-audit`. A field with a writer needs a check, or the shape drifts
+# and nothing notices.
+#
+# All WARN. A malformed provenance block is bad bookkeeping, not corruption: the
+# note's content is unaffected and no other check depends on it.
+
+echo ""
+echo "── 13. Provenance Blocks ──────────────────────────────────────────────────"
+
+prov_checked=0
+
+# Actor form: <producer>/<version>, human:<id>, or process:<id>
+actor_ok() {
+    case "$1" in
+        human:?*|process:?*) return 0 ;;
+        */?*)               return 0 ;;
+        *)                  return 1 ;;
+    esac
+}
+
+while IFS= read -r -d '' f; do
+    label=$(realpath --relative-to="$VAULT" "$f")
+    grep -qE "^(generated|verified):" "$f" 2>/dev/null || continue
+    prov_checked=$((prov_checked + 1))
+
+    # 13a. generated: — a mapping with both by: and at:
+    if grep -qE "^generated:" "$f" 2>/dev/null; then
+        gen_by=$(awk '/^generated:/{f=1;next} f&&/^[a-z]/{exit} f&&/^[[:space:]]+by:/{sub(/^[[:space:]]+by:[[:space:]]*/,"");print;exit}' "$f")
+        gen_at=$(awk '/^generated:/{f=1;next} f&&/^[a-z]/{exit} f&&/^[[:space:]]+at:/{sub(/^[[:space:]]+at:[[:space:]]*/,"");print;exit}' "$f")
+        if [ -z "$gen_by" ] || [ -z "$gen_at" ]; then
+            warn "$label — generated: is missing by: or at:"
+        else
+            actor_ok "$gen_by" || warn "$label — generated.by '$gen_by' is not a valid actor string (<producer>/<version>, human:<id>, process:<id>)"
+            echo "$gen_at" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' || warn "$label — generated.at '$gen_at' is not YYYY-MM-DD"
+        fi
+    fi
+
+    # 13b. verified: — a list, every entry carrying by: and at:
+    if grep -qE "^verified:" "$f" 2>/dev/null; then
+        ver_block=$(awk '/^verified:/{f=1;next} f&&/^[a-z]/{exit} f{print}' "$f")
+        entry_count=$(printf '%s\n' "$ver_block" | grep -cE '^[[:space:]]*-[[:space:]]' || true)
+        if [ "$entry_count" -eq 0 ]; then
+            warn "$label — verified: is present but has no list entries (expected '- by:' / '  at:')"
+        else
+            by_count=$(printf '%s\n' "$ver_block" | grep -cE '^[[:space:]]*-?[[:space:]]*by:' || true)
+            at_count=$(printf '%s\n' "$ver_block" | grep -cE '^[[:space:]]*at:' || true)
+            if [ "$by_count" -ne "$entry_count" ] || [ "$at_count" -ne "$entry_count" ]; then
+                warn "$label — verified: has $entry_count entr(ies) but $by_count by: and $at_count at: (each entry needs both)"
+            fi
+            while IFS= read -r vb; do
+                actor_ok "$vb" || warn "$label — verified.by '$vb' is not a valid actor string"
+                case "$vb" in
+                    human:*) ;;
+                    *) warn "$label — verified.by '$vb' is not a human: actor — verified: records human sign-off only" ;;
+                esac
+            done < <(printf '%s\n' "$ver_block" | grep -oE 'by:[[:space:]]*[^[:space:]]+' | sed 's/^by:[[:space:]]*//')
+        fi
+
+        # 13c. Stale sign-off: newest verified.at older than updated:
+        newest_ver=$(printf '%s\n' "$ver_block" | grep -oE 'at:[[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}' \
+                     | sed 's/^at:[[:space:]]*//' | sort | tail -1 || true)
+        updated=$(grep -m1 "^updated:" "$f" 2>/dev/null | sed 's/^updated:[[:space:]]*//' || true)
+        if [ -n "$newest_ver" ] && [ -n "$updated" ]; then
+            if [[ "$updated" > "$newest_ver" ]]; then
+                warn "$label — signed off $newest_ver but updated $updated (sign-off predates the current content)"
+            fi
+        fi
+    fi
+done < <(find "$VAULT/atoms" "$VAULT/sources" "$VAULT/topics" "$VAULT/glossary" "$VAULT/extracts" \
+             -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null)
+
+if [ "$prov_checked" -eq 0 ]; then
+    echo -e "  ${DIM}SKIP${NC}  no generated: or verified: blocks yet"
+fi
+ok "provenance block check complete"
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 
 echo ""
@@ -795,6 +946,8 @@ else
     echo -e "  ${RED}${fails} failure(s)${NC}, $((issues - fails)) warning(s). Review above."
 fi
 echo ""
+
+finished=true
 
 # FAIL gates; WARN does not. See the exit-status note at the top of this file.
 if [ "$fails" -gt 0 ]; then

@@ -156,6 +156,13 @@ claim, `verified:` is who checked it.
 
 Actor forms: `<producer>/<version>`, `human:<id>`, `process:<id>`.
 
+`verified:` is written by `memex-trust-audit` alone. It is append-only, it is
+asked as its own question rather than bundled with a `confidence:` change, and
+**it never bumps `updated:`** — checking a note is not revising it, and
+refreshing the timestamp would launder staleness into freshness and clear the
+atom's own stale-confidence signal. A sign-off older than `updated:` is stale,
+not void; lint section 13 reports it.
+
 ## Tags
 
 Controlled vocabulary lives in `_meta/domain.md` — *Domain Tags*, *Type Tags*,
