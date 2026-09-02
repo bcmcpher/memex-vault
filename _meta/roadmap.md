@@ -10,6 +10,8 @@ it with a wikilink.
 Companions: `_meta/deep-extract-design.md` holds the full design for Phase 3, and
 for Phase 5 (deferred). `_meta/okf-alignment.md` holds the full design for
 Phases 8–9, plus the frontmatter changes they need from Phase 2.
+`_meta/forge-design.md` holds the design for a post-1.0 WikiSkill fork — design
+only, nothing in it is built.
 
 `CHANGELOG.md` records what shipped in each release; this file records what has
 not shipped yet. When the two disagree about a phase's status, the changelog is
@@ -337,6 +339,8 @@ invalidating that.
 **Since `v1.0.0-rc.1`, the first move is a fork, not a phase.** Clearing the
 verification debt below needs a vault with real notes, and building Phase 8 first
 only adds a fifth unexercised thing to the list. Phase 8 is the next *build*.
+That fork's plan is written up in `_meta/forge-design.md`, gated on `v1.0.0`
+final; it needs no phase here because it happens in another repository.
 
 **Phase 8 is the only unblocked phase.** Its full design is in
 `_meta/okf-alignment.md`; the roadmap entry below carries three amendments made
