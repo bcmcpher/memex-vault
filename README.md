@@ -39,6 +39,9 @@ its atoms simply capped at `confidence: medium`. Nothing is ever promoted from
 
 ```
 vault/
+├── VERSION                   # Template release this vault was built from — never edited by a fork
+├── CHANGELOG.md              # What changed between template releases
+│
 ├── _templates/               # Templater input templates (not indexed)
 │   ├── source-digital.md     # All digital sources (web, video, paper, docs)
 │   ├── source-meeting.md     # Meeting notes (no URL; different schema)
@@ -470,6 +473,31 @@ rename cannot go quiet. The source-type vocabulary is read from `_meta/domain.md
 too: add `hearing` to § Source Types and lint applies every naming and frontmatter
 check to `sources/hearing/`, and warns if the folder is missing — or if a folder
 under `sources/` was never declared, whose notes would otherwise go unchecked.
+
+### Which template version is this fork on?
+
+GitHub's *Use this template* starts your repository at a single fresh commit. None
+of the template's history, tags, or releases come with it, so `git log` cannot tell
+you what you forked from.
+
+Root **`VERSION`** can. It is one line naming the template release, it comes across
+with the copy, and **a fork never edits it** — it records provenance, not the
+vault's own version. `memex-init` reads it and writes `template:: v<version>` into
+its `_meta/log.md` entry, so the answer survives even if the file is later lost.
+
+To see what has changed upstream since, compare that version against
+[`CHANGELOG.md`](CHANGELOG.md) in the template repository. To actually take the
+changes:
+
+```bash
+git remote add template git@github.com:bcmcpher/memex-vault.git
+git fetch template
+git diff v<your-version> template/main -- skills/ _meta/schema.md _meta/lint.sh
+```
+
+Merge selectively. `_meta/domain.md`, `README.md`, and `getting-started.md` are
+yours and will conflict by design; the skills, the constitution, and the scripts
+are the parts worth pulling. Re-run `memex-init` afterwards to log the new version.
 
 ---
 
