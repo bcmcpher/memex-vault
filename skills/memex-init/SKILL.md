@@ -25,6 +25,13 @@ say so plainly and stop — that is a schema amendment, not an init.
 `sources/video/`. Empty folders cost nothing; deleting one that turns out to hold
 notes costs the notes. Report what is now unused and let the user remove it.
 
+**Never edits `VERSION`.** That file names the template release this vault was
+built from, not the vault's own version. GitHub's *Use this template* starts a
+fork at a single fresh commit with none of the template's history or tags, so
+`VERSION` is the only thing that survives to answer "what was this forked from" —
+which is what makes a later upstream diff tractable. Step 12 copies it into the
+log; nothing rewrites it.
+
 ---
 
 ## Before anything: is this vault already initialized?
@@ -269,17 +276,33 @@ Exit status 2 is a linter bug, not a finding about the vault — report it as su
 
 ### 12. Log
 
+Read the template version first — it is one line, and it is the fork's only record
+of what it was built from:
+
+```bash
+TEMPLATE_VERSION=$(cat "$VAULT/VERSION" 2>/dev/null || echo unknown)
+```
+
+`unknown` is a legitimate value: a vault forked before `VERSION` existed will not
+have one. Write `unknown` rather than guessing, and do not create the file — a
+version you invented is worse than an absent one.
+
 ```markdown
 ## [YYYY-MM-DD] init | <Domain Name>
 url:: n/a
 atoms:: 
 skill:: memex-init
+template:: v<TEMPLATE_VERSION>
 notes: N source types (<list>); M domain tags; topic stub <slug>; projects: yes/no; research: yes/no
 ```
 
 This entry is also the re-run detector at the top of this skill, so it must be
 written on every run, including a partial one. If the user stops halfway, log what
 was done and say which steps did not run.
+
+On a re-run, write a fresh entry with the `VERSION` read at that moment. If it
+differs from the first entry's, the vault has taken an upstream update in between,
+and the pair of entries is the record of which init ran against which template.
 
 ### 13. Report
 
@@ -288,7 +311,7 @@ State, in this order:
 1. Domain name and the slug of the topic created
 2. Source types, and any folder now unused because a type was dropped
 3. Vocabulary counts written to `_meta/domain.md`
-4. `lint.sh` exit status
+4. `lint.sh` exit status, and the template version logged in step 12
 5. **What is left to do by hand**, which is always:
    - `README.md` — still describes the template's domain; the fork's front page
    - install Dataview in Obsidian, and set the template folder to `_templates`
