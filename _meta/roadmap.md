@@ -536,10 +536,25 @@ plan:
     and 8d used `grep -c "^cites::"`. Every freshly-created atom therefore drew
     two bogus "all cited sources are unread" warnings. All counts now require a
     populated field.
+15. **Relation counts counted lines, not targets** *(found 2026-09-02, after
+    `v1.0.0-rc.1`)*. Item 14's fix added `\[\[` to those greps but left them as
+    `grep -c`, which counts matching *lines*. § Orphans blesses
+    `introduces:: [[A]], [[B]]` on one line and calls it "expected and correct",
+    so every threshold check read a well-linked field as a single connection.
+    Two checks were wrong in opposite directions: **8d** flagged a source with
+    four atoms on one `introduces::` line as *under-extracted* — nagging exactly
+    the sources the vault wants — and **6c** could only fire on six separate
+    `cites::` lines, which nothing writes, so it had never fired at all. Fixed
+    with a `count_links()` helper beside `backing_sources()`, which already
+    parsed per-target correctly; 6c, 8d, and 8e now use it. Thresholds unchanged.
 
-Items 13 and 14 are lint defects rather than Phase 2 work, fixed here because
-this phase is what exposed them and because a lint that dies partway cannot gate
-anything — which was Phase 0's entire point.
+Items 13, 14, and 15 are lint defects rather than Phase 2 work, filed here
+because this phase is what exposed the family and because a lint that dies
+partway cannot gate anything — which was Phase 0's entire point. Item 15 was
+found later, while verifying that nothing in the vault enforces one atom per
+source; nothing does, and the wording that suggested otherwise
+(`memex-ingest` step 6, `getting-started.md`, and the "one concept per file"
+line in `README.md` / § Node Types) was corrected in the same change.
 
 ### Phase 3 — Evidence layer *(complete)*
 

@@ -61,7 +61,9 @@ All source files go in `sources/<medium>/` with the naming pattern `YYYY-MM-DD-k
 
 ### Promoting to atoms
 
-After reading a source, ask: does it introduce a concept worth tracking? If yes:
+After reading a source, ask: which concepts does it introduce that are worth
+tracking? Usually more than one — a single article routinely feeds three or four
+atoms, and the source note links to all of them. Then, for each concept:
 1. Create `atoms/concept-name.md` using the `atom` template
 2. Set `confidence: low` for single-source atoms
 3. Wire it back: add `cites:: [[source-filename]]` in the atom

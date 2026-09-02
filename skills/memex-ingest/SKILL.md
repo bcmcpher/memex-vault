@@ -113,12 +113,16 @@ Write candidate file before writing to the source note (see Candidate Gating bel
 Use `challenges::` when the source questions a claim without fully refuting it. Use `refutes::` when it provides direct counter-evidence. Use `related::` only as a fallback. See `references/vault-schema.md` for the full decision tree.
 
 ### 6. Promote to atoms (optional but encouraged)
-If the source introduces a concept not yet in `atoms/`, offer to create a stub. A good atom candidate is any concept that:
-- Appears in the source's title or abstract
-- Would be referenced from multiple future sources
-- Isn't already covered by an existing atom
+Most sources introduce **several** concepts, not one. Enumerate before proposing:
 
-Write a candidate file before creating the atom (see Candidate Gating below).
+1. List **every** concept the source introduces that is not already in `atoms/`.
+2. Keep the ones that meet all three criteria. A good atom candidate is any concept that:
+   - Appears in the source's title or abstract
+   - Would be referenced from multiple future sources
+   - Isn't already covered by an existing atom
+3. **For each survivor**, write a candidate file and ask separately (see Candidate Gating below, and "Ask before creating each stub" in step 7). Proposing one atom and stopping under-extracts the source — `_meta/lint.sh` 8d warns about exactly that.
+
+Don't create atom stubs for every concept mentioned — only for concepts that warrant independent tracking. If the source is dense enough that step 1 runs long, that is a signal for `memex-deep-extract`, which gates promotion on a claim-count threshold rather than on judgement.
 
 Stub atom format (save to `atoms/kebab-concept.md`):
 ```markdown

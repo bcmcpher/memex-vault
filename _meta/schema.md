@@ -26,6 +26,14 @@ is what a fork changes.
 | Export | `_exports/` | — | One file per compose session | (generated — no required frontmatter) |
 | Candidate | `_meta/candidates/` | — | One file per proposed write | `proposed`, `skill`, `action`, `target`, `session`, `stage` |
 
+Every "One X per file" above is a statement about **file granularity**, not about
+fan-out. In particular, "one concept per file" caps what an atom may contain — it
+does not cap how many atoms a source may feed. A source normally introduces
+several concepts and links to all of them from one `introduces::` line; see
+§ Atom Writing Style ("one claim per atom"), which is why a dense source *must*
+produce more than one. The only true 1:1 relation in the vault is
+`extracted-from::`.
+
 `type:` is required on every curated node and is the single node-type
 discriminator. `medium:` remains the *sub*type of a source, so a paper is
 `type: Source` + `medium: paper` and no fact is stored twice. `topic-type:` was
@@ -691,8 +699,9 @@ These thresholds are soft signals surfaced as WARNings, not hard failures. They 
 |-------|-------|-----------|-------|
 | Source: unread + no Connections | Source | any | Inbox-only; run `memex-connect` |
 | Atom: no populated relations | Atom | any | Fully isolated atom; check for orphan or missing wiring |
-| Atom: bloated | Atom | `cites::` > 5 AND `related::` > 4 AND body > 100 lines | May cover multiple concepts; consider splitting |
+| Atom: bloated | Atom | `cites::` targets > 5 AND `related::` targets > 4 AND body > 100 lines | May cover multiple concepts; consider splitting |
 | Topic map: too many atoms | Concept map | > 15 atoms with `part-of::` pointing at it | May span multiple domains; consider sub-topics |
+| Source: under-extracted | Source | `stage: processed` AND body > 100 lines AND `introduces::`+`supports::` targets < 2 | A long source that yielded almost no atoms; run `memex-deep-extract`. A dense source is *expected* to feed many atoms |
 | Extract: `claims:` count wrong | Extract | frontmatter ≠ `^cNN` block ids in body | Hand edit drifted from the frontmatter; recount |
 | Atom: `high` without grounding | Atom | `confidence: high` and no `cites:: [[…#^…]]` | Confidence rests on filenames, not sentences; run `memex-deep-extract` |
 
