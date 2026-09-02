@@ -26,7 +26,9 @@ topics/concepts/  →  atoms/  →  extracts/  →  sources/  →  .archive/
 Every connection between notes is typed (e.g., `extends::`, `supports::`, `refutes::`), making the graph navigable by relationship kind — not just by link existence.
 
 Density rises left to right and curation falls. `atoms/` and above are
-hand-curated: one concept per file, written by a human. `extracts/` is the
+hand-curated: one concept per atom file, written by a human. That bounds what a
+single atom holds, not what a single source yields — one article routinely feeds
+three or four atoms, and the arrows above are fan-in. `extracts/` is the
 **evidence layer** — what a source actually said, claim by claim, each claim
 carrying a verbatim quote that `_meta/lint.sh` checks against the archived text.
 It is optional and selective; a vault with no extracts works exactly as before,

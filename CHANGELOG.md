@@ -17,6 +17,23 @@ and is the authority on what remains.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Lint counted relation lines, not link targets.** `_meta/lint.sh` sections 6c,
+  8d, and 8e used `grep -c`, which counts matching *lines*, while the schema
+  blesses `introduces:: [[A]], [[B]]` on one line. 8d therefore warned
+  "under-extracted" about sources that had yielded several atoms, and 6c's
+  bloated-atom check could never fire. All three now use a `count_links()` helper;
+  thresholds are unchanged. Roadmap Phase 2, item 15.
+
+### Changed
+
+- **Atom promotion is documented as plural.** `memex-ingest` step 6 now enumerates
+  every candidate concept and asks per atom, matching how step 7 already handles
+  glossary terms and how `memex-connect` and `memex-meeting` were already written.
+  `README.md`, `_meta/schema.md` § Node Types, and `topics/concepts/getting-started.md`
+  now say explicitly that "one concept per file" bounds an *atom*, not a source.
+
 ### Planned
 
 - **Phase 8** — OKF export layer: `_meta/okf-export.py` plus a `memex-export`

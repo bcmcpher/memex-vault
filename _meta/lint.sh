@@ -72,6 +72,23 @@ ok()    { echo -e "  ${GRN}OK${NC}    $1"; }
 # it would make the orphan check below vacuous the moment the log has an entry.
 CURATED=(sources atoms topics glossary)
 
+# Count the wikilink targets on a relation field, not the lines carrying them.
+# `_meta/schema.md` blesses `introduces:: [[A]], [[B]]` on one line — "multiple
+# targets on a single relation field ... expected and correct" — so a `grep -c`
+# here reports 1 where the vault means 2. That undercount made 8d flag
+# well-atomized sources as under-extracted and left 6c's thresholds unreachable;
+# Phase 2's item 14 fixed the same greps to require `[[` but kept counting lines.
+#
+# Requires a populated field, exactly as item 14 did: a bare `cites:: ` template
+# prompt contributes nothing. Targets are deduplicated, matching backing_sources.
+#
+# Takes an alternation of bare field names: count_links "$f" 'introduces|supports'
+count_links() {
+    local f="$1" fields="$2"
+    grep -hE "^(${fields})::[[:space:]]*\[\[" "$f" 2>/dev/null \
+        | grep -oE '\[\[[^]]+\]\]' | sort -u | wc -l || true
+}
+
 # Resolve an atom's cites:: into the distinct source files standing behind them.
 # A citation is one of two shapes: a bare source ([[slug]] or [[slug#Section]]),
 # or a claim inside an extract ([[ext-slug#^cNN]]), which resolves through that
@@ -351,8 +368,8 @@ done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
 # 6c. Bloated atoms: high cites + high related + long body (soft heuristic — split candidate)
 while IFS= read -r -d '' f; do
-    cites_count=$(grep -cE "^cites::[[:space:]]*\[\[" "$f" 2>/dev/null || true)
-    related_count=$(grep -cE "^related::[[:space:]]*\[\[" "$f" 2>/dev/null || true)
+    cites_count=$(count_links "$f" 'cites')
+    related_count=$(count_links "$f" 'related')
     line_count=$(wc -l < "$f")
     if [ "$cites_count" -gt 5 ] && [ "$related_count" -gt 4 ] && [ "$line_count" -gt 100 ]; then
         warn "atoms/$(basename "$f") — may cover multiple concepts (cites=$cites_count related=$related_count lines=$line_count); consider splitting"
@@ -523,9 +540,7 @@ while IFS= read -r -d '' f; do
     if [ "$src_stage" = "processed" ]; then
         line_count=$(wc -l < "$f")
         if [ "$line_count" -gt 100 ]; then
-            introduces_count=$(grep -cE "^introduces::[[:space:]]*\[\[" "$f" 2>/dev/null || true)
-            supports_count=$(grep -cE "^supports::[[:space:]]*\[\[" "$f" 2>/dev/null || true)
-            atom_connections=$((introduces_count + supports_count))
+            atom_connections=$(count_links "$f" 'introduces|supports')
             if [ "$atom_connections" -lt 2 ]; then
                 warn "$label — stage: processed, $line_count lines, but only $atom_connections atom connections (introduces+supports); may be under-extracted"
             fi
@@ -545,7 +560,7 @@ while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
     confidence=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | sed 's/^confidence:[[:space:]]*//' || true)
     [ "$confidence" = "high" ] || continue
-    outgoing=$(grep -cE "^(contradicts|refutes)::[[:space:]]*\[\[" "$f" 2>/dev/null || true)
+    outgoing=$(count_links "$f" 'contradicts|refutes')
     incoming=$(grep -rlE "^(contradicts|refutes)::.*\[\[${atom_name}(#[^]]*)?\]\]" \
                "$VAULT/atoms" 2>/dev/null | grep -cv "^${f}$" || true)
     total=$((outgoing + incoming))
