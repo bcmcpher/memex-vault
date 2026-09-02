@@ -1,7 +1,8 @@
 # memex-vault Improvement Roadmap
 
-Revised: 2026-08-25. Supersedes the 2026-07-09 revision, which superseded
-2026-05-07.
+Revised: 2026-09-02, adding § Release Status for `v1.0.0-rc.1`. The findings and
+phase detail below are from the 2026-08-25 revision and are unchanged by it, which
+superseded 2026-07-09, which superseded 2026-05-07.
 
 Infrastructure doc — not a vault node. No frontmatter, and nothing should link to
 it with a wikilink.
@@ -9,6 +10,32 @@ it with a wikilink.
 Companions: `_meta/deep-extract-design.md` holds the full design for Phase 3, and
 for Phase 5 (deferred). `_meta/okf-alignment.md` holds the full design for
 Phases 8–9, plus the frontmatter changes they need from Phase 2.
+
+`CHANGELOG.md` records what shipped in each release; this file records what has
+not shipped yet. When the two disagree about a phase's status, the changelog is
+the one tied to a tag.
+
+---
+
+## Release Status
+
+**`v1.0.0-rc.1`, tagged 2026-09-02.** The first tagged release, cut at Phase 7.
+
+A release *candidate* rather than a final for one reason: the verification debt
+below. Four things are built and pass against fixtures but have never run over
+real notes, and that cannot change inside this repository — it is a template and
+ships with zero notes deliberately. The debt is discharged in the first fork that
+puts real content through the skills, which is exactly what an RC is for.
+
+What promotes it to `v1.0.0`: the four verification-debt rows exercised against a
+real vault, and any bugs that surfaces fixed. **Phase 8 is not a blocker** — it
+ships as `v1.1.0`. An exporter with nothing to export and no importer to feed
+cannot be validated either, so holding the release for it would trade one kind of
+unverified code for another.
+
+Root `VERSION` carries the release into a fork, which GitHub's *Use this template*
+otherwise strips along with the history and tags. `memex-init` logs it as
+`template::`. Neither is edited by a fork.
 
 ---
 
@@ -307,6 +334,10 @@ invalidating that.
 
 ## Where to Start Next
 
+**Since `v1.0.0-rc.1`, the first move is a fork, not a phase.** Clearing the
+verification debt below needs a vault with real notes, and building Phase 8 first
+only adds a fifth unexercised thing to the list. Phase 8 is the next *build*.
+
 **Phase 8 is the only unblocked phase.** Its full design is in
 `_meta/okf-alignment.md`; the roadmap entry below carries three amendments made
 while later phases shipped — extracts map onto OKF §5.1 footnote-keyed
@@ -330,6 +361,10 @@ needs content to act on has been proven only against fixtures.
 | `memex-init`'s five-question flow | Phase 6 | The first real fork |
 | `memex-tend`'s ordering | Phase 7 | The first vault with enough findings to sequence |
 | `memex-deep-extract` end to end | Phase 3 | The first deep extraction of a real source |
+
+These four rows are what the `-rc` in `v1.0.0-rc.1` refers to; see § Release
+Status. Clearing them is what promotes the release, and none of them can be
+cleared here — the work happens in the first fork with real notes in it.
 
 This is not a defect list. Fixture-testing caught two real bugs in Phase 6 that a
 content-ful vault would have caught the same way. But no amount of it substitutes
