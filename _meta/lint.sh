@@ -458,6 +458,46 @@ while IFS= read -r -d '' f; do
     fi
 done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
+# Atoms and glossary terms share one wikilink namespace: Obsidian resolves [[x]] by
+# filename, and _meta/schema.md § Disambiguation Policy forbids two notes sharing
+# one. Nothing enforced it, and deep-extract mode B once proposed three glossary
+# stubs whose slugs were atoms in the same run (trial-1 finding 10). The glossary
+# is a disjoint set by design (M7); this is the guard that keeps it disjoint.
+#   FAIL — a filename present in both atoms/ and glossary/
+#   WARN — a glossary slug equal to an atom's alias, slugified
+slugify() {
+    local x="${1,,}"
+    x="${x//[^a-z0-9]/-}"
+    while [[ $x == *--* ]]; do x="${x//--/-}"; done
+    x="${x#-}"; x="${x%-}"
+    REPLY=$x
+}
+if [ -d "$VAULT/glossary" ]; then
+    declare -A ALIAS_OWNER=()
+    while IFS= read -r -d '' f; do
+        aliases_line=$(awk 'NR == 1 && /^---[[:space:]]*$/ { fm = 1; next }
+                            fm && /^---[[:space:]]*$/ { exit }
+                            fm && /^aliases:/ { inl = 1; sub(/^aliases:[[:space:]]*/, ""); sub(/^\[/, ""); sub(/\][[:space:]]*$/, ""); if ($0 != "") print; next }
+                            fm && inl && /^[[:space:]]+-/ { sub(/^[[:space:]]+-[[:space:]]*/, ""); print; next }
+                            { inl = 0 }' "$f" 2>/dev/null | tr '\n' ',' || true)
+        IFS=',' read -ra alias_arr <<< "$aliases_line"
+        for alias in "${alias_arr[@]}"; do
+            alias="${alias//[\"\']/}"
+            slugify "$alias"
+            if [ -n "$REPLY" ] && [ -z "${ALIAS_OWNER[$REPLY]+x}" ]; then ALIAS_OWNER[$REPLY]="atoms/$(basename "$f")"; fi
+        done
+    done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null)
+
+    while IFS= read -r -d '' g; do
+        term="$(basename "$g" .md)"
+        if [ -f "$VAULT/atoms/${term}.md" ]; then
+            error "glossary/${term}.md — atoms/${term}.md has the same filename; [[${term}]] is ambiguous (schema.md § Disambiguation Policy)"
+        elif [ -n "${ALIAS_OWNER[$term]+x}" ]; then
+            warn "glossary/${term}.md — matches an alias of ${ALIAS_OWNER[$term]}; one concept may be in two notes"
+        fi
+    done < <(find "$VAULT/glossary" -name "*.md" ! -name ".gitkeep" -print0)
+fi
+
 ok "naming check complete"
 
 # ── 2. Required frontmatter fields ──────────────────────────────────────────
