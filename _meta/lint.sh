@@ -110,28 +110,115 @@ count_links() {
 # was quietly wrong on any atom citing an extract: 7d and 8c reported "all cited
 # sources unread" because they resolved nothing at all.
 #
-# Emits one absolute path per line, deduplicated. Prints nothing when an atom has
-# no resolvable citations.
+# Sets REPLY to the resolved paths, one per line, deduplicated — empty when an atom
+# has no resolvable citations. Memoized per atom: 7c, 7d and 8a-8c all ask.
 backing_sources() {
-    local f="$1" target note ext_file src
-    {
-        while IFS= read -r target; do
-            note="${target%%#*}"
-            [ -z "$note" ] && continue
-            case "$note" in
-                ext-*)
-                    ext_file="$VAULT/extracts/${note}.md"
-                    if [ -f "$ext_file" ]; then
-                        src=$(grep -m1 "^extracted-from::" "$ext_file" 2>/dev/null \
+    local f="$1" target note paths=""
+    if [ -n "${BACKING[$f]+x}" ]; then
+        REPLY=${BACKING[$f]}
+        return 0
+    fi
+    while IFS= read -r target; do
+        note="${target%%#*}"
+        [ -z "$note" ] && continue
+        case "$note" in
+            ext-*)
+                if [ -z "${EXT_SOURCE[$note]+x}" ]; then
+                    EXT_SOURCE[$note]=""
+                    if [ -f "$VAULT/extracts/${note}.md" ]; then
+                        EXT_SOURCE[$note]=$(grep -m1 "^extracted-from::" "$VAULT/extracts/${note}.md" 2>/dev/null \
                               | grep -oE '\[\[[^]|]+' | tr -d '[' | head -1 || true)
-                        [ -n "$src" ] && note="$src"
                     fi
-                    ;;
-            esac
-            find "$VAULT/sources" -name "${note}.md" 2>/dev/null | head -1
-        done < <(grep -E "^cites::" "$f" 2>/dev/null \
-                 | grep -oE '\[\[[^]]+\]\]' | sed 's/^\[\[//; s/\]\]$//' || true)
-    } | grep -v '^$' | sort -u || true
+                fi
+                if [ -n "${EXT_SOURCE[$note]}" ]; then
+                    note="${EXT_SOURCE[$note]}"
+                fi
+                ;;
+        esac
+        if [ -n "${SRC_PATH[$note]+x}" ]; then
+            paths+="${SRC_PATH[$note]}"$'\n'
+        fi
+    done < <(grep -E "^cites::" "$f" 2>/dev/null \
+             | grep -oE '\[\[[^]]+\]\]' | sed 's/^\[\[//; s/\]\]$//' || true)
+    BACKING[$f]=$(printf '%s' "$paths" | grep -v '^$' | sort -u || true)
+    REPLY=${BACKING[$f]}
+}
+
+# ── Lookup tables ────────────────────────────────────────────────────────────
+# Built once, so no check pays per citation (roadmap M16). backing_sources() used
+# to run a find over sources/ for every citation, and 7c, 7d, 8a, 8b and 8c each
+# re-resolved every atom: ~1,360 find/grep pairs on a 22-atom vault, extrapolating
+# to ~26,000 at 200 sources. 7a, 12a and 12e ran the same per-item find.
+#
+# `find ROOT... -name "$slug.md" | head -1` answers with the first match in find's
+# traversal order, so each table keeps the first path it meets in that same order
+# and a duplicate basename resolves exactly as before. The one difference: -name
+# read a slug as a glob, and a table key is literal — no real slug contains * ? [.
+#
+# Paths print as ${f#"$VAULT"/} rather than `realpath --relative-to`, which forked
+# once per file and is GNU-only. Every path here comes from a find rooted at
+# "$VAULT/...", so stripping that prefix gives the same answer.
+declare -A BACKING=() EXT_SOURCE=() SRC_PATH=() NOTE_PATH=() TOPIC_PATH=() \
+           SRC_STAGE=() SRC_SAVED=() ANCHOR_FOUND=() STAGE_VOCAB=() \
+           LIST_MEMBER=() LIST_INDEXED=()
+
+while IFS= read -r -d '' p; do
+    b="${p##*/}"; b="${b%.md}"
+    if [ -n "$b" ] && [ -z "${SRC_PATH[$b]+x}" ]; then SRC_PATH[$b]=$p; fi
+done < <(find "$VAULT/sources" -name "*.md" -print0 2>/dev/null)
+
+while IFS= read -r -d '' p; do
+    b="${p##*/}"; b="${b%.md}"
+    if [ -n "$b" ] && [ -z "${NOTE_PATH[$b]+x}" ]; then NOTE_PATH[$b]=$p; fi
+done < <(find "$VAULT/extracts" "$VAULT/sources" "$VAULT/atoms" -name "*.md" -print0 2>/dev/null)
+
+while IFS= read -r -d '' p; do
+    b="${p##*/}"; b="${b%.md}"
+    if [ -n "$b" ] && [ -z "${TOPIC_PATH[$b]+x}" ]; then TOPIC_PATH[$b]=$p; fi
+done < <(find "$VAULT/topics" -name "*.md" -print0 2>/dev/null)
+
+# First stage: / saved: line of a note, read exactly as the per-citation pipelines
+# read it — once per file instead of once per citation per section. Sets REPLY.
+note_stage() {
+    if [ -z "${SRC_STAGE[$1]+x}" ]; then
+        SRC_STAGE[$1]=$(grep "^stage:" "$1" 2>/dev/null | head -1 | sed 's/^stage:[[:space:]]*//' || true)
+    fi
+    REPLY=${SRC_STAGE[$1]}
+}
+note_saved() {
+    if [ -z "${SRC_SAVED[$1]+x}" ]; then
+        SRC_SAVED[$1]=$(grep "^saved:" "$1" 2>/dev/null | head -1 | sed 's/^saved:[[:space:]]*//' || true)
+    fi
+    REPLY=${SRC_SAVED[$1]}
+}
+
+# Does <file> contain <anchor> anywhere (grep -F)? Memoized per pair for 12e.
+anchor_in() {
+    local key="$1"$'\x1f'"$2"
+    if [ -z "${ANCHOR_FOUND[$key]+x}" ]; then
+        if grep -qF -- "$2" "$1" 2>/dev/null; then ANCHOR_FOUND[$key]=1; else ANCHOR_FOUND[$key]=0; fi
+    fi
+    [ "${ANCHOR_FOUND[$key]}" = 1 ]
+}
+
+# list_has <name> <list> <word> — `echo "$list" | grep -qx "$word"` without the
+# fork. For a plain word (letters, digits, - and _: every real tag, relation field,
+# medium and stage value) a full-line match is string equality, so a set indexed
+# once per list answers it. Any other word still takes the original grep, so the
+# match semantics never change.
+list_has() {
+    local name="$1" list="$2" word="$3" line
+    if [[ ! $word =~ ^[A-Za-z0-9_][A-Za-z0-9_-]*$ ]]; then
+        echo "$list" | grep -qx "$word"
+        return
+    fi
+    if [ -z "${LIST_INDEXED[$name]+x}" ]; then
+        LIST_INDEXED[$name]=1
+        while IFS= read -r line; do
+            if [ -n "$line" ]; then LIST_MEMBER["$name"$'\x1f'"$line"]=1; fi
+        done <<< "$list"
+    fi
+    [ -n "${LIST_MEMBER["$name"$'\x1f'"$word"]+x}" ]
 }
 
 # Source media come from _meta/domain.md § Source Types rather than a literal
@@ -178,7 +265,7 @@ done
 # fork hits, so name them.
 while IFS= read -r -d '' dir; do
     medium="$(basename "$dir")"
-    if ! echo "$source_media" | grep -qx "$medium"; then
+    if ! list_has media "$source_media" "$medium"; then
         warn "sources/$medium/ exists but is not declared in _meta/domain.md § Source Types — its notes are unchecked"
     fi
 done < <(find "$VAULT/sources" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null)
@@ -322,7 +409,7 @@ else
                 target="$raw_path"
             fi
             if [ ! -f "$target" ]; then
-                error "$(realpath --relative-to="$VAULT" "$f") — raw:: points to missing file: $raw_path"
+                error "${f#"$VAULT"/} — raw:: points to missing file: $raw_path"
             fi
         done < <(grep "^raw::" "$f" 2>/dev/null || true)
     done < <(find "$VAULT/sources" -name "*.md" ! -name ".gitkeep" -print0)
@@ -341,7 +428,7 @@ while IFS= read -r -d '' f; do
     if echo "$stage_line" | grep -q "unread\|unprocessed"; then
         has_connections=$(grep -cE "^(supports|introduces|demonstrates|cites|related)::[[:space:]]*\[\[" "$f" 2>/dev/null || true)
         if [ "$has_connections" -eq 0 ]; then
-            label=$(realpath --relative-to="$VAULT" "$f")
+            label=${f#"$VAULT"/}
             warn "$label — unread with no Connections wired (inbox-only; run memex-connect)"
         fi
     fi
@@ -421,7 +508,7 @@ while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
     while IFS= read -r line; do
         while IFS= read -r target; do
-            if [ -z "$(find "$VAULT/topics" -name "${target}.md" 2>/dev/null | head -1)" ]; then
+            if [ -z "$target" ] || [ -z "${TOPIC_PATH[$target]+x}" ]; then
                 warn "atoms/${atom_name}.md — part-of:: [[${target}]] but no matching topic file found"
             fi
         done < <(echo "$line" | grep -oE '\[\[[^]|]+' | tr -d '[')
@@ -433,13 +520,15 @@ if cutoff18=$(date -d "18 months ago" +%Y-%m-%d 2>/dev/null) || cutoff18=$(date 
     while IFS= read -r -d '' f; do
         atom_name="$(basename "$f" .md)"
         newest_saved=""
+        backing_sources "$f"
         while IFS= read -r src_file; do
-            saved=$(grep "^saved:" "$src_file" 2>/dev/null | head -1 | sed 's/^saved:[[:space:]]*//' || true)
+            [ -z "$src_file" ] && continue
+            note_saved "$src_file"; saved=$REPLY
             [ -z "$saved" ] && continue
             if [ -z "$newest_saved" ] || [[ "$saved" > "$newest_saved" ]]; then
                 newest_saved="$saved"
             fi
-        done < <(backing_sources "$f")
+        done <<< "$REPLY"
         if [ -n "$newest_saved" ] && [[ "$newest_saved" < "$cutoff18" ]]; then
             warn "atoms/${atom_name}.md — newest cited source saved $newest_saved (>18 months ago); may be stale"
         fi
@@ -449,13 +538,13 @@ fi
 # 7d. Unvalidated atom: all cited sources are stage: unread
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
-    resolved=$(backing_sources "$f")
+    backing_sources "$f"; resolved=$REPLY
     # No resolvable source is a dangling-link problem, not an unread one — do not
     # report it here, or every extract-only atom reads as unvalidated.
     [ -z "$resolved" ] && continue
     all_unread=true
     while IFS= read -r src_file; do
-        src_stage=$(grep "^stage:" "$src_file" 2>/dev/null | head -1 | sed 's/^stage:[[:space:]]*//' || true)
+        note_stage "$src_file"; src_stage=$REPLY
         if [ "$src_stage" != "unread" ]; then
             all_unread=false
             break
@@ -472,9 +561,9 @@ if [ -f "$schema_file" ]; then
     valid_fields=$(awk '/^## Valid Relation Fields/{f=1} f && /^```$/{b=!b; next} f && b{print} f && /^---$/ && !b && NR>1{exit}' "$schema_file" | grep -v "^$")
     if [ -n "$valid_fields" ]; then
         while IFS= read -r -d '' f; do
-            label=$(realpath --relative-to="$VAULT" "$f")
+            label=${f#"$VAULT"/}
             while IFS= read -r field; do
-                if ! echo "$valid_fields" | grep -qx "$field"; then
+                if ! list_has fields "$valid_fields" "$field"; then
                     warn "$label — unknown relation field: ${field}::"
                 fi
             done < <(awk 'BEGIN{fm=0} /^---$/{fm++; next} fm>=2 && /^[a-z][a-z-]*::/{sub(/::.*/, ""); print}' "$f" 2>/dev/null)
@@ -508,7 +597,12 @@ while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
     confidence=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | sed 's/^confidence:[[:space:]]*//' || true)
     if [ "$confidence" = "high" ]; then
-        source_count=$(backing_sources "$f" | grep -c . || true)
+        backing_sources "$f"
+        source_count=0
+        if [ -n "$REPLY" ]; then
+            mapfile -t backing_list <<< "$REPLY"
+            source_count=${#backing_list[@]}
+        fi
         if [ "$source_count" -lt 3 ]; then
             warn "atoms/${atom_name}.md — confidence: high backed by only $source_count distinct source(s) (needs 3+ independent for high)"
         fi
@@ -521,12 +615,14 @@ while IFS= read -r -d '' f; do
     confidence=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | sed 's/^confidence:[[:space:]]*//' || true)
     if [ "$confidence" = "low" ]; then
         processed_count=0
+        backing_sources "$f"
         while IFS= read -r src_file; do
-            src_stage=$(grep "^stage:" "$src_file" 2>/dev/null | head -1 | sed 's/^stage:[[:space:]]*//' || true)
+            [ -z "$src_file" ] && continue
+            note_stage "$src_file"; src_stage=$REPLY
             if [ "$src_stage" = "processed" ]; then
                 processed_count=$((processed_count + 1))
             fi
-        done < <(backing_sources "$f")
+        done <<< "$REPLY"
         if [ "$processed_count" -ge 2 ]; then
             warn "atoms/${atom_name}.md — confidence: low but $processed_count processed sources support it (upgrade candidate)"
         fi
@@ -537,11 +633,11 @@ done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 # (complements Section 7d — same detection, framed as a confidence signal)
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
-    resolved=$(backing_sources "$f")
+    backing_sources "$f"; resolved=$REPLY
     [ -z "$resolved" ] && continue
     all_unread=true
     while IFS= read -r src_file; do
-        src_stage=$(grep "^stage:" "$src_file" 2>/dev/null | head -1 | sed 's/^stage:[[:space:]]*//' || true)
+        note_stage "$src_file"; src_stage=$REPLY
         if [ "$src_stage" != "unread" ]; then
             all_unread=false
             break
@@ -554,8 +650,8 @@ done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
 # 8d. Under-extracted source: stage: processed, body > 100 lines, atom connections < 2
 while IFS= read -r -d '' f; do
-    label=$(realpath --relative-to="$VAULT" "$f")
-    src_stage=$(grep "^stage:" "$f" 2>/dev/null | head -1 | sed 's/^stage:[[:space:]]*//' || true)
+    label=${f#"$VAULT"/}
+    note_stage "$f"; src_stage=$REPLY
     if [ "$src_stage" = "processed" ]; then
         line_count=$(wc -l < "$f")
         if [ "$line_count" -gt 100 ]; then
@@ -632,19 +728,22 @@ if [ -z "$valid_tags" ]; then
     echo -e "  ${DIM}SKIP${NC}  no tag sections found in _meta/domain.md — define vocabulary to enable this check"
 else
     while IFS= read -r -d '' f; do
-        label=$(realpath --relative-to="$VAULT" "$f")
+        label=${f#"$VAULT"/}
         # Extract tags line from frontmatter
         tags_line=$(awk '/^---$/{fm++; next} fm==1 && /^tags:/{print; exit} fm==2{exit}' "$f" 2>/dev/null || true)
         [ -z "$tags_line" ] && continue
         # Parse inline YAML array: tags: [a, b, c] or tags: []
         if [[ "$tags_line" =~ \[([^]]*)\] ]]; then
             tags_content="${BASH_REMATCH[1]}"
-            [[ -z "$(echo "$tags_content" | tr -d ' ,')" ]] && continue
+            [[ -z "${tags_content//[ ,]/}" ]] && continue
             IFS=',' read -ra tag_arr <<< "$tags_content"
             for raw_tag in "${tag_arr[@]}"; do
-                tag=$(echo "$raw_tag" | sed "s/^[[:space:]]*//;s/[[:space:]]*$//;s/[\"']//g")
+                # Trim surrounding whitespace, then drop quotes — the old echo|sed, in-process.
+                tag="${raw_tag#"${raw_tag%%[![:space:]]*}"}"
+                tag="${tag%"${tag##*[![:space:]]}"}"
+                tag=${tag//[\"\']/}
                 [ -z "$tag" ] && continue
-                if ! echo "$valid_tags" | grep -qx "$tag"; then
+                if ! list_has tags "$valid_tags" "$tag"; then
                     warn "$label — unknown tag: '$tag' (not in _meta/domain.md)"
                 fi
             done
@@ -704,7 +803,7 @@ if [ -z "$okf_types" ]; then
     echo -e "  ${DIM}SKIP${NC}  no OKF Types table in _meta/domain.md — cannot validate type:"
 else
     while IFS= read -r -d '' f; do
-        rel=$(realpath --relative-to="$VAULT" "$f")
+        rel=${f#"$VAULT"/}
 
         # 11c. status: is forbidden everywhere in the vault, candidates included.
         if grep -q "^status:" "$f" 2>/dev/null; then
@@ -740,8 +839,11 @@ else
         if [ -n "$section" ]; then
             stage_val=$(grep "^stage:" "$f" 2>/dev/null | head -1 | sed 's/^stage:[[:space:]]*//;s/[[:space:]]*$//' || true)
             if [ -n "$stage_val" ]; then
-                allowed=$(stage_vocab "$section")
-                if [ -n "$allowed" ] && ! echo "$allowed" | grep -qx "$stage_val"; then
+                if [ -z "${STAGE_VOCAB[$section]+x}" ]; then
+                    STAGE_VOCAB[$section]=$(stage_vocab "$section")
+                fi
+                allowed=${STAGE_VOCAB[$section]}
+                if [ -n "$allowed" ] && ! list_has "stage:$section" "$allowed" "$stage_val"; then
                     error "$rel — stage: \"$stage_val\" not valid for $section ($(echo "$allowed" | tr '\n' '/' | sed 's#/$##'))"
                 fi
             fi
@@ -798,7 +900,7 @@ else
         if [ -z "$src_target" ]; then
             error "$rel — no extracted-from:: (an extract with no source cannot be grounded)"
         else
-            src_file=$(find "$VAULT/sources" -name "${src_target}.md" 2>/dev/null | head -1)
+            src_file=${SRC_PATH[$src_target]-}
             if [ -z "$src_file" ]; then
                 error "$rel — extracted-from:: [[${src_target}]] but no such file in sources/"
             fi
@@ -843,8 +945,40 @@ else
         fi
 
         # 12d. The grounding itself.
+        #
+        # Two passes, so the archive is read once per extract rather than grepped
+        # once per quote — at 200 sources that is ~8,000 greps (roadmap M16). Pass 1
+        # strips each quote: line exactly as the old `echo | sed` did ("- quote:",
+        # then one opening and one closing double quote).
+        quotes=()
         while IFS= read -r qline; do
-            quote=$(echo "$qline" | sed 's/^[[:space:]]*-[[:space:]]*quote:[[:space:]]*//; s/^"//; s/"[[:space:]]*$//')
+            quote=$qline
+            if [[ $quote =~ ^[[:space:]]*-[[:space:]]*quote:[[:space:]]* ]]; then
+                quote=${quote:${#BASH_REMATCH[0]}}
+            fi
+            quote=${quote#\"}
+            if [[ $quote =~ \"[[:space:]]*$ ]]; then
+                quote=${quote:0:${#quote}-${#BASH_REMATCH[0]}}
+            fi
+            quotes+=("$quote")
+        done < <(grep -E '^[[:space:]]*-[[:space:]]*quote:' "$f" 2>/dev/null || true)
+
+        # One awk per extract answers every non-empty quote, in order: is it a
+        # substring of the archive? A quote holds no newline, so matching against
+        # the whole file cannot cross a line, which is what `grep -F` guarantees;
+        # LC_ALL=C makes the comparison bytewise, as grep -F is on valid UTF-8.
+        found=()
+        if [ -n "$archive" ] && [ "${#quotes[@]}" -gt 0 ]; then
+            mapfile -t found < <(
+                for quote in "${quotes[@]}"; do [ -n "$quote" ] && printf '%s\n' "$quote"; done \
+                | LC_ALL=C awk 'BEGIN { while ((getline line < ARGV[1]) > 0) buf = buf line "\n"
+                                        ARGV[1] = "" }
+                                { print (index(buf, $0) ? 1 : 0) }' "$archive"
+            )
+        fi
+
+        i=0
+        for quote in "${quotes[@]}"; do
             if [ -z "$quote" ]; then
                 error "$rel — empty quote: line"
                 continue
@@ -853,7 +987,7 @@ else
                 unverifiable=$((unverifiable + 1))
                 continue
             fi
-            if grep -qF -- "$quote" "$archive" 2>/dev/null; then
+            if [ "${found[i]:-0}" = 1 ]; then
                 grounded=$((grounded + 1))
             else
                 hint=""
@@ -862,7 +996,8 @@ else
                 esac
                 error "$rel — quote not found in $(basename "$archive"): \"$(echo "$quote" | cut -c1-70)\"$hint"
             fi
-        done < <(grep -E '^[[:space:]]*-[[:space:]]*quote:' "$f" 2>/dev/null || true)
+            i=$((i + 1))
+        done
     done < <(find "$extracts_dir" -name "*.md" ! -name ".gitkeep" -print0)
 
     if [ "$unverifiable" -gt 0 ]; then
@@ -875,14 +1010,15 @@ fi
 # Provenance that resolves to nothing is worse than none — the atom reads as
 # claim-grounded and is not.
 while IFS= read -r -d '' f; do
-    label=$(realpath --relative-to="$VAULT" "$f")
+    label=${f#"$VAULT"/}
     while IFS= read -r ref; do
         target="${ref%%#*}"
         anchor="${ref#*#}"
-        tfile=$(find "$VAULT/extracts" "$VAULT/sources" "$VAULT/atoms" -name "${target}.md" 2>/dev/null | head -1)
+        tfile=""
+        if [ -n "$target" ]; then tfile=${NOTE_PATH[$target]-}; fi
         if [ -z "$tfile" ]; then
             warn "$label — cites:: [[${target}#${anchor}]] but no such note"
-        elif ! grep -qF -- "$anchor" "$tfile" 2>/dev/null; then
+        elif ! anchor_in "$tfile" "$anchor"; then
             warn "$label — cites:: [[${target}#${anchor}]] but ${target} has no block ${anchor}"
         fi
     done < <(grep -oE '\[\[[^]|]+#\^[A-Za-z0-9-]+' "$f" 2>/dev/null | sed 's/^\[\[//' || true)
@@ -931,7 +1067,7 @@ actor_ok() {
 }
 
 while IFS= read -r -d '' f; do
-    label=$(realpath --relative-to="$VAULT" "$f")
+    label=${f#"$VAULT"/}
     grep -qE "^(generated|verified):" "$f" 2>/dev/null || continue
     prov_checked=$((prov_checked + 1))
 
