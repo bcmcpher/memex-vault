@@ -99,6 +99,33 @@ count_links() {
         | grep -oE '\[\[[^]]+\]\]' | sort -u | wc -l || true
 }
 
+# fm_value <file> <key>: the key's value from the frontmatter, and only from it.
+# Sets REPLY to the value, FM_FOUND to 1 when the key is present (even with an
+# empty value) and 0 otherwise.
+#
+# Lint used to read frontmatter with `grep "^key:" | head -1` over the whole file,
+# which misread three ways (roadmap M20, audited 2026-09-15): a body line counted
+# as the field — `status:` inside a fenced YAML example FAILed the vault, and a
+# prose `stage:` line hid a missing one; a trailing space, CR or quotes made
+# `confidence: high ` not equal "high", silencing 8a/8c/12f; and an empty value
+# counted as present. This reads between the fences, takes the first occurrence,
+# and strips CR, surrounding whitespace, a trailing " #comment" and one pair of
+# quotes — which is what a YAML reader such as Dataview sees.
+fm_value() {
+    local out
+    out=$(awk -v k="$2" 'BEGIN { SQ = "\047" }
+        NR == 1 { if ($0 !~ /^---[[:space:]]*$/) exit; fm = 1; next }
+        fm && /^---[[:space:]]*$/ { exit }
+        fm && index($0, k ":") == 1 {
+            v = substr($0, length(k) + 2)
+            sub(/\r$/, "", v); sub(/[[:space:]]+#.*$/, "", v)
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
+            if (v ~ /^".*"$/ || v ~ ("^" SQ ".*" SQ "$")) v = substr(v, 2, length(v) - 2)
+            print "=" v; exit
+        }' "$1" 2>/dev/null || true)
+    if [ -n "$out" ]; then FM_FOUND=1; REPLY=${out#=}; else FM_FOUND=0; REPLY=""; fi
+}
+
 # Resolve an atom's cites:: into the distinct source files standing behind them.
 # A citation is one of two shapes: a bare source ([[slug]] or [[slug#Section]]),
 # or a claim inside an extract ([[ext-slug#^cNN]]), which resolves through that
@@ -119,6 +146,7 @@ backing_sources() {
         return 0
     fi
     while IFS= read -r target; do
+        target="${target%%|*}"          # [[slug|display text]] names slug
         note="${target%%#*}"
         [ -z "$note" ] && continue
         case "$note" in
@@ -177,17 +205,17 @@ while IFS= read -r -d '' p; do
     if [ -n "$b" ] && [ -z "${TOPIC_PATH[$b]+x}" ]; then TOPIC_PATH[$b]=$p; fi
 done < <(find "$VAULT/topics" -name "*.md" -print0 2>/dev/null)
 
-# First stage: / saved: line of a note, read exactly as the per-citation pipelines
-# read it — once per file instead of once per citation per section. Sets REPLY.
+# A note's frontmatter stage: / saved:, via fm_value — once per file instead of
+# once per citation per section. Sets REPLY.
 note_stage() {
     if [ -z "${SRC_STAGE[$1]+x}" ]; then
-        SRC_STAGE[$1]=$(grep "^stage:" "$1" 2>/dev/null | head -1 | sed 's/^stage:[[:space:]]*//' || true)
+        fm_value "$1" stage; SRC_STAGE[$1]=$REPLY
     fi
     REPLY=${SRC_STAGE[$1]}
 }
 note_saved() {
     if [ -z "${SRC_SAVED[$1]+x}" ]; then
-        SRC_SAVED[$1]=$(grep "^saved:" "$1" 2>/dev/null | head -1 | sed 's/^saved:[[:space:]]*//' || true)
+        fm_value "$1" saved; SRC_SAVED[$1]=$REPLY
     fi
     REPLY=${SRC_SAVED[$1]}
 }
@@ -289,7 +317,7 @@ compute_independence() {
                 if (lineno == 1 && line ~ /^---[ \t]*$/) { fm = 1; continue }
                 if (fm && line ~ /^---[ \t]*$/) { fm = 0; continue }
                 if (fm) {
-                    if (inlist != "" && line ~ /^[ \t]+-/) { s = line; sub(/^[ \t]+-[ \t]*/, "", s); addkey(p, inlist, s); continue }
+                    if (inlist != "" && line ~ /^[ \t]*-/) { s = line; sub(/^[ \t]*-[ \t]*/, "", s); addkey(p, inlist, s); continue }
                     inlist = ""
                     if (line ~ /^authors:/) {
                         s = trim(substr(line, 9))
@@ -478,7 +506,7 @@ if [ -d "$VAULT/glossary" ]; then
         aliases_line=$(awk 'NR == 1 && /^---[[:space:]]*$/ { fm = 1; next }
                             fm && /^---[[:space:]]*$/ { exit }
                             fm && /^aliases:/ { inl = 1; sub(/^aliases:[[:space:]]*/, ""); sub(/^\[/, ""); sub(/\][[:space:]]*$/, ""); if ($0 != "") print; next }
-                            fm && inl && /^[[:space:]]+-/ { sub(/^[[:space:]]+-[[:space:]]*/, ""); print; next }
+                            fm && inl && /^[[:space:]]*-/ { sub(/^[[:space:]]*-[[:space:]]*/, ""); print; next }
                             { inl = 0 }' "$f" 2>/dev/null | tr '\n' ',' || true)
         IFS=',' read -ra alias_arr <<< "$aliases_line"
         for alias in "${alias_arr[@]}"; do
@@ -505,11 +533,15 @@ ok "naming check complete"
 echo ""
 echo "── 2. Required Frontmatter Fields ────────────────────────────────────────"
 
-# Presence only. Section 11 checks that type: and stage: carry legal *values*.
+# Present in the frontmatter with a non-empty value. Section 11 checks that type:
+# and stage: carry legal *values*.
 check_field() {
     local file="$1" field="$2" label="$3"
-    if ! grep -q "^${field}:" "$file" 2>/dev/null; then
+    fm_value "$file" "$field"
+    if [ "$FM_FOUND" -eq 0 ]; then
         warn "$label — missing field: $field"
+    elif [ -z "$REPLY" ]; then
+        warn "$label — empty field: $field"
     fi
 }
 
@@ -645,8 +677,8 @@ echo "── 6. Graph Health ─────────────────
 
 # 6a. Inbox-only sources: unread/unprocessed with no populated Connections
 while IFS= read -r -d '' f; do
-    stage_line=$(grep "^stage:" "$f" 2>/dev/null | head -1 || true)
-    if echo "$stage_line" | grep -q "unread\|unprocessed"; then
+    note_stage "$f"
+    if [[ $REPLY == *unread* || $REPLY == *unprocessed* ]]; then
         has_connections=$(grep -cE "^(supports|introduces|demonstrates|cites|related)::[[:space:]]*\[\[" "$f" 2>/dev/null || true)
         if [ "$has_connections" -eq 0 ]; then
             label=${f#"$VAULT"/}
@@ -820,7 +852,7 @@ compute_independence
 # unit count remains an upper bound — it can only under-report.
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
-    confidence=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | sed 's/^confidence:[[:space:]]*//' || true)
+    fm_value "$f" confidence; confidence=$REPLY
     if [ "$confidence" = "high" ]; then
         backing_sources "$f"
         source_count=0
@@ -840,7 +872,7 @@ done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 # false positives in one run, every one two sources from one author group.
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
-    confidence=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | sed 's/^confidence:[[:space:]]*//' || true)
+    fm_value "$f" confidence; confidence=$REPLY
     if [ "$confidence" = "low" ]; then
         processed_count=0
         backing_sources "$f"
@@ -863,7 +895,7 @@ done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 # warned twice. Same verifiable test as 7d, for the same reason (finding 11).
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
-    confidence=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | sed 's/^confidence:[[:space:]]*//' || true)
+    fm_value "$f" confidence; confidence=$REPLY
     case "$confidence" in medium|high) ;; *) continue ;; esac
     backing_sources "$f"; resolved=$REPLY
     [ -z "$resolved" ] && continue
@@ -897,7 +929,7 @@ done < <(find "$VAULT/sources" -name "*.md" ! -name ".gitkeep" -print0)
 # regardless of confidence. This asks whether `high` is still earned.
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
-    confidence=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | sed 's/^confidence:[[:space:]]*//' || true)
+    fm_value "$f" confidence; confidence=$REPLY
     [ "$confidence" = "high" ] || continue
     outgoing=$(count_links "$f" 'contradicts|refutes')
     incoming=$(grep -rlE "^(contradicts|refutes)::.*\[\[${atom_name}(#[^]]*)?\]\]" \
@@ -954,7 +986,12 @@ else
     while IFS= read -r -d '' f; do
         label=${f#"$VAULT"/}
         # Extract tags line from frontmatter
-        tags_line=$(awk '/^---$/{fm++; next} fm==1 && /^tags:/{print; exit} fm==2{exit}' "$f" 2>/dev/null || true)
+        # Inline `tags: [a, b]` or a block list; rendered as "[a, b]" either way.
+        tags_line=$(awk '/^---[[:space:]]*$/ { fm++; if (fm == 2) exit; next }
+                         fm == 1 && inl && /^[[:space:]]*-/ { t = $0; sub(/^[[:space:]]*-[[:space:]]*/, "", t); out = out (out == "" ? "" : ", ") t; next }
+                         fm == 1 && inl { exit }
+                         fm == 1 && /^tags:/ { v = $0; sub(/^tags:[[:space:]]*/, "", v); if (v != "") { print v; exit }; inl = 1; next }
+                         END { if (inl) print "[" out "]" }' "$f" 2>/dev/null || true)
         [ -z "$tags_line" ] && continue
         # Parse inline YAML array: tags: [a, b, c] or tags: []
         if [[ "$tags_line" =~ \[([^]]*)\] ]]; then
@@ -1030,7 +1067,8 @@ else
         rel=${f#"$VAULT"/}
 
         # 11c. status: is forbidden everywhere in the vault, candidates included.
-        if grep -q "^status:" "$f" 2>/dev/null; then
+        fm_value "$f" status
+        if [ "$FM_FOUND" -eq 1 ]; then
             error "$rel — carries status:; the vault field is stage: (see schema.md § Stage Values)"
         fi
 
@@ -1050,7 +1088,7 @@ else
         done <<< "$okf_types"
 
         if [ -n "$expected" ]; then
-            actual=$(grep "^type:" "$f" 2>/dev/null | head -1 | sed 's/^type:[[:space:]]*//;s/[[:space:]]*$//' || true)
+            fm_value "$f" type; actual=$REPLY
             if [ -z "$actual" ]; then
                 error "$rel — missing required field: type: (expected \"$expected\")"
             elif [ "$actual" != "$expected" ]; then
@@ -1061,7 +1099,7 @@ else
         # 11b. stage: value must be in the vocabulary for this node type.
         section=$(stage_section_for "$rel")
         if [ -n "$section" ]; then
-            stage_val=$(grep "^stage:" "$f" 2>/dev/null | head -1 | sed 's/^stage:[[:space:]]*//;s/[[:space:]]*$//' || true)
+            fm_value "$f" stage; stage_val=$REPLY
             if [ -n "$stage_val" ]; then
                 if [ -z "${STAGE_VOCAB[$section]+x}" ]; then
                     STAGE_VOCAB[$section]=$(stage_vocab "$section")
@@ -1073,7 +1111,7 @@ else
             fi
         fi
     done < <(find "$VAULT/sources" "$VAULT/atoms" "$VAULT/topics" "$VAULT/glossary" \
-                  "$VAULT/_meta/candidates" -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null)
+                  "$VAULT/extracts" "$VAULT/_meta/candidates" -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null)
     ok "schema conformance check complete"
 fi
 
@@ -1135,7 +1173,7 @@ else
 
         # 12b. claims: is the one derived number the schema keeps in frontmatter,
         # because Dataview cannot count block ids. Cross-check so it cannot drift.
-        declared=$(grep "^claims:" "$f" 2>/dev/null | head -1 | sed 's/^claims:[[:space:]]*//;s/[[:space:]]*$//' || true)
+        fm_value "$f" claims; declared=$REPLY
         claim_ids=$(grep -cE '\^c[0-9]+[[:space:]]*$' "$f" 2>/dev/null || true)
         if [ -n "$declared" ] && [ "$declared" != "$claim_ids" ]; then
             warn "$rel — claims: $declared but $claim_ids block ids in the body"
@@ -1255,7 +1293,7 @@ done < <(find "$VAULT/atoms" "$VAULT/sources" "$VAULT/topics" "$VAULT/glossary" 
 # which checks how many sources there are; this checks how specific they are.
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
-    confidence=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | sed 's/^confidence:[[:space:]]*//' || true)
+    fm_value "$f" confidence; confidence=$REPLY
     if [ "$confidence" = "high" ]; then
         anchored=$(grep -cE '^cites::.*\[\[[^]|]+#\^' "$f" 2>/dev/null || true)
         if [ "$anchored" -eq 0 ]; then
@@ -1321,6 +1359,16 @@ echo "── 13. Provenance Blocks ───────────────
 
 prov_checked=0
 
+# A mapping value as YAML reads it: drop a trailing " #comment", surrounding space
+# and one pair of quotes. `by: "human:x"` and `at: 2026-09-15 # ok` are both valid.
+unquote() {
+    local v="$1"
+    v="${v%%[[:space:]]#*}"
+    v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"
+    if [[ $v == \"*\" || $v == \'*\' ]]; then v="${v:1:${#v}-2}"; fi
+    printf '%s' "$v"
+}
+
 # Actor form: <producer>/<version>, human:<id>, or process:<id>
 actor_ok() {
     case "$1" in
@@ -1332,13 +1380,16 @@ actor_ok() {
 
 while IFS= read -r -d '' f; do
     label=${f#"$VAULT"/}
-    grep -qE "^(generated|verified):" "$f" 2>/dev/null || continue
+    fm_value "$f" generated; has_gen=$FM_FOUND
+    fm_value "$f" verified;  has_ver=$FM_FOUND
+    [ "$has_gen" -eq 1 ] || [ "$has_ver" -eq 1 ] || continue
     prov_checked=$((prov_checked + 1))
 
     # 13a. generated: — a mapping with both by: and at:
-    if grep -qE "^generated:" "$f" 2>/dev/null; then
+    if [ "$has_gen" -eq 1 ]; then
         gen_by=$(awk '/^generated:/{f=1;next} f&&(/^[a-z]/||/^---[[:space:]]*$/){exit} f&&/^[[:space:]]+by:/{sub(/^[[:space:]]+by:[[:space:]]*/,"");print;exit}' "$f")
         gen_at=$(awk '/^generated:/{f=1;next} f&&(/^[a-z]/||/^---[[:space:]]*$/){exit} f&&/^[[:space:]]+at:/{sub(/^[[:space:]]+at:[[:space:]]*/,"");print;exit}' "$f")
+        gen_by=$(unquote "$gen_by"); gen_at=$(unquote "$gen_at")
         if [ -z "$gen_by" ] || [ -z "$gen_at" ]; then
             warn "$label — generated: is missing by: or at:"
         else
@@ -1353,18 +1404,19 @@ while IFS= read -r -d '' f; do
     # /^[a-z]/ runs on into the body and reads prose as provenance — it read
     # 'confounded by: resolution,' as an actor string the first time any atom
     # carried a real sign-off. Silent on 4 of 5 atoms purely by luck.
-    if grep -qE "^verified:" "$f" 2>/dev/null; then
+    if [ "$has_ver" -eq 1 ]; then
         ver_block=$(awk '/^verified:/{f=1;next} f&&(/^[a-z]/||/^---[[:space:]]*$/){exit} f{print}' "$f")
         entry_count=$(printf '%s\n' "$ver_block" | grep -cE '^[[:space:]]*-[[:space:]]' || true)
         if [ "$entry_count" -eq 0 ]; then
             warn "$label — verified: is present but has no list entries (expected '- by:' / '  at:')"
         else
             by_count=$(printf '%s\n' "$ver_block" | grep -cE '^[[:space:]]*-?[[:space:]]*by:' || true)
-            at_count=$(printf '%s\n' "$ver_block" | grep -cE '^[[:space:]]*at:' || true)
+            at_count=$(printf '%s\n' "$ver_block" | grep -cE '^[[:space:]]*-?[[:space:]]*at:' || true)
             if [ "$by_count" -ne "$entry_count" ] || [ "$at_count" -ne "$entry_count" ]; then
                 warn "$label — verified: has $entry_count entr(ies) but $by_count by: and $at_count at: (each entry needs both)"
             fi
             while IFS= read -r vb; do
+                vb=$(unquote "$vb")
                 actor_ok "$vb" || warn "$label — verified.by '$vb' is not a valid actor string"
                 case "$vb" in
                     human:*) ;;
@@ -1374,9 +1426,9 @@ while IFS= read -r -d '' f; do
         fi
 
         # 13c. Stale sign-off: newest verified.at older than updated:
-        newest_ver=$(printf '%s\n' "$ver_block" | grep -oE 'at:[[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}' \
-                     | sed 's/^at:[[:space:]]*//' | sort | tail -1 || true)
-        updated=$(grep -m1 "^updated:" "$f" 2>/dev/null | sed 's/^updated:[[:space:]]*//' || true)
+        newest_ver=$(printf '%s\n' "$ver_block" | grep -oE "at:[[:space:]]*[\"']?[0-9]{4}-[0-9]{2}-[0-9]{2}" \
+                     | sed -E "s/^at:[[:space:]]*[\"']?//" | sort | tail -1 || true)
+        fm_value "$f" updated; updated=$REPLY
         if [ -n "$newest_ver" ] && [ -n "$updated" ]; then
             if [[ "$updated" > "$newest_ver" ]]; then
                 warn "$label — signed off $newest_ver but updated $updated (sign-off predates the current content)"
