@@ -168,7 +168,7 @@ than its evidence:
 | UNGROUNDED | declared `high`, zero block-anchored citations — the cap, named |
 | CONTRADICTED | declared `high` with a populated `contradicts::` / `refutes::` and no prose addressing it |
 | STALE | incoming `challenges::` / `refutes::` dated after the atom's `updated:` |
-| UNVALIDATED | every cited source is `stage: unread` |
+| UNVALIDATED | nothing cited has been read claim by claim: no block-anchored `cites:: [[ext-...#^cNN]]`, and no cited source has an extract. Not `stage: unread` — `read` is self-reported and nothing can verify it (lint 7d/8c use the same test) |
 | STALE SOURCES | newest cited source `saved:` more than 18 months ago |
 | NEVER VERIFIED | no `verified:` key — feeds step 7, never a confidence change |
 | STALE SIGN-OFF | newest `verified.at` earlier than `updated:` — someone signed off on a version that no longer exists |
@@ -245,8 +245,8 @@ rests on, so the user can check the arithmetic rather than trust it:
 
 ## Unvalidated atoms
   atoms/speculative-atom.md
-  - all 2 cited sources are stage: unread
-  → Flag only — confidence cannot be evaluated until the sources are read
+  - 2 cited sources, none with an extract, and no block-anchored cites::
+  → Flag only — confidence cannot be evaluated until a source is read claim by claim
 
 ## Stale sources
   atoms/old-atom.md
@@ -385,7 +385,7 @@ both.
 - **Don't count citations.** Three block anchors into one extract are one source. Resolve every anchor through `extracted-from::` before tallying anything
 - **Don't let an atom reach `high` on bare citations.** No block anchors means no extract, which means the cap applies no matter how many sources agree
 - **Don't assume independence.** Two sources are dependent until shown otherwise; say which ones you merged and why
-- Don't treat `UNVALIDATED` as a confidence problem — it's a workflow state. Once the sources are read and processed, run trust-audit again
+- Don't treat `UNVALIDATED` as a confidence problem — it's an evidence state. Once a cited source is deep-extracted, run trust-audit again; marking a source `stage: read` does not clear it
 - Don't downgrade atoms just because sources are old — check whether the claim is foundational (timeless) or empirical (may have been superseded)
 - Don't audit an atom that hasn't been through `memex-reconcile` — a disconnected graph produces misleading provenance
 - **Don't read a `verified:` entry as agreement with `confidence:`.** They are orthogonal. A signed-off atom can still be overconfident, and a `low` atom a human has confirmed is correctly hedged is a perfectly good note

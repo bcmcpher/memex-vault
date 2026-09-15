@@ -368,6 +368,33 @@ compute_independence() {
         }')
 }
 
+# Sources that have an extract: the target of some extract's extracted-from::,
+# resolved the same way 12a resolves it.
+declare -A EXTRACTED=() CLOSE_READ=()
+while IFS= read -r line; do
+    if [[ $line =~ extracted-from::.*\[\[([^]|#]+) ]] && [ -n "${SRC_PATH[${BASH_REMATCH[1]}]+x}" ]; then
+        EXTRACTED[${SRC_PATH[${BASH_REMATCH[1]}]}]=1
+    fi
+done < <(grep -rh -m1 --include='*.md' "^extracted-from::" "$VAULT/extracts" 2>/dev/null || true)
+
+# read_closely <atom> <resolved sources>: has anything this atom rests on been
+# read claim by claim? Yes when it carries a block-anchored citation into an
+# extract, or when any cited source has an extract. Memoized; used by 7d and 8c.
+read_closely() {
+    local f="$1" src
+    if [ -z "${CLOSE_READ[$f]+x}" ]; then
+        CLOSE_READ[$f]=0
+        if grep -qE '^cites::.*\[\[ext-[^]|]*#\^' "$f" 2>/dev/null; then
+            CLOSE_READ[$f]=1
+        else
+            while IFS= read -r src; do
+                if [ -n "$src" ] && [ -n "${EXTRACTED[$src]+x}" ]; then CLOSE_READ[$f]=1; break; fi
+            done <<< "$2"
+        fi
+    fi
+    [ "${CLOSE_READ[$f]}" = 1 ]
+}
+
 # " — independence unchecked for K source(s) …" when K > 0, else nothing.
 unchecked_note() {
     if [ "${1:-0}" -gt 0 ]; then
@@ -689,23 +716,24 @@ if cutoff18=$(date -d "18 months ago" +%Y-%m-%d 2>/dev/null) || cutoff18=$(date 
     done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 fi
 
-# 7d. Unvalidated atom: all cited sources are stage: unread
+# 7d. Unchecked evidence: nothing the atom cites has been read claim by claim.
+#
+# This used to test for every cited source being `stage: unread`. But `read` is
+# the one stage value no skill can verify — "a human read this" is self-reported,
+# and reported aspirationally — so the check fired on papers just read 37 claims
+# deep, whose stage: lagged because deep-extract mode A may not touch the source
+# note, and stayed silent on sources marked read that nobody had read (trial-1
+# finding 11). It now keys on evidence the vault can check: a block-anchored
+# cites:: [[ext-...#^cNN]], or a cited source that has an extract. stage: read
+# survives as an annotation that nothing here depends on.
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
     backing_sources "$f"; resolved=$REPLY
-    # No resolvable source is a dangling-link problem, not an unread one — do not
-    # report it here, or every extract-only atom reads as unvalidated.
+    # No resolvable source is a dangling-link problem, not an evidence one — do
+    # not report it here.
     [ -z "$resolved" ] && continue
-    all_unread=true
-    while IFS= read -r src_file; do
-        note_stage "$src_file"; src_stage=$REPLY
-        if [ "$src_stage" != "unread" ]; then
-            all_unread=false
-            break
-        fi
-    done <<< "$resolved"
-    if $all_unread; then
-        warn "atoms/${atom_name}.md — all cited sources are stage: unread (confidence based on unread material)"
+    if ! read_closely "$f" "$resolved"; then
+        warn "atoms/${atom_name}.md — no cited source has been read claim by claim (no block-anchored cites::, and no cited source has an extract)"
     fi
 done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
@@ -789,22 +817,18 @@ while IFS= read -r -d '' f; do
     fi
 done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
-# 8c. Unvalidated confidence: all cites:: sources are stage: unread
-# (complements Section 7d — same detection, framed as a confidence signal)
+# 8c. Unchecked confidence: confidence: medium or high resting on the same
+# unchecked evidence 7d reports. 7d says it of any atom; this says it only where a
+# confidence above low claims more than anyone has checked, so a low atom is not
+# warned twice. Same verifiable test as 7d, for the same reason (finding 11).
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
+    confidence=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | sed 's/^confidence:[[:space:]]*//' || true)
+    case "$confidence" in medium|high) ;; *) continue ;; esac
     backing_sources "$f"; resolved=$REPLY
     [ -z "$resolved" ] && continue
-    all_unread=true
-    while IFS= read -r src_file; do
-        note_stage "$src_file"; src_stage=$REPLY
-        if [ "$src_stage" != "unread" ]; then
-            all_unread=false
-            break
-        fi
-    done <<< "$resolved"
-    if $all_unread; then
-        warn "atoms/${atom_name}.md — confidence assigned but all cited sources are still unread"
+    if ! read_closely "$f" "$resolved"; then
+        warn "atoms/${atom_name}.md — confidence: $confidence but no cited source has been read claim by claim"
     fi
 done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
