@@ -218,7 +218,7 @@ Done 2026-09-15. What differs from the list above, and what verification showed:
 
 ---
 
-## Stage 3 — `lint.sh` correctness and cost
+## Stage 3 — `lint.sh` correctness and cost *(done)*
 
 - **Finding 7 / section 8 — the noisiest check in the vault.** Lint counts
   `stage: processed` sources; `schema.md` counts *independent claims across
@@ -267,6 +267,46 @@ Done 2026-09-15. What differs from the list above, and what verification showed:
   block is an unexecuted code path until something writes one. Audit the remaining
   optional blocks against a populated example before tagging — the fork is the
   populated example.
+
+Done 2026-09-15 — `9d86c94` … `2f6fe95`. What differs from the list above, with
+the numbers that show it:
+
+- **lint.sh requires bash 4** (user decision): associative arrays for M16's tables.
+  A guard exits 2 with the fix named; `realpath --relative-to` (GNU-only) is gone.
+- **M16** was checked against the post-Stage-2 output, not `lint-baseline-rc1.txt`
+  (Stage 2 had already changed it): byte-identical on the fork, the template, an
+  edge-case fixture and a 5× copy of the fork. Fork 18.2 s → 4.5 s; 5× 101 s →
+  23 s, now linear. § 4 stays mildly superlinear — see § Not in RC-2.
+- **Finding 7 / M15.** Independence is a shared author — first initial + surname,
+  or `channel:`/`tool:` — or a `cites::` chain. Surname alone chained Frässle to
+  Cammoun through two different people named Do. Fork: all six false 8b warnings
+  clear; summary reads 8 independent units of 21 sources, 8 unchecked. **No
+  template or skill writes `authors:`, `channel:` or `tool:`** — only the fork's
+  hand-edited notes carry them, and the manifest's Cammoun row is `[Leila Cammoun,
+  et al.]`. Stage 6 `memex-seed` must write full author lists or M15 reads zero.
+- **Finding 11.** 7d warns for any atom whose evidence nobody read claim by claim;
+  8c only when confidence is medium or high. Fork: one new warning
+  (`white-matter-atlas`). `memex-trust-audit`'s UNVALIDATED uses the same test.
+- **Finding 10** FAILs a shared atom/glossary filename and WARNs an alias match;
+  **finding 13** (12g) checks Promotion Log rows. Fork: zero of either; all 555
+  anchored citations are logged.
+- **M18: the planned fix was measured first and did not hold.** Affiliations
+  appear on 21 of 22 real landing pages ("Access through <university>"), and
+  numbered sections and a references heading each on 3 of 12 corpus papers. The
+  drop-cap join misses every numbered heading and corrupts real text, so it is not
+  done (user decision). Rule instead: a body (≥ 25 KB in ≥ 20 paragraph lines) or a
+  reference list the body cites into. 62 labelled samples all correct — corpus
+  12/12 pass, trial-1 archives 8/9 (feng-bundlecleaner rejected before and after),
+  22/22 IEEE and Elsevier landing pages rejected. Known holes are in the header.
+- **M20 audit** found the same failure class in 8 more places — whole-file greps
+  reading body lines, unnormalised values, empty values passing, unindented block
+  lists dropped, `verified:` shape rejections, `extracts/` missing from § 11. All
+  fixed through one frontmatter reader; 33 cases now report what YAML says.
+- **Also fixed:** `[[slug|display]]` citations never resolved in
+  `backing_sources`, a bug M16 had to preserve to stay byte-identical.
+
+Fork lint now: exit 0, 4 warnings (video inbox item, `connectome-edge-weighting`
+6c, `brain-connectivity` 6d, `white-matter-atlas` 7d), 365 quotes verified.
 
 ---
 
@@ -415,6 +455,13 @@ trial 2 shows it is worse than recorded, which is new.
 | Open question 4 — `topics/research/` vs `topics/projects/` as distinct node types | Untriggered by any observation |
 | M3, M4, M8, Phases 5/8/9 | Already deferred in the roadmap |
 | M22 — graph labels are filenames | Accepted, no action (roadmap recommendation 3) |
+| Lint § 8d `body > 100 lines` on sources — the same unreachable line count M11(c) fixed in 6c | Sources are long-wrapped too, so 8d silently never fires; it produced no false signal in trial 1. Fix the way 6c was when next open *(added Stage 3)* |
+| Lint § 7c 18-month freshness is a temporal threshold, M11(a)'s class | Cannot fire on a vault younger than 18 months, so trial 2 cannot exercise it *(added Stage 3)* |
+| Lint § 4 orphan check runs `grep -r` per atom — mildly superlinear | 0.22 s → 1.65 s at 5× the fork; not dominant. Revisit near 200 sources *(added Stage 3)* |
+| `authors:` as "Last, First" or a flow list wrapped across lines is misparsed | The manifest and the skills write "First Last" on one line *(added Stage 3)* |
+| `warn()`/`error()` use `echo -e`, so a backslash in quoted text is interpreted | Cosmetic; seen only in a synthetic quote *(added Stage 3)* |
+| `stage: unread` as a reader-facing flag in memex-compose, -search, -topic-init, -review | Finding 11 changed the evidence test; these label workflow state for a reader, which `unread` still does honestly *(added Stage 3)* |
+| `validate-archive.sh` holes: snippets + full reference list pass; superscript citations invisible; IEEE abstract + references rejection rests on a synthetic page | Recorded in the script header; no real page of either kind exists to test *(added Stage 3)* |
 
 Resolved elsewhere, listed so nothing looks missing: finding 1 → fixed, reaches
 here via Stage 1, residue in Stage 5 `memex-init`; 2 → Stage 5 `memex-connect`;
