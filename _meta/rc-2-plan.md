@@ -310,7 +310,7 @@ Fork lint now: exit 0, 4 warnings (video inbox item, `connectome-edge-weighting`
 
 ---
 
-## Stage 4 — D2 hierarchy and D3 scaffold
+## Stage 4 — D2 hierarchy and D3 scaffold *(done)*
 
 The schema amendment. `_meta/schema.md` is the one file `memex-init` refuses to
 touch, so this is a template-level change by definition.
@@ -345,6 +345,39 @@ touch, so this is a template-level change by definition.
   no evidence, so nothing can be over-confident or orphaned. This is a doctrine
   change; record it as such.
 
+Done 2026-09-15 — `d6b8426`. What differs from the list above, with the numbers
+that show it:
+
+- **Only concept maps form the tree** (user decision). Projects and research
+  questions sit outside it, and an atom's membership of them stays additive, so an
+  atom on one leaf concept map plus a project is legal.
+- **Lint.** 6d exempts a concept map with children; 7a also checks topics' own
+  `part-of::` (target exists, only concept maps name a parent, the parent is a
+  concept map); 7f flags two parents and cycles; 7g flags an atom on a non-leaf or
+  on two concept maps. `part-of::` inside fenced code is ignored, as Dataview
+  ignores it: the shipped `getting-started.md` has a fenced
+  `part-of:: [[getting-started]]` example that first read as a self-cycle. A
+  hierarchy fixture reports exactly its pre-written expectations; fork and template
+  output are unchanged (fork re-run after the restore: exit 0, 4 warnings, 365
+  quotes).
+- **Render check passed** in the fork's Obsidian (checked by the user). A temporary
+  `tractography-methods` concept map under `brain-connectivity`, with 8 of the 22
+  atoms moved to it: `brain-connectivity` Core Concepts **14**, "Via sub-topics"
+  one group, `tractography-methods`, **8**; `tractography-methods` Core Concepts
+  **8**. 14 + 8 = 22, the filesystem count. Lint in that state exempted the parent
+  from 6d and raised 7g on the 14 atoms left on the root. Fork restored.
+- **`_meta/index.md`** gives Concept Maps a Parent column, sorted by parent, rather
+  than a separate tree query.
+- **D3** as planned; `memex-init` copies the template's Dataview blocks instead of
+  its own hand-typed stub, which had drifted from the template. **M21** as planned.
+- **Stage 2's deferred topic-emerge re-run is not done here.** The fork is still
+  flat — `brain-connectivity` has no children — so its part-of candidate is
+  whole-vault by construction and a re-run would reproduce Stage 2. D2 shrinks
+  part-of candidates only on a vault that has a tree; trial 2, seeded by the new
+  `memex-init`, is the first. Carried to trial 2.
+- **Missed:** `memex-topic-emerge` Step 7 writes the finding 7g now raises.
+  Added to Stage 5.
+
 ---
 
 ## Stage 5 — the remaining verdict fixes
@@ -361,6 +394,7 @@ touch, so this is a template-level change by definition.
 | `memex-ingest` | Has a candidate type its workflow never produces, so supporting an existing atom is evidentially silent until back-wired |
 | `memex-stale` | Check 4's recommendation routes into an operation nothing has designed for `medium: code` (M8) — say so rather than recommending it |
 | `memex-deep-extract` | *(Added 2026-09-15.)* Three things trial 2 will otherwise re-find. **(1) Sanction what mode B already does:** once claims are promoted, mode B sets `stage: processed` and fills `## Summary` / `## Key Points` — mode A's one-file rule stands, and the source template's placeholder already names this skill as a writer. **(2) Mode B candidate gating:** a batched up-front confirmation is allowed, but candidates are still written — approval and crash recovery are different properties, and mode B is the longest write sequence in the vault. **(3) `## Concurrency`**, pointing at the Stage 4 schema rule: mode A parallel-safe with log appends lifted to a coordinator; mode B never; candidate session ids derived from the worker, not the wall clock. M11(b) is already in Stage 2 |
+| `memex-topic-emerge` | *(Added 2026-09-15; missed in Stage 4.)* Step 7 appends `part-of::` to every covered atom not already pointing at the new topic, so an atom already on a concept map gets a second one — lint 7g. Under D2 the new map is either a leaf the atom moves to (replace the atom's link) or a parent of the atom's current leaf (write the topic's own `part-of::`, leave the atom alone). The part-of chain signal still pools every atom that names a root |
 
 `memex-glossary`, `memex-meeting`, `memex-review`, `memex-trust-audit` and
 `memex-topic-init` need no changes. M7 is closed: the glossary is a **disjoint
