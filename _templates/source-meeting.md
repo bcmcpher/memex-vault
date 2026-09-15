@@ -10,21 +10,26 @@ tags: []
 stage: unprocessed
 ---
 
-## Purpose / Agenda
+## Why Recorded
 <!-- One line of this becomes frontmatter `description:`. -->
 
-## Key Discussions
-<!-- What was discussed, decided, or discovered? -->
-
-## Referenced Resources
-<!-- Links to papers, tools, articles, or ideas mentioned -->
-supports:: 
-introduces:: 
-related:: 
+## Decisions Made
+<!-- One concrete decision per bullet. Anchorable as [[note#Decisions Made]]. -->
+- 
 
 ## Action Items
 - [ ] 
 
-## Follow-up Sources to Capture
+## Follow-up Sources Mentioned
 <!-- Papers/articles/tools mentioned that need their own source notes -->
 - 
+
+## Key Concepts Discussed
+<!-- 2-5 sentences. Anchorable as [[note#Key Concepts Discussed]]. -->
+
+## Connections
+supports:: 
+introduces:: 
+challenges:: 
+related:: 
+cites:: 

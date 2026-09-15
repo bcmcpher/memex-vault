@@ -1,3 +1,5 @@
 .archive/
 _exports/
 _meta/candidates/
+.obsidian/workspace.json
+.obsidian/plugins/

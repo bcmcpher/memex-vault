@@ -267,16 +267,51 @@ reaches a generated note.
 - Enable **Dataview JS queries** (optional; needed only for advanced index queries)
 - Set **Refresh interval** to `2500ms` or lower for responsive live tables
 
-### 3. Exclude archive from indexing
-Already configured in `.obsidian/app.json`. The `.archive/` folder will not appear in file explorer, graph, or search results.
+### 3. Two kinds of exclusion, and they are not interchangeable
 
-### 4. Graph view coloring (optional but recommended)
-`Settings → Graph view → Groups`:
-- Add group: `path:sources/` → color orange
-- Add group: `path:extracts/` → color grey
-- Add group: `path:atoms/` → color blue
-- Add group: `path:glossary/` → color green
-- Add group: `path:topics/` → color purple
+**Hidden everywhere** — `.obsidian/app.json` `userIgnoreFilters` removes a folder
+from the file explorer, quick switcher, search *and* graph. Ships with `.archive`
+and `_okf`. `.archive/` belongs here because it holds verbatim third-party article
+text: you want `lint.sh` section 12 to read it and nothing else to.
+
+**Hidden from the graph only** — the graph's own filter. This is where `skills/`,
+`_meta/`, `_templates/`, `_exports/` and `canvas/` belong. They are ~60 markdown
+files with almost no wikilinks between them, so on the graph they are a large
+disconnected cloud that crowds out the real nodes. But you *do* want to search
+and open them, so hiding them globally is the wrong tool.
+
+Both are pre-configured. Nothing to do unless you add a folder.
+
+### 4. Graph view — already configured, and the menu is not in Settings
+
+`.obsidian/graph.json` ships with the filter and the colour groups below, so a
+fresh fork gets a readable graph with no setup.
+
+**To adjust it: open the graph, then click the sliders icon in the graph pane's
+own top-left corner.** The panel there holds *Filters*, *Groups*, *Display* and
+*Forces*. There is no graph section under `Settings` — that is a common
+misreading.
+
+Shipped filter, which keeps infrastructure off the graph while leaving it
+searchable:
+
+```
+-path:skills -path:_meta -path:_templates -path:_exports -path:canvas
+```
+
+`showOrphans` ships **off**. An orphan on this graph is almost always an
+infrastructure file rather than a knowledge node; for real orphan atoms use
+`lint.sh` section 4, which applies the schema's definition rather than Obsidian's.
+
+Shipped colour groups:
+
+| Query | Colour | |
+|---|---|---|
+| `path:topics` | purple | `#A882FF` |
+| `path:atoms` | blue | `#4A9EFF` |
+| `path:sources` | orange | `#FF9F45` |
+| `path:glossary` | green | `#4ACF8B` |
+| `path:extracts` | grey | `#8A8A8A` |
 
 Grey for extracts is deliberate: they are evidence, not curated knowledge, and
 should read as background in the graph rather than as nodes to navigate by.

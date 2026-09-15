@@ -13,6 +13,7 @@ stage: unread
      paper  → authors: [], year:, venue:
      video  → channel:
      docs   → tool:, version:, section:
+     code   → repo:, language:, version:
 -->
 
 ## Why Saved

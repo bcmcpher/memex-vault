@@ -918,8 +918,8 @@ while IFS= read -r -d '' f; do
 
     # 13a. generated: — a mapping with both by: and at:
     if grep -qE "^generated:" "$f" 2>/dev/null; then
-        gen_by=$(awk '/^generated:/{f=1;next} f&&/^[a-z]/{exit} f&&/^[[:space:]]+by:/{sub(/^[[:space:]]+by:[[:space:]]*/,"");print;exit}' "$f")
-        gen_at=$(awk '/^generated:/{f=1;next} f&&/^[a-z]/{exit} f&&/^[[:space:]]+at:/{sub(/^[[:space:]]+at:[[:space:]]*/,"");print;exit}' "$f")
+        gen_by=$(awk '/^generated:/{f=1;next} f&&(/^[a-z]/||/^---[[:space:]]*$/){exit} f&&/^[[:space:]]+by:/{sub(/^[[:space:]]+by:[[:space:]]*/,"");print;exit}' "$f")
+        gen_at=$(awk '/^generated:/{f=1;next} f&&(/^[a-z]/||/^---[[:space:]]*$/){exit} f&&/^[[:space:]]+at:/{sub(/^[[:space:]]+at:[[:space:]]*/,"");print;exit}' "$f")
         if [ -z "$gen_by" ] || [ -z "$gen_at" ]; then
             warn "$label — generated: is missing by: or at:"
         else
@@ -929,8 +929,13 @@ while IFS= read -r -d '' f; do
     fi
 
     # 13b. verified: — a list, every entry carrying by: and at:
+    # The frontmatter fence terminates the block as well as the next top-level
+    # key. verified: is usually the LAST key, so a parser that stops only at
+    # /^[a-z]/ runs on into the body and reads prose as provenance — it read
+    # 'confounded by: resolution,' as an actor string the first time any atom
+    # carried a real sign-off. Silent on 4 of 5 atoms purely by luck.
     if grep -qE "^verified:" "$f" 2>/dev/null; then
-        ver_block=$(awk '/^verified:/{f=1;next} f&&/^[a-z]/{exit} f{print}' "$f")
+        ver_block=$(awk '/^verified:/{f=1;next} f&&(/^[a-z]/||/^---[[:space:]]*$/){exit} f{print}' "$f")
         entry_count=$(printf '%s\n' "$ver_block" | grep -cE '^[[:space:]]*-[[:space:]]' || true)
         if [ "$entry_count" -eq 0 ]; then
             warn "$label — verified: is present but has no list entries (expected '- by:' / '  at:')"
@@ -978,6 +983,7 @@ printf "  %-22s %s\n" "Sources (web):"     "$(count_md "$VAULT/sources/web")"
 printf "  %-22s %s\n" "Sources (video):"   "$(count_md "$VAULT/sources/video")"
 printf "  %-22s %s\n" "Sources (paper):"   "$(count_md "$VAULT/sources/paper")"
 printf "  %-22s %s\n" "Sources (docs):"    "$(count_md "$VAULT/sources/docs")"
+printf "  %-22s %s\n" "Sources (code):"    "$(count_md "$VAULT/sources/code")"
 printf "  %-22s %s\n" "Sources (meeting):" "$(count_md "$VAULT/sources/meeting")"
 printf "  %-22s %s\n" "Extracts:"          "$(count_md "$VAULT/extracts")"
 printf "  %-22s %s\n" "Atoms:"             "$(count_md "$VAULT/atoms")"

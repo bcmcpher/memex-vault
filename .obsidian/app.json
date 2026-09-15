@@ -1,5 +1,6 @@
 {
   "userIgnoreFilters": [
-    ".archive"
+    ".archive",
+    "_okf"
   ]
 }

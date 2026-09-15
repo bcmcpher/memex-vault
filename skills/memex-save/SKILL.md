@@ -22,9 +22,16 @@ For meeting notes with no URL, use `memex-meeting` instead.
 | `arxiv.org`, `doi.org`, `semanticscholar.org`, `openreview.net` | `paper` | `sources/paper/` |
 | `youtube.com`, `youtu.be`, `vimeo.com` | `video` | `sources/video/` |
 | `docs.*`, `*.readthedocs.io`, `*.dev/docs*`, `*.io/docs*`, official library reference pages | `docs` | `sources/docs/` |
+| `github.com`, `gitlab.com`, `codeberg.org`, package registries, analysis/toolbox repos | `code` | `sources/code/` |
 | Everything else | `web` | `sources/web/` |
 
-If the URL is ambiguous, ask once: "Is this a paper, video, docs page, or general article?"
+The authoritative list is `_meta/domain.md` § Source Types, not this table — a
+fork adds a medium there and the table above is only the URL heuristic for it.
+Check that file when a URL fits nothing here.
+
+If the URL is ambiguous, ask once, listing the media declared in
+`_meta/domain.md` § Source Types: "Is this a paper, video, docs page, code
+repository, or general article?"
 
 ---
 
@@ -97,7 +104,7 @@ type: Source
 title: <from fetch>
 description: <one line from the fetched summary; leave blank if the fetch failed>
 url: <url>
-medium: <web|video|paper|docs>
+medium: <one of _meta/domain.md § Source Types — web|video|paper|docs|code>
 saved: <today YYYY-MM-DD>
 tags: []
 stage: <unread|read>
@@ -107,7 +114,7 @@ generated:
 ---
 ```
 
-Add type-specific fields when extractable from the fetch: `authors: []` and `year:` for papers; `channel:` for video; `tool:` for docs.
+Add type-specific fields when extractable from the fetch: `authors: []` and `year:` for papers; `channel:` for video; `tool:` for docs; `repo:`, `language:`, and `license:` for code.
 
 **Body:**
 ```markdown

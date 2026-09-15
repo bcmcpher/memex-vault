@@ -119,7 +119,7 @@ fork's pointer lines updated to this path. Regression baseline captured.
 
 ---
 
-## Stage 1 — back-port what the trial already fixed
+## Stage 1 — back-port what the trial already fixed *(done)*
 
 One commit here. Pure copy from the fork, no new design. This is M17 and its
 neighbours, all already verified in the fork.
@@ -142,6 +142,14 @@ neighbours, all already verified in the fork.
 Checked 2026-09-15: that list is exactly the fork↔template diff on template-layer
 paths, and every line present only in this repo's `roadmap.md` or `README.md` is
 an rc.1 wording the fork has already superseded. The copy loses nothing.
+
+Done 2026-09-15, with three additions the list above missed. **`.claude/skills ->
+../skills`** — tracked in the fork, absent here, and § Testing against the fork
+depends on it. **README de-forked** — the copied §3 named the fork's node count
+("~49 real nodes") and §4 a fork date; both removed. **Paper names in script
+comments kept** (`normalize.sh`, `pdf-clean.sh`, `validate-archive.sh`): they are
+the reason the code exists, nothing parses them, and M18 rewrites the
+`validate-archive.sh` calibration table in Stage 3.
 
 ---
 

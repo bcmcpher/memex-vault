@@ -32,6 +32,6 @@ WHERE contains(row["part-of"], this.file.link)
 ## Dataview: Supporting Sources
 ```dataview
 TABLE medium, saved, stage FROM "sources"
-WHERE contains(supports, [[<% tp.file.title %>]])
+WHERE contains(supports, this.file.link)
 SORT saved DESC
 ```

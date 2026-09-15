@@ -1,0 +1,58 @@
+{
+  "collapse-filter": false,
+  "search": "-path:skills -path:_meta -path:_templates -path:_exports -path:canvas",
+  "showTags": false,
+  "showAttachments": false,
+  "hideUnresolved": false,
+  "showOrphans": false,
+  "collapse-color-groups": false,
+  "colorGroups": [
+    {
+      "query": "path:topics",
+      "color": {
+        "a": 1,
+        "rgb": 11043583
+      }
+    },
+    {
+      "query": "path:atoms",
+      "color": {
+        "a": 1,
+        "rgb": 4890367
+      }
+    },
+    {
+      "query": "path:sources",
+      "color": {
+        "a": 1,
+        "rgb": 16752453
+      }
+    },
+    {
+      "query": "path:glossary",
+      "color": {
+        "a": 1,
+        "rgb": 4902795
+      }
+    },
+    {
+      "query": "path:extracts",
+      "color": {
+        "a": 1,
+        "rgb": 9079434
+      }
+    }
+  ],
+  "collapse-display": true,
+  "showArrow": false,
+  "textFadeMultiplier": 0,
+  "nodeSizeMultiplier": 1,
+  "lineSizeMultiplier": 1,
+  "collapse-forces": true,
+  "centerStrength": 0.518713248970312,
+  "repelStrength": 10,
+  "linkStrength": 1,
+  "linkDistance": 250,
+  "scale": 0.4069256457613727,
+  "close": false
+}

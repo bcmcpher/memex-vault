@@ -36,6 +36,13 @@
 #
 # What it does
 # ------------
+#   0. Deletes C0 control bytes except tab and newline. These arrive from PDF
+#      extraction, where pdftotext emits a raw 0x02 or 0x03 in place of a
+#      superscript minus or a relational operator: "p , 10\x0210" is really
+#      p < 10^-10. They are invisible in an editor, invisible in a terminal, and
+#      invisible in a model's view of the file, so a quote that looks
+#      byte-perfect fails `grep -F` for no visible reason. Found the hard way --
+#      three quotes in the Hagmann 2008 extract failed on exactly this.
 #   1. CRLF → LF; strips BOM, zero-width joiners/spaces, and soft hyphens.
 #   2. Folds ligatures (ﬁ ﬂ ﬀ ﬃ ﬄ ﬅ ﬆ), smart quotes, primes, ellipsis,
 #      en/em/figure dashes and the Unicode minus, and every exotic space, to ASCII.
@@ -75,6 +82,11 @@ fi
 export LC_ALL=C
 
 normalize() {
+    # ── 0. C0 controls ───────────────────────────────────────────────────────
+    # Everything below 0x20 except tab and newline, plus DEL. Nothing in a text
+    # archive should carry these, and when they appear they are undetectable by
+    # eye -- which makes them the worst possible grounding failure.
+    tr -d '\001-\010\013\014\016-\037\177' |
     # ── 1–2. Character folding ───────────────────────────────────────────────
     # Byte-literal substitution, so the C locale is correct here as well as fast.
     sed -e 's/\r$//' \

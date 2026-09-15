@@ -25,7 +25,11 @@ For the relationship taxonomy and full field definitions, read: `references/vaul
 | YouTube / video | `sources/video/` | `youtube.com`, `youtu.be`, Vimeo, conference talks |
 | Academic paper | `sources/paper/` | `arxiv.org`, `doi.org`, journal sites |
 | Docs / API reference | `sources/docs/` | `docs.*`, `*.readthedocs.io`, official library sites |
+| Code / repository | `sources/code/` | `github.com`, `gitlab.com`, package registries, analysis or toolbox repos |
 | Meeting / discussion | `sources/meeting/` | No URL; in-person or virtual conversation |
+
+The authoritative list is `_meta/domain.md` § Source Types, not this table — a
+fork adds a medium there and the table above is only the routing heuristic.
 
 All digital sources use `_templates/source-digital.md`. Meetings use `_templates/source-meeting.md`.
 
@@ -44,6 +48,7 @@ Fetch the URL immediately to extract metadata. Use what you find to fill the tem
 - **arXiv/paper**: fetch the abstract page; extract title, authors array, year, venue, and write the abstract as `## Summary`
 - **YouTube/video**: extract title and channel name from the page; note that full transcripts require an optional MCP server (see README)
 - **Docs**: extract title, tool name from subdomain/title, version from URL path if present
+- **Code/repo**: extract the repo owner/name, primary language, license, and the README's opening description; record `repo:`, `language:`, `license:`. If the README cites a paper, note it — the published DOI often differs from the preprint DOI the README links
 - **PDFs** (URL ends in `.pdf`): cannot extract via fetch — ask the user for title, authors, year, and a brief summary directly
 - **Paywalled/failed**: ask the user to paste the key fields
 
@@ -63,7 +68,7 @@ type: Source
 title: <from fetch>
 description: <first sentence of the summary, condensed to one line>
 url: <url>
-medium: <web|video|paper|docs>
+medium: <one of _meta/domain.md § Source Types — web|video|paper|docs|code>
 saved: <today YYYY-MM-DD>
 tags: []
 stage: unread
