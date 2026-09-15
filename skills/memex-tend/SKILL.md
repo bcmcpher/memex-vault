@@ -103,13 +103,12 @@ hand fixes; say so rather than inventing a route.
 | 1 | missing `YYYY-MM-DD` prefix (FAIL) | hand fix — rename the file |
 | 1 | declared source type with no folder / undeclared folder | `memex-init` re-run, vocabulary only |
 | 2 | missing frontmatter field | hand fix, or re-run the capture skill that wrote it |
-| 3 | stale unread sources | `memex-stale` for the report; then read or drop them |
 | 4 | orphan atom | `memex-connect` to wire it, `memex-refactor` merge if it is redundant |
 | 5 | `raw::` pointing at a missing archive (FAIL) | hand fix — re-ingest or drop the `raw::` |
 | 6 | inbox-only source | `memex-connect` |
 | 6 | bloated atom | `memex-refactor` split — **recommend only** |
 | 6 | broad topic map | `memex-topic-emerge`, then `memex-review` |
-| 7 | orphan `part-of::`, stale `related::` | `memex-reconcile` |
+| 7 | orphan `part-of::` | `memex-reconcile` |
 | 7 | atom's newest source >18 months old | `memex-stale` |
 | 7 | unknown relation field | hand fix — it is a typo or a schema question |
 | 8 | over/under-confident, unvalidated, `high` with live contradictions | `memex-trust-audit` |
@@ -137,8 +136,9 @@ misses ones that were not yet visible.
    wrong, not just incomplete. Fix or escalate them, then re-run lint.
 3. **`memex-connect`** — wires inbox-only sources. Wiring changes orphan counts and
    confidence inputs, so it precedes everything that reads them.
-4. **`memex-reconcile`** — repairs dangling `part-of::` and promotes aged
-   `related::`. Structural repair before semantic audit.
+4. **`memex-reconcile`** — repairs dangling `part-of::`. Structural repair before
+   semantic audit. Its `related::` backlog pass has no lint signal: offer it, never
+   schedule it.
 5. **`memex-trust-audit`** — needs 3 and 4 finished to be auditing the real graph.
    Includes the sign-off pass, which asks the human separately.
 6. **`memex-conflicts`** — documents bare conflict links. After trust-audit, whose

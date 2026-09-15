@@ -350,10 +350,10 @@ STRUCTURE ───────────────────────�
   refactor       revise / split / merge existing atoms
 
 MAINTAIN ────────────────────────────────────────────────
-  reconcile      fix dangling part-of; promote stale related:: to typed relations
+  reconcile      fix dangling part-of; work the untyped related:: backlog
   trust-audit    audit confidence against the claim rubric; record human sign-off
   conflicts      surface and document unacknowledged tensions
-  stale          read-only decay audit (unread age, stale atoms, underconfident topics)
+  stale          read-only neglect audit (read-but-unwired sources, underconfident topics, never deep-extracted)
 
 COMPOSE ─────────────────────────────────────────────────
   compose        topic → structured Markdown export in _exports/
@@ -426,7 +426,7 @@ dependency order. It reports before it runs anything, and never invokes
 The cadence it encodes, if you would rather drive by hand:
 
 - **After each ingest session:** run `memex-connect` to close any inbox items
-- **Weekly:** open `_meta/index.md` — scan orphan atoms and stale unread sources
+- **Weekly:** open `_meta/index.md` — scan orphan atoms and uncategorized atoms
 - **After 5+ new sources in an area:** run `trust-audit` on that topic
 - **Monthly:** run `bash _meta/lint.sh`; run `memex-stale`; run `reconcile`; run `review` on one active topic
 - **Before sharing research:** run `reconcile` → `trust-audit` → `conflicts` → `compose`

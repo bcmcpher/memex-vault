@@ -1,6 +1,6 @@
 ---
 name: memex-reconcile
-description: Repair dangling part-of:: links and promote stale related:: links to typed relations. Use when running a vault health check, after bulk ingest, or when lint Section 7a surfaces orphan part-of warnings. Triggers on: "reconcile my vault", "check graph integrity", "fix dangling links", "part-of points nowhere", "promote related links", "retype my related links".
+description: Repair dangling part-of:: links and work the backlog of untyped related:: links, promoting each to a typed relation where one genuinely fits. Use when running a vault health check, after bulk ingest, or when lint Section 7a surfaces orphan part-of warnings. Triggers on: "reconcile my vault", "check graph integrity", "fix dangling links", "part-of points nowhere", "promote related links", "retype my related links".
 ---
 
 # Karpathy Wiki Reconcile
@@ -12,8 +12,8 @@ fork of this vault works unedited.
 This skill runs two repair passes over the graph:
 
 1. **Dangling `part-of::`** — an atom names a topic file that does not exist.
-2. **Stale `related::`** — a fallback link that has sat untyped long enough to be
-   worth resolving into a precise relation.
+2. **Untyped `related::`** — a fallback link, worked as a backlog and resolved
+   into a precise relation where one genuinely fits.
 
 For the full relationship taxonomy, read: `references/vault-schema.md`
 
@@ -29,7 +29,8 @@ For the full relationship taxonomy, read: `references/vault-schema.md`
 
 - After bulk ingest of multiple sources
 - When `_meta/lint.sh` Section 7a surfaces orphan `part-of::` WARNs
-- Monthly, for the `related::` promotion pass
+- When the user asks to work the `related::` backlog — Pass 2 has no schedule and
+  no lint signal, so it runs only when invoked
 - Before running `memex-compose` (composition depends on correct membership)
 
 ---
@@ -100,18 +101,32 @@ Without a pass that actually refines it, every hard call silently becomes
 grep -rn "^related::.*\[\[" "$VAULT/atoms/" "$VAULT/topics/" "$VAULT/sources/"
 ```
 
-A link is **stale** when the note's `updated:` frontmatter (falling back to
-`created:`, then file mtime) is more than 30 days old. A `related::` written last
-week is still legitimately provisional; one written six months ago is a decision
-nobody came back to.
+Every populated `related::` is in the backlog; there is no age threshold. The
+30-day rule this pass used to apply excluded every link in a young vault and said
+nothing about the link itself (roadmap M11). Typing now happens at write time, in
+`memex-connect` and `memex-ingest`, so this pass handles what they left.
+
+Before presenting anything, drop every link the user has already chosen to
+**Keep**. Keeps change no note; they are recorded only as `kept::` lines in earlier
+reconcile entries in `_meta/log.md`:
+
+```bash
+grep -h "^kept::" "$VAULT/_meta/log.md"
+```
+
+Each line reads `kept:: <note path> -> [[target]]`. A kept link is a decision, not
+a backlog item, and re-offering it is exactly the churn this record prevents.
+
+If the backlog is large, ask the user for a scope (a topic, a note, or a count)
+rather than presenting all of it.
 
 ### 2. Present with a proposed type
 
-For each stale link, read both notes and propose a specific relation using the
+For each link, read both notes and propose a specific relation using the
 decision tree in `references/vault-schema.md`. Show the reasoning:
 
 ```
-STALE RELATED: atoms/flash-attention.md (updated 2026-03-02, 176 days)
+UNTYPED RELATED: atoms/flash-attention.md
   related:: [[attention-mechanism]]
   Both describe the same operation; flash-attention is an IO-aware
   reimplementation of it, not a separate idea.
@@ -126,8 +141,8 @@ is real but untypeable. Do not force a type to clear the queue.
 
 - **Accept** — replace `related::` with the proposed typed relation
 - **Choose** — user names a different type from the vocabulary
-- **Keep** — genuinely navigational; leave as `related::` and touch `updated:` so
-  it does not resurface next month
+- **Keep** — genuinely navigational; leave the note untouched and record a
+  `kept::` line in the session log, so the link is never offered again
 - **Drop** — the link is not meaningful; remove it
 
 ### 4. Apply
@@ -136,7 +151,7 @@ is real but untypeable. Do not force a type to clear the queue.
   in the same `## Connections` section, creating the line if absent
 - If `related::` ends up with no targets, leave the bare `related:: ` field —
   templates ship it empty and Dataview reads an empty field as absent
-- Update `updated:` in frontmatter to today
+- Update `updated:` in frontmatter to today — not for **Keep**, which changes no note
 - For `challenges::`, `refutes::`, `contradicts::`, `limits::`: the schema
   requires a sentence in the body explaining the tension. Write it, or the
   promotion is not complete
@@ -152,10 +167,13 @@ Append to `_meta/log.md`:
 url:: n/a
 atoms:: [[Atom A]], [[Atom B]]
 skill:: memex-reconcile
+kept:: atoms/flash-attention.md -> [[attention-mechanism]]
 notes: N dangling part-of fixed; M related:: promoted, K kept, J dropped
 ```
 
-List every note that was modified. Do not log a session where nothing was applied.
+List every note that was modified. Write one `kept::` line per link kept this
+session — Pass 2 reads them back, and they are the only record a Keep exists. Do
+not log a session where nothing was applied or kept.
 
 ---
 
@@ -176,8 +194,8 @@ List every note that was modified. Do not log a session where nothing was applie
   a valid outcome and a forced type is worse than an honest `related::`
 - Don't treat a dangling `part-of::` as always a typo; a topic may have been
   deliberately deleted, in which case **Remove** is right
-- Don't re-surface a link the user chose to **Keep** last month — touching
-  `updated:` is what prevents that, so do not skip it
+- Don't re-surface a link the user chose to **Keep** — read the `kept::` lines
+  first, and never skip writing one for a new Keep
 - Don't promote a `related::` on a source note into an atom→atom relation; check
   which node types are on each end first
-- Don't log entries for sessions where no fixes were applied
+- Don't log entries for sessions where nothing was applied or kept

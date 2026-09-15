@@ -8,7 +8,7 @@
 # Checks:
 #   1. Naming convention violations
 #   2. Missing required frontmatter fields
-#   3. Stale unread sources (>30 days)
+#   3. (retired in rc.2 — temporal threshold, roadmap M11a; number kept)
 #   4. Orphan atoms (no cites::, no inbound links from curated nodes)
 #   5. Archive mismatches (raw:: pointing to missing file)
 #   6. Graph health (inbox-only sources, isolated atoms, bloated atoms, broad topic maps)
@@ -248,33 +248,12 @@ done
 
 ok "frontmatter check complete"
 
-# ── 3. Stale unread sources (>30 days) ──────────────────────────────────────
-
-echo ""
-echo "── 3. Stale Unread Sources (>30 days) ────────────────────────────────────"
-
-# Compute cutoff date (cross-platform: try GNU date first, fall back to BSD)
-if cutoff=$(date -d "30 days ago" +%Y-%m-%d 2>/dev/null); then
-    :
-elif cutoff=$(date -v-30d +%Y-%m-%d 2>/dev/null); then
-    :
-else
-    echo -e "  ${DIM}SKIP${NC}  cannot compute cutoff date on this platform"
-    cutoff=""
-fi
-
-if [ -n "$cutoff" ]; then
-    while IFS= read -r -d '' f; do
-        stage_line=$(grep "^stage:" "$f" 2>/dev/null | head -1 || true)
-        if echo "$stage_line" | grep -q "unread\|unprocessed"; then
-            saved=$(grep "^saved:\|^date:" "$f" 2>/dev/null | head -1 | sed 's/^[^:]*: *//' || true)
-            if [ -n "$saved" ] && [[ "$saved" < "$cutoff" ]]; then
-                warn "$(realpath --relative-to="$VAULT" "$f") — stage=$( echo "$stage_line" | cut -d' ' -f2), saved/date=$saved"
-            fi
-        fi
-    done < <(find "$VAULT/sources" -name "*.md" ! -name ".gitkeep" -print0)
-    ok "stale source check complete (cutoff: $cutoff)"
-fi
+# ── 3. (retired) ─────────────────────────────────────────────────────────────
+# "Stale unread sources (>30 days)" was removed in rc.2 (roadmap M11a). It asked
+# the question memex-stale's old Check 1 asked, with a different number, and on
+# the first real vault neither produced a finding: how long a source has sat
+# unread measures the vault's age, not the source. The number is kept so every
+# "section N" reference elsewhere stays valid.
 
 # ── 4. Orphan atoms ──────────────────────────────────────────────────────────
 
@@ -366,15 +345,45 @@ while IFS= read -r -d '' f; do
     fi
 done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
-# 6c. Bloated atoms: high cites + high related + long body (soft heuristic — split candidate)
-while IFS= read -r -d '' f; do
-    cites_count=$(count_links "$f" 'cites')
-    related_count=$(count_links "$f" 'related')
-    line_count=$(wc -l < "$f")
-    if [ "$cites_count" -gt 5 ] && [ "$related_count" -gt 4 ] && [ "$line_count" -gt 100 ]; then
-        warn "atoms/$(basename "$f") — may cover multiple concepts (cites=$cites_count related=$related_count lines=$line_count); consider splitting"
+# 6c. Bloated atoms: high cites + high related + a body well above this vault's
+# own median (soft heuristic — split candidate).
+#
+# Size is body characters, not lines. Atom prose is one long-wrapped line per
+# paragraph, so the old `lines > 100` could not fire on any real atom: trial-1
+# atoms spanned 38-56 lines but 1,417-8,976 characters (roadmap M11c). The
+# cites:: line is excluded because it grows with evidence, not with scope, and
+# alone reached a fifth of the largest body. The trigger is 2x the vault's median
+# rather than a constant, so it calibrates per fork the way tag vocabulary does.
+# Below BLOAT_MIN_ATOMS a median means nothing, and the check SKIPs.
+BLOAT_MIN_ATOMS=10
+body_chars() {
+    awk 'NR == 1 && /^---[[:space:]]*$/ { fm = 1; next }
+         fm && /^---[[:space:]]*$/      { fm = 0; next }
+         fm || /^cites::/               { next }
+                                        { n += length($0) + 1 }
+         END                            { print n + 0 }' "$1"
+}
+mapfile -t atom_sizes < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null \
+    | while IFS= read -r -d '' f; do body_chars "$f"; done | sort -n)
+atom_n=${#atom_sizes[@]}
+if [ "$atom_n" -lt "$BLOAT_MIN_ATOMS" ]; then
+    echo -e "  ${DIM}SKIP${NC}  6c bloated atoms — $atom_n atoms, need $BLOAT_MIN_ATOMS for a meaningful median"
+else
+    if (( atom_n % 2 )); then
+        bloat_median=${atom_sizes[atom_n / 2]}
+    else
+        bloat_median=$(( (atom_sizes[atom_n / 2 - 1] + atom_sizes[atom_n / 2]) / 2 ))
     fi
-done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
+    bloat_limit=$(( 2 * bloat_median ))
+    while IFS= read -r -d '' f; do
+        cites_count=$(count_links "$f" 'cites')
+        related_count=$(count_links "$f" 'related')
+        chars=$(body_chars "$f")
+        if [ "$cites_count" -gt 5 ] && [ "$related_count" -gt 4 ] && [ "$chars" -gt "$bloat_limit" ]; then
+            warn "atoms/$(basename "$f") — may cover multiple concepts (cites=$cites_count related=$related_count body=$chars chars, limit=$bloat_limit = 2x median); consider splitting"
+        fi
+    done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
+fi
 
 # 6d. Broad topic maps: many member atoms (sub-domain split candidate)
 # Membership is derived, so count atoms pointing here rather than reading the topic.

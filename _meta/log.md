@@ -14,6 +14,7 @@ Fields:
 - `url::` — source URL or `n/a` for meetings and reconcile/refactor operations
 - `atoms::` — Dataview wikilinks to every atom created or modified; empty list is `atoms:: ` with no links
 - `skill::` — the memex-* skill that wrote the entry; enables log-query to filter by operation type
+- `kept::` — `memex-reconcile` entries only; one line per `related::` link the user chose to keep, as `kept:: <note path> -> [[target]]`. Pass 2 reads these back so a kept link is never re-offered
 - `template::` — `memex-init` entries only; the template `VERSION` this vault was forked from, or `vunknown` if the fork predates that file
 - `notes:` — plain text; optional context, counts, or flags
 

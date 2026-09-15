@@ -23,10 +23,10 @@ The four fields this skill tracks:
 
 | Field | Strength | Notes |
 |-------|----------|-------|
-| `contradicts::` | Direct logical incompatibility | Strongest; both atoms should have reciprocal links |
+| `contradicts::` | Direct logical incompatibility | Strongest, and symmetric — the only field that needs a reciprocal link to count as acknowledged |
 | `refutes::` | One atom or source directly counter-evidences another | Asymmetric is acceptable — one side may not yet be updated |
-| `challenges::` | Weakens or questions without full contradiction | Common; softer than contradicts |
-| `limits::` | Defines boundary conditions where the target breaks down | Not a true conflict but a tension worth surfacing |
+| `challenges::` | Weakens or questions without full contradiction | Common; softer than contradicts. Asymmetric is acceptable |
+| `limits::` | Defines boundary conditions where the target breaks down | Directional by construction — `B limits:: A` asserts something different, and usually false. Never needs a reciprocal |
 
 ---
 
@@ -45,15 +45,16 @@ Collect every (source-atom, relation-type, target-atom) triple. This is the raw 
 
 For each conflict pair (A → B via relation R):
 
-**Acknowledged** — meets all three conditions:
-1. A has R pointing to B
-2. B has a reciprocal skeptical relation pointing back to A (any of: `contradicts::`, `challenges::`, `limits::`, `refutes::`)
-3. At least one of A or B has prose text in its body describing the tension (not just field lines)
+**Acknowledged** — meets both conditions:
+1. At least one of A or B has prose text in its body describing the tension (not just field lines)
+2. **For `contradicts::` only:** B has a reciprocal `contradicts::` pointing back to A
+
+Reciprocity is required only where the relation is symmetric. `limits::` means "A defines boundary conditions where B breaks down" — directional by construction, so demanding `B limits:: A` is a category error. `challenges::` and `refutes::` are accepted asymmetric: one side may not yet be updated, and that is not a failure to acknowledge. The old rule required a reciprocal on all four fields and classified 13 of 13 pairs on the first real vault as unacknowledged, 11 of them `limits::` (roadmap M14).
 
 **Unacknowledged** — any condition is unmet:
-- Missing reciprocal link only → "one-sided conflict"
+- `contradicts::` missing only its reciprocal → "one-sided contradiction"
 - Missing prose in both atoms → "bare conflict link"
-- Both missing → "undocumented conflict"
+- Both missing (`contradicts::` only) → "undocumented conflict"
 
 ### 3. Identify cross-topic conflicts
 
@@ -77,10 +78,10 @@ Group by severity, most actionable first:
     Cross-topic: A is in [[deep-learning]], B is in [[transformer-architecture]]
 
   [ACKNOWLEDGED] atoms/atom-c.md ↔ atoms/atom-d.md
-    Both atoms have reciprocal links and tension descriptions. ✓
+    Reciprocal `contradicts::` on both sides, and the tension is described. ✓
 
 ## Challenges (challenges::)
-  [UNACKNOWLEDGED — one-sided] atoms/atom-e.md → atoms/atom-f.md
+  [UNACKNOWLEDGED — bare] atoms/atom-e.md → atoms/atom-f.md
     ...
 ```
 
@@ -96,8 +97,10 @@ For each unacknowledged conflict, present options:
 
 If accepted: insert the draft as a new paragraph in the atom body where the conflict field appears (above or below the `## Connections` section — user's choice).
 
-**Missing reciprocal link:** Propose adding the reverse relation to the other atom:
-> "Add `challenges:: [[atom-a]]` to atoms/atom-b.md? (Accept / Skip)"
+**Missing reciprocal `contradicts::`:** Propose adding the reverse relation to the other atom:
+> "Add `contradicts:: [[atom-a]]` to atoms/atom-b.md? (Accept / Skip)"
+
+Never propose a reciprocal for `limits::`, `challenges::` or `refutes::` — see step 2.
 
 Only add the missing side — never modify or remove existing links.
 

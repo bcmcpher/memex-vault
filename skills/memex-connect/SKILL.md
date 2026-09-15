@@ -111,7 +111,7 @@ grep -rl "concept-keyword" "$VAULT/atoms/"
 **For each concept:**
 - **Match found** → propose the correct relation type; confirm before writing
 - **No match, concept warrants an atom** → offer to create a stub (`type: Atom`, `confidence: low`); ask first
-- **Boundary unclear** → use `related::` as a holding pattern; flag for monthly review
+- **Boundary unclear** → propose a typed relation now, while the reasoning is at hand; fall back to `related::` only when no type genuinely fits. Nothing is scheduled to come back and type it later, so an untyped link written here is usually permanent
 
 **Atom promotion criteria:**
 1. Concept appears in title, abstract, or key contributions → strong candidate

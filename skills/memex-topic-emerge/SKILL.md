@@ -52,9 +52,11 @@ Evaluate three signal types in order. An atom can appear in multiple candidate c
 
 **Part-of chains:** atoms pointing to the same `part-of::` target. Threshold: ≥ 3 atoms pointing to the same target (even if that target doesn't exist as an atom yet).
 
-**Related density:** if atoms A, B, C each have `related::` links to two or more of the others, they form a cluster. Threshold: ≥ 3 atoms with ≥ 2 mutual links each.
+**Related density:** if atoms A, B, C each have `related::` links to two or more of the others, they form a cluster. Threshold: ≥ 3 atoms with ≥ 2 mutual links each. **Mutual means reciprocal** — A lists B *and* B lists A. Counted in either direction, nearly every atom in a well-wired vault qualifies; on the first real vault that made the whole vault one candidate.
 
-Merge overlapping candidates: if two candidates share ≥ 50% of their atoms, merge them into one (use the union). Use the larger signal set to name it.
+Merge overlapping candidates by **Jaccard similarity**, `|A ∩ B| / |A ∪ B|`: take the highest-scoring pair, and if it is ≥ 0.50 merge the two into their union; re-score the merged cluster against the rest and repeat until no pair reaches the cut. Always merge highest-first — at a tie on the cut, scanning in list order instead can chain a merge that highest-first would never make. Use the larger signal set to name it.
+
+Do not score overlap as `|A ∩ B| / min(|A|, |B|)`. That measures *containment*: a 4-atom candidate sharing two atoms with a 9-atom one scores 0.50, and two such bridges chain a vault's real sub-domains into one blob. On the first real vault it merged ten tag candidates into a single cluster of every atom, so the skill proposed nothing (roadmap M13). Jaccard scores that pair 2/11 = 0.18. The 0.50 cut is a starting value — 0.30 gives fewer, broader clusters — so say which one you used.
 
 If no clusters meet any threshold, skip to the report: "No clusters found — the vault may need more atoms in an area before patterns emerge. Run `memex-ingest` or `memex-connect` to add more."
 

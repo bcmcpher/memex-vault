@@ -73,7 +73,7 @@ notes: reason: <user-supplied reason>; confidence: <unchanged|low→medium|etc>
 Divide one atom into two when it covers distinct concepts that warrant separate nodes.
 
 ### When to use
-- Lint Section 6c flags the atom as bloated (`cites::` > 5, `related::` > 4, body > 100 lines)
+- Lint Section 6c flags the atom as bloated (`cites::` > 5, `related::` > 4, body > 2× the vault's median size)
 - The atom's title describes two things joined by "and" or "/"
 - You find yourself saying "this atom covers X in context Y but also X in context Z"
 

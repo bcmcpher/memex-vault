@@ -153,7 +153,7 @@ the reason the code exists, nothing parses them, and M18 rewrites the
 
 ---
 
-## Stage 2 — the miscalibrated thresholds (M11–M14)
+## Stage 2 — the miscalibrated thresholds (M11–M14) *(done)*
 
 Every threshold the campaign exercised was wrong; only two were about vault size.
 
@@ -185,6 +185,36 @@ Every threshold the campaign exercised was wrong; only two were about vault size
   that can fire on stale `related::` or delete the row in
   `skills/memex-tend/SKILL.md:112` that promises one. Do not ship a routing table
   naming a signal the linter cannot emit.
+
+Done 2026-09-15. What differs from the list above, and what verification showed:
+
+- **M11(b) targets `memex-connect` and `memex-ingest`, not deep-extract mode B** —
+  mode B never writes `related::`; its relation vocabulary is already typed. The
+  two skills that do write it now type at write time.
+- **M12: the routing row is dropped**, not backed by a lint check — with no age
+  threshold, a check could only flag every `related::` (78 in the fork).
+  Reconcile's **Keep** is now a `kept::` line in `_meta/log.md` (documented in its
+  header), replacing the `updated:` touch that died with the 30-day rule.
+- **Numbering kept.** Lint §3 and `memex-stale` Check 1 are retired in place so no
+  "section N" / "Check N" reference breaks. `_meta/index.md`'s 30-day query is gone.
+- **M11(c):** SKIP below 10 atoms. Fork: median 3,947 body chars; fires on
+  `connectome-edge-weighting` only (8,977 > 7,894). Fork lint otherwise equals the
+  baseline minus §3; 365 quotes.
+- **M13:** tag candidates give **8 clusters at 0.50** (the fork now has 22 atoms;
+  the roadmap's 7 was measured on 21) and 5 at 0.30; `min()` gives 1–2.
+  Verification found two spec gaps, both fixed in the skill: merge order
+  (highest-scoring pair first — ties at the cut are order-dependent) and "mutual"
+  `related::` links (reciprocal — either-direction makes the whole vault one
+  candidate). **A third is deferred to Stage 4:** on the flat topic layer the
+  part-of chain candidates are whole-vault (22 and 20 atoms) and absorb
+  `structural-connectivity` at exactly 0.50, so an all-signal run still shows one
+  22-atom cluster beside eight real ones. D2's one-leaf rule should make part-of
+  candidates leaf-sized; **re-run topic-emerge on the fork after Stage 4.**
+- **M14:** 13 pairs (11 `limits::`, 2 `challenges::`). Old rule 13/13
+  unacknowledged; new rule **1** (`deterministic-vs-probabilistic-tractography
+  limits:: tractometry` — neither body describes it), 2 under a stricter prose
+  reading. The prose call is a judgement; a trial-2 count of 1 vs 2 is not a new
+  finding.
 
 ---
 

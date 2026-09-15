@@ -115,7 +115,7 @@ related:: [[Adjacent Concept]]
 
 Write candidate file before writing to the source note (see Candidate Gating below). Then write the Dataview inline fields under `## Connections`.
 
-Use `challenges::` when the source questions a claim without fully refuting it. Use `refutes::` when it provides direct counter-evidence. Use `related::` only as a fallback. See `references/vault-schema.md` for the full decision tree.
+Use `challenges::` when the source questions a claim without fully refuting it. Use `refutes::` when it provides direct counter-evidence. Use `related::` only as a fallback: type the relation now, while the source is open — no later pass is scheduled to type it, and an untyped link is usually permanent. See `references/vault-schema.md` for the full decision tree.
 
 ### 6. Promote to atoms (optional but encouraged)
 Most sources introduce **several** concepts, not one. Enumerate before proposing:

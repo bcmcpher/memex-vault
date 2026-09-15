@@ -425,7 +425,7 @@ a vault unsearchable.
 
 1. **One claim per atom.** If the summary needs the word "and" to stay honest,
    there are two atoms. `memex-refactor` splits them; lint flags the symptom
-   (`cites::` > 5 *and* `related::` > 4 *and* body > 100 lines).
+   (`cites::` > 5 *and* `related::` > 4 *and* body characters, `cites::` line excluded, > 2× the vault median).
 2. **Present tense, declarative.** "Flash attention tiles the softmax to avoid
    materializing the full attention matrix" — not "the paper argues that…". The
    atom states what is true as far as the vault knows; attribution is what
@@ -699,7 +699,7 @@ These thresholds are soft signals surfaced as WARNings, not hard failures. They 
 |-------|-------|-----------|-------|
 | Source: unread + no Connections | Source | any | Inbox-only; run `memex-connect` |
 | Atom: no populated relations | Atom | any | Fully isolated atom; check for orphan or missing wiring |
-| Atom: bloated | Atom | `cites::` targets > 5 AND `related::` targets > 4 AND body > 100 lines | May cover multiple concepts; consider splitting |
+| Atom: bloated | Atom | `cites::` targets > 5 AND `related::` targets > 4 AND body characters (`cites::` line excluded) > 2× the vault median; skipped below 10 atoms | May cover multiple concepts; consider splitting |
 | Topic map: too many atoms | Concept map | > 15 atoms with `part-of::` pointing at it | May span multiple domains; consider sub-topics |
 | Source: under-extracted | Source | `stage: processed` AND body > 100 lines AND `introduces::`+`supports::` targets < 2 | A long source that yielded almost no atoms; run `memex-deep-extract`. A dense source is *expected* to feed many atoms |
 | Extract: `claims:` count wrong | Extract | frontmatter ≠ `^cNN` block ids in body | Hand edit drifted from the frontmatter; recount |

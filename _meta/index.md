@@ -202,15 +202,6 @@ SORT updated DESC
 
 ## Maintenance Flags
 
-### Sources older than 30 days still unread
-
-```dataview
-LIST url
-FROM "sources"
-WHERE stage = "unread" AND date(saved) < date(today) - dur(30 days)
-SORT saved ASC
-```
-
 ### Atoms with no part-of link (uncategorized)
 
 `row["part-of"]`, not `part-of` — Dataview reads a bare hyphenated field in a
