@@ -198,6 +198,11 @@ Exactly one plugin is load-bearing. Everything else is convenience: the vault is
 readable, writable, and checkable without any of them, because `_meta/lint.sh`
 answers in plain text what `_meta/index.md` answers in Dataview.
 
+`_meta/lint.sh` needs **bash 4 or later**. Linux has it; stock macOS ships bash
+3.2 as `/bin/bash`, so run `brew install bash` and put that bash first on `PATH`.
+Under an older shell lint refuses to start and exits 2 rather than reporting a
+false result.
+
 ### Required
 
 | Plugin | Kind | Why | Install name |

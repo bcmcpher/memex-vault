@@ -25,13 +25,23 @@
 # Exit status:
 #   0 — no FAIL-level findings (warnings may still be present)
 #   1 — one or more FAIL-level findings
-#   2 — the linter itself broke before reaching a verdict; says nothing about the
-#       vault. Kept distinct from 1 so a bug here can never be read as corruption.
+#   2 — the linter itself broke before reaching a verdict, or cannot run in this
+#       shell (bash < 4); says nothing about the vault. Kept distinct from 1 so a
+#       bug here can never be read as corruption.
 #
 # WARN is a soft signal for human review. FAIL means the vault is corrupt in a way
 # no reviewer should have to notice: a misnamed source, a raw:: pointing at a file
 # that does not exist, or an extracted claim quoting text the source never
 # contained.
+
+# Needs bash 4: associative arrays and mapfile. Stock macOS ships bash 3.2 as
+# /bin/bash, where both fail at runtime and the trap below would misreport that as
+# a linter bug. Refuse up front instead, before anything else runs.
+if [ -z "${BASH_VERSINFO:-}" ] || [ "${BASH_VERSINFO[0]}" -lt 4 ]; then
+    echo "lint.sh needs bash >= 4 (running under ${BASH_VERSION:-a non-bash shell})." >&2
+    echo "On macOS: brew install bash, then run 'bash _meta/lint.sh' with it first on PATH." >&2
+    exit 2
+fi
 
 set -euo pipefail
 
