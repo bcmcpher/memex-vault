@@ -18,21 +18,35 @@ For the relationship taxonomy and full field definitions, read: `references/vaul
 ## Workflow
 
 ### 1. Discovery
-Find all source notes that are `stage: unread` or `stage: unprocessed` AND have no populated Dataview relation fields in their `## Connections` block (inbox-only captures):
+A source needs wiring when nothing connects it to the knowledge graph in either direction: none of its own relation fields names a target, **and** no atom or extract links to it. Stage is not part of the test. `stage:` records reading and links record wiring, so a source can be read and unwired — the normal state after `memex-save` with "I've read this".
 
 ```bash
 VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 
-# Find unread sources
-grep -rl "stage: unread\|stage: unprocessed" "$VAULT/sources/"
-
-# From those, find ones with no wired connections
-grep -rL "supports::\|introduces::\|cites::\|demonstrates::\|challenges::\|refutes::" "$VAULT/sources/"
+for f in "$VAULT"/sources/*/*.md; do
+    [ -f "$f" ] || continue
+    slug=$(basename "$f" .md)
+    # outbound: a relation field with a real target, not the empty field the template ships
+    grep -qE '^(supports|introduces|demonstrates|challenges|refutes|cites|rebuts|related|defines)::[[:space:]]*\[\[' "$f" && continue
+    # inbound: an atom citing it, or an extract drawn from it
+    grep -rqE "\[\[$slug([]#|])" "$VAULT/atoms" "$VAULT/extracts" --include='*.md' 2>/dev/null && continue
+    stage=$(awk '/^---$/ { n++; next } n == 1 && /^stage:/ { sub(/^stage:[[:space:]]*/, ""); print; exit }' "$f")
+    echo "${stage:-?}	${f#"$VAULT"/}"
+done
 ```
 
-Present the intersection grouped by medium. Include count and ask: "Which of these N notes would you like to process? (All, or name specific ones)"
+Two tests this deliberately avoids, both of which failed on the first real vault:
 
-If the user names a specific note not in the inbox list, process it directly regardless of stage.
+- **The bare field name.** `grep -L "supports::"` finds nothing, because the template ships every relation field empty on every source — the name is always present, so the query returned only `.gitkeep` files and reported "nothing to process" on a vault with work waiting. Match a field followed by `[[`.
+- **Outbound fields alone.** `memex-deep-extract` writes `cites::` into atoms and never back onto the source, so a paper eight atoms cite can have an empty `## Connections`. Count inbound links from `atoms/` and `extracts/` too.
+
+Links from `topics/` do not count: a project or research note citing a source is navigation, not atom wiring. Say when a listed source is cited by a topic, so the user can skip it knowingly.
+
+Present the list grouped by medium, with stage as a column. Include count and ask: "Which of these N notes would you like to process? (All, or name specific ones)"
+
+If the list is empty, say which kind of empty: no source notes exist yet, or every source is linked. They call for different next steps.
+
+If the user names a specific note not in the list, process it directly regardless of stage or wiring.
 
 ---
 
@@ -213,11 +227,12 @@ If the note introduces or supports an atom that has no `part-of::`, offer to set
 
 ---
 
-### 9. Status promotion
-Ask which transition applies:
-- `unread → processed` (read and fully analyzed)
-- `unread → read` (read but connections still incomplete)
+### 9. Stage
+`stage:` records whether the source has been read and processed, not whether it is wired — the links written in steps 5–6 are the wiring record. Ask which applies:
+- `→ processed` — read, and its connections and atoms are done
+- `unread → read` — the user has read it, and processing is not finished
 - `unprocessed → processed` (meetings)
+- no change — nobody has read it yet. Wiring an unread source from its metadata is legitimate and does not make it read.
 
 ---
 

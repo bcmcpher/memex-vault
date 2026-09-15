@@ -77,10 +77,14 @@ than that is a guess about notes that do not exist yet, and `memex-topic-emerge`
 will find the real ones.
 
 ### 2. Source types
-What kinds of thing will this vault save? The template ships
-`web video paper docs meeting`.
+What kinds of thing will this vault save? Read the current list from
+`_meta/domain.md` § Source Types and offer that — do not recite one from this
+skill. A list written here is a second owner of that vocabulary, and it drifts the
+first time a fork extends it.
 
-Offer that list, and let the user add, drop, or rename. Two things to say out loud:
+Let the user add, drop, or rename. If they will save code repositories, offer
+`code`: `memex-save` and `memex-ingest` route repository URLs to it, and the
+template does not declare it. Two things to say out loud:
 
 - **`meeting` is reserved.** Notes in `sources/meeting/` are checked for `date:`
   instead of `url:`/`saved:`, because a meeting has no URL. Renaming it keeps the
@@ -102,9 +106,9 @@ an unused tag is indistinguishable from a typo at lint time, and the vocabulary 
 trivial to extend later by re-running this skill.
 
 Say explicitly that **Type Tags and Stage Tags are not being asked about** because
-they survive a fork unchanged — `foundational`/`applied`/`survey` and
-`needs-review`/`stale` describe *how you relate to a note*, not what it is about.
-The user can still edit them by hand.
+they survive a fork unchanged: they describe *how you relate to a note*, not what it
+is about. If the user asks what they are, read them from `_meta/domain.md`. The user
+can still edit them by hand.
 
 ---
 
@@ -186,6 +190,7 @@ The root, from Q1:
     description: <one sentence: what this vault covers>
     tags: []
     created: <YYYY-MM-DD>
+    reviewed:
     generated:
       by: memex-init/claude-opus-5
       at: <YYYY-MM-DD>
@@ -206,7 +211,9 @@ The root, from Q1:
 
 Each sub-domain has the same shape, with its own title, description and slug, and
 `part-of:: [[<slug>]]` on its `## Sub-topics and Relations` line. Leave the root's
-`part-of::` empty: it is the root.
+`part-of::` empty: it is the root. Leave `reviewed:` empty on every topic — it
+records a later review, and `_templates/topic-concept.md` ships it on every concept
+map, so a scaffold that omits it starts the fork one field short of its own template.
 
 Copy both Dataview blocks — direct members, and members via sub-topics — verbatim
 from `_templates/topic-concept.md`. They are self-referential (`this.file.link`),

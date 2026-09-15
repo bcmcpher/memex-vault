@@ -54,7 +54,8 @@ can reach `confidence: high`.
 VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 for f in "$VAULT"/sources/*/*.md; do
     grep -q "^stage: processed" "$f" || continue
-    [ -f "$VAULT/extracts/ext-$(basename "$f")" ] || echo "$f"
+    [ -f "$VAULT/extracts/ext-$(basename "$f")" ] && continue
+    if grep -q "^medium: code" "$f"; then echo "code	$f"; else echo "prose	$f"; fi
 done
 ```
 
@@ -64,6 +65,13 @@ closely is a much better use of an expensive skill than one nothing cites.
 
 Report these; do not run anything. `memex-deep-extract` is the most expensive
 skill in the vault and is user-invoked by design.
+
+**Report `medium: code` sources apart, with no recommendation.** `memex-deep-extract`
+assumes prose; pointed at a repository it would pull out claims about control flow
+and I/O plumbing. Extraction from code is not designed yet (roadmap M8), so
+recommending it sends the user into an operation that does not exist. List them
+under their own heading as having *no extraction path yet*. The count is still worth
+knowing: no atom resting only on them can reach `confidence: high`.
 
 ---
 
@@ -92,6 +100,12 @@ These are highest priority: you've already read them.
 |-------|--------|-----------------|
 | ...   | ...    | ...             |
 → Run: memex-deep-extract mode A (expensive — pick the most-cited first)
+
+#### Code sources — no extraction path yet — N sources
+| Title | Atoms citing it |
+|-------|-----------------|
+| ...   | ...             |
+Listed, not routed: extraction from code is undesigned (roadmap M8).
 
 ---
 Total: N findings across 3 checks.

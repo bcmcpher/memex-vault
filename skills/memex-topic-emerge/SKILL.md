@@ -18,6 +18,7 @@ This skill scans `atoms/` for structural clustering signals and proposes topic m
 - You've ingested many atoms but haven't created topic maps yet
 - You want to see what domains have naturally formed in your vault
 - You suspect there are orphan atoms that belong together but aren't wired
+- Lint section 6 flags a concept map as broad — the clusters inside it are its candidate sub-topics
 
 For a domain you already have in mind, use `memex-topic-init` instead — it's faster when you know what you're building.
 
@@ -35,8 +36,11 @@ VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 # Tags per atom
 grep -rh "^tags:" "$VAULT/atoms/"
 
-# part-of:: targets (count occurrences of each target)
-grep -rh "^part-of::" "$VAULT/atoms/" | grep -oP '\[\[.*?\]\]' | sort | uniq -c | sort -rn
+# part-of:: targets that have no topic file (count atoms per target)
+grep -rh "^part-of::" "$VAULT/atoms/" | grep -oE '\[\[[^]|#]+' | sed 's/^\[\[//' | sort | uniq -c |
+  while read -r n t; do
+    [ -z "$(find "$VAULT/topics" -name "$t.md" -print -quit)" ] && echo "$n $t"
+  done
 
 # related:: links
 grep -rh "^related::" "$VAULT/atoms/"
@@ -50,7 +54,7 @@ Evaluate three signal types in order. An atom can appear in multiple candidate c
 
 **Tag clusters:** atoms sharing the same tag. Threshold: ≥ 3 atoms per tag.
 
-**Part-of chains:** atoms pointing to the same `part-of::` target. Threshold: ≥ 3 atoms pointing to the same target (even if that target doesn't exist as an atom yet).
+**Part-of chains:** atoms pointing to the same `part-of::` target **that has no topic file**. Threshold: ≥ 3 atoms pointing to the same target. A target with a topic file is not an emerging topic — it is existing coverage, which Step 3 reads. Counted as a signal, it proposes a topic's own membership back to it, and at the merge it absorbs the real clusters inside that topic: on the first real vault every atom named one concept map and one project, so the two part-of candidates held 22 and 20 of the 22 atoms.
 
 **Related density:** if atoms A, B, C each have `related::` links to two or more of the others, they form a cluster. Threshold: ≥ 3 atoms with ≥ 2 mutual links each. **Mutual means reciprocal** — A lists B *and* B lists A. Counted in either direction, nearly every atom in a well-wired vault qualifies; on the first real vault that made the whole vault one candidate.
 
@@ -62,17 +66,19 @@ If no clusters meet any threshold, skip to the report: "No clusters found — th
 
 ### Step 3 — Check for existing topic coverage
 
-For each candidate cluster, check whether an existing topic already claims most of
-its atoms. Membership is derived, so read it off the atoms themselves rather than
-off the topic files:
+For each candidate cluster, read which concept map each of its atoms names. Membership is derived, so read it off the atoms rather than the topic files:
 
 ```bash
-grep -rh "^part-of::" "$VAULT/atoms/" 2>/dev/null
+grep -H "^part-of::" "$VAULT"/atoms/*.md 2>/dev/null
+ls "$VAULT/topics/concepts/"
 ```
 
-Tally which topic each cluster atom declares. If one existing topic already claims
-≥ 60% of a cluster's atoms, flag it as **"possible extension"** rather than a new
-topic creation. Show the existing topic name.
+Count only concept maps (`topics/concepts/`). Projects and research questions sit outside the topic tree (`_meta/schema.md` § Topic Hierarchy), so a cluster that shares a project is not covered by it.
+
+If one concept map claims ≥ 60% of a cluster's atoms, the cluster sits inside that map:
+
+- **The cluster is a proper part of the map** → flag it as a **possible sub-topic** of that map, and show the map's name.
+- **The cluster holds every atom the map has** → it is already covered. Report it and propose nothing, except **Extend** for any cluster atoms that name no concept map.
 
 ### Step 4 — Report findings
 
@@ -87,14 +93,14 @@ Found N candidate clusters:
 Atoms (N): [[atom-a]], [[atom-b]], [[atom-c]], ...
 Signals: shared tags [X, Y] | M atoms in part-of:: chain | K mutual related:: links
 
-→ Action: (1) Create new topic map  (2) Rename proposed title  (3) Skip
+→ Action: (1) Create new concept map  (2) Rename proposed title  (3) Skip
 
 ### Cluster 2: [proposed title]
 Atoms (N): [[atom-d]], [[atom-e]], ...
 Signals: shared tags [X]
-Existing topic: [[existing-topic]] already claims M/N of these atoms
+Inside: [[existing-map]] claims M/N of these atoms
 
-→ Action: (1) Extend existing topic  (2) Create separate topic  (3) Skip
+→ Action: (1) Sub-topic of [[existing-map]]  (2) Extend [[existing-map]] with the unclaimed atoms  (3) Skip
 ```
 
 For the proposed title: infer from the dominant tag, or the most common keyword across atom titles.
@@ -104,74 +110,80 @@ For the proposed title: infer from the dominant tag, or the most common keyword 
 Ask for a decision on each cluster before writing anything. Accept all decisions, then proceed to write.
 
 Options per cluster:
-- **Create** — create a new topic map with the proposed title (or a renamed one)
-- **Extend** — point the unclaimed atoms' `part-of::` at an existing topic
+- **Create** — a new concept map with no parent
+- **Sub-topic** — a new concept map whose parent is the existing map; the cluster's atoms move onto it
+- **Extend** — point unclaimed atoms (those naming no concept map) at an existing map
 - **Skip** — no action for this cluster
 
 ### Step 6 — Write candidate files
 
-For each confirmed **Create**: write a candidate file to `_meta/candidates/` before creating the topic file.
+For each confirmed **Create** or **Sub-topic**: write a create candidate to `_meta/candidates/` before creating the topic file.
 
-Topic file frontmatter:
+Build the topic from `_templates/topic-concept.md`: its frontmatter, including `reviewed:` left empty, and **both** Dataview blocks — direct members, and members via sub-topics — copied verbatim. They are self-referential (`this.file.link`), so nothing needs substituting, and a hand-typed copy is how topic stubs drift from the template. Fill `title:` (Title Case), `description:` (one sentence naming what the cluster has in common) and `tags:` (the dominant tag), and add:
+
 ```yaml
----
-type: Concept Map
-title: <confirmed title, Title Case>
-description: <one sentence naming what the cluster has in common>
-created: YYYY-MM-DD
-tags: [<dominant tag from cluster>]
 generated:
   by: memex-topic-emerge/claude-opus-5
   at: YYYY-MM-DD
----
 ```
 
-Topic file body:
-````markdown
-## Overview
-<!-- Scaffold — fill in with memex-compose or manually -->
+On the `## Sub-topics and Relations` line, `part-of::` names the parent map for a **Sub-topic** and stays empty for a **Create**.
 
-## Core Concepts
-<!-- Derived from each atom's part-of:: — do not maintain by hand. -->
-```dataview
-LIST FROM "atoms"
-WHERE contains(row["part-of"], this.file.link)
-```
-````
+The topic file carries no membership list. The cluster's atoms join it in Step 7, by having their own `part-of::` set — that is the only write that creates membership.
 
-The topic file carries no membership list. The cluster's atoms join it in Step 7,
-by having their own `part-of::` set — that is the only write that creates
-membership.
-
-For each confirmed **Extend**: write candidate files proposing `part-of::` on each
-unclaimed atom. No change is proposed to the existing topic file at all.
+For each confirmed **Extend**: no change is proposed to the existing topic file at all. Step 7 writes the atoms.
 
 Confirm each candidate interactively before writing the vault file.
 
 ### Step 7 — Back-wire atoms
 
-For each newly created or extended topic, add `part-of:: [[topic-name]]` to the `## Connections` section of any covered atom that doesn't already have a `part-of::` entry pointing to this topic.
+An atom names one concept map, and it is a leaf (`_meta/schema.md` § Topic Hierarchy). For each atom in a confirmed cluster, write one modify candidate and confirm it:
 
-Write a candidate file for each atom modification before writing. Confirm interactively.
+| The atom's concept-map `part-of::` | Write |
+|---|---|
+| none | append `part-of:: [[new-map]]` (or the extended map) |
+| the parent of a new **Sub-topic** | replace that link with `[[new-map]]` — the parent is now derived through the new map's own `part-of::` |
+| any other concept map | nothing yet — show both maps and ask which one leaf the atom belongs on; skip it if the user is unsure |
 
-Do not modify atom bodies beyond the `part-of::` append. Do not alter existing relations.
+**Never append a second concept map to an atom that already names one.** That puts the atom on two concept maps, or on a non-leaf once the new map has a parent, and lint section 7g warns on both. Links to projects and research questions are outside the tree: keep them as they are on the same line.
+
+A replace is a modify candidate with `change: replace`, and `replaces:` holding the atom's current `part-of::` line exactly. The body is the new line:
+
+```yaml
+---
+proposed: YYYY-MM-DD HH:MM
+skill: memex-topic-emerge
+action: modify
+target: atoms/bundle-segmentation.md
+section: "## Connections"
+change: replace
+replaces: "part-of:: [[brain-connectivity]], [[crane-method-integration]]"
+session: YYYY-MM-DD-HHMM
+stage: pending
+---
+
+part-of:: [[tractography-methods]], [[crane-method-integration]]
+```
+
+Do not modify atoms beyond the `part-of::` line. Do not alter other relations.
 
 ### Step 8 — Log
 
 Append to `_meta/log.md`:
 ```markdown
-## [YYYY-MM-DD] topic-emerge | N clusters found, M created, K extended
+## [YYYY-MM-DD] topic-emerge | N clusters found, M created, S sub-topics, K extended
 url:: n/a
 atoms:: [[atom-a]], [[atom-b]], ...
 skill:: memex-topic-emerge
-notes: signals: <tag clusters / part-of chains / related density>; <M> new topics, <K> extensions, <skip count> skipped
+notes: signals: <tag clusters / part-of chains / related density>; cut <0.50|0.30>; <M> new topics, <S> sub-topics, <K> extensions, <skip count> skipped
 ```
 
 ### Step 9 — Confirm and close
 
-Report: clusters found, topics created, topics extended, clusters skipped. One suggested next step:
+Report: clusters found, topics created, sub-topics created, topics extended, clusters skipped. Suggested next steps:
 
-- "Run `memex-reconcile` to check for dangling `part-of::` links across newly created topics."
+- "Run `_meta/lint.sh`: section 7 should report no new topic-tree findings, and a map you split should no longer be flagged broad in section 6."
+- "If section 7a reports a dangling `part-of::`, run `memex-reconcile`."
 
 ---
 
@@ -180,8 +192,8 @@ Report: clusters found, topics created, topics extended, clusters skipped. One s
 - Does not create atoms — only discovers clusters from existing atoms
 - Does not infer cluster membership from semantic content — only from structural signals (`tags:`, `part-of::`, `related::`)
 - Does not decide topic type (concept vs. research vs. project) — defaults to `concept`; rename manually if needed
-- Does not modify atom bodies beyond appending `part-of::` to `## Connections`
-- Does not scan `sources/`, `topics/`, or `glossary/` — only `atoms/`
+- Does not modify atoms beyond each atom's `part-of::` line
+- Does not scan `sources/` or `glossary/`; reads `topics/` only to learn which `part-of::` targets exist and which are concept maps
 - Does not run `memex-reconcile` inline — suggests it as a follow-up
 
 ---
@@ -190,6 +202,8 @@ Report: clusters found, topics created, topics extended, clusters skipped. One s
 
 - Don't propose a cluster of fewer than 3 atoms — the signal is too weak
 - Don't create duplicate topic maps — always check for existing coverage first (Step 3)
+- Don't count a `part-of::` target that already has a topic file as an emerging cluster
+- Don't append a concept map to an atom that already names one — replace it (Sub-topic) or ask (Step 7)
 - Don't batch-apply candidates without user confirmation per cluster
 - Don't infer topic type from keywords alone — default to `concept` and let the user correct it
-- Don't write a membership list into a topic body, and don't modify an existing topic body at all on the Extend path — extension is an edit to atoms, not to topics
+- Don't write a membership list into a topic body, and don't modify an existing topic body at all — Extend and Sub-topic are edits to atoms (plus, for Sub-topic, one new topic file)

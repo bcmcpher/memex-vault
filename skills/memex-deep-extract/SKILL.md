@@ -19,7 +19,7 @@ For the relationship taxonomy and field definitions, read: `references/vault-sch
 Full design rationale: `_meta/deep-extract-design.md`
 
 **Two modes.** Mode A writes exactly one file and mutates nothing else. Mode B
-turns reviewed claims into atom changes, one confirmation at a time. They are
+turns reviewed claims into atom changes, then brings the source note up to date. They are
 deliberately separate: extraction is cheap to redo and expensive to trust, so a
 human reads the extract before anything touches `atoms/`.
 
@@ -267,8 +267,8 @@ candidate, since it edits an existing file.
 
 ## Mode B — promote
 
-Turns reviewed extract content into atom changes, through ordinary candidate
-gating, **one confirmation at a time**. Re-runnable by design: an extract is a
+Turns reviewed extract content into atom changes, through candidate gating
+(§ Candidate gating in mode B, below). Re-runnable by design: an extract is a
 standing source of evidence, not a one-shot import.
 
 Start by reading the extract's `## Promotion Log` so already-promoted claims are
@@ -331,13 +331,37 @@ invariant intact. **Never edit `memex-conflicts` to do this.**
 
 ### 6. Append to the Promotion Log
 
-One line per promoted claim, so a re-run does not re-offer it:
+One line per promoted claim, so a re-run does not re-offer it. Write each row as
+soon as that claim's atom edit lands, not in one batch at the end — a run
+interrupted between the two leaves a citation with no row:
 
 ```
-- ^c07 → atoms/rag-token.md (cites, 2026-08-25)
+- ^c07 -> atoms/rag-token.md (cites, 2026-08-25)
 ```
 
-### 7. Log and report
+The arrow is ASCII `->`. `_meta/lint.sh` 12g reads rows in exactly that shape
+(the target may also be written `rag-token` or `[[rag-token]]`) and warns on every
+block-anchored citation whose row it cannot find.
+
+### 7. Bring the source note up to date
+
+Once at least one claim from this extract is promoted, the source has been read
+claim by claim and wired through atoms, and its note should say so. Propose:
+
+- **`stage: processed`**, if the note is `unread` or `read`. `processed` means
+  connections and atoms exist (`_meta/schema.md` § Stage Values), and now they do.
+  As in `memex-connect` step 9, this one-field edit is asked, not gated.
+- **`## Summary` and `## Key Points`**, only if they are empty or hold nothing but
+  the template's placeholder. Draft them from the promoted claims, in the vault's
+  voice, as modify candidates on those sections. Never rewrite text a person wrote:
+  if either section has content, leave it and say so.
+
+Mode A's one-file rule is unchanged. The source note waits for mode B because until
+a human has reviewed and promoted claims, nothing has been processed. On trial 1
+the operator made exactly these edits after promoting, and the source template's
+placeholder names this skill as a writer of `## Summary`.
+
+### 8. Log and report
 
 Append to `_meta/log.md`:
 
@@ -350,6 +374,37 @@ notes: N claims promoted; M atoms enriched; K stubs; L conflicts proposed
 ```
 
 Mode A logs the same way with `deep-extract/extract` and `notes: N claims, M concepts`.
+
+### Candidate gating in mode B
+
+Every write in mode B — an atom's `## Detail` and `cites::`, a glossary or atom
+stub, a conflict link, a Promotion Log row, a source-note section — gets a candidate
+first, with the same lifecycle as mode A's one file: write candidate → confirm →
+write to vault → delete candidate. Edits to existing files are modify candidates:
+
+```yaml
+---
+proposed: YYYY-MM-DD HH:MM
+skill: memex-deep-extract
+action: modify
+target: atoms/rag-token.md
+section: "## Detail"
+change: append
+session: YYYY-MM-DD-HHMM
+stage: pending
+---
+```
+
+**A batched confirmation is allowed; skipping candidates is not.** Mode B asks many
+questions, and asking them all before any write is fine. But a batched yes replaces
+the confirmations, not the candidates. Candidates exist for crash recovery, not for
+approval: mode B is the longest write sequence in the vault and the likeliest to be
+interrupted, and a run that dies after a batched yes with no candidates on disk
+leaves atoms half-edited and no record of what was still to come. On trial 1 the
+operator skipped candidates for six atom writes after one batched confirmation; that
+was the wrong call.
+
+A `confidence:` change stays its own question even inside a batch (step 1).
 
 ---
 
@@ -382,6 +437,35 @@ Stop and ask if any of these hold:
 
 ---
 
+## Concurrency
+
+The rule is `_meta/schema.md` § Concurrency. Here is how it applies.
+
+**Mode A may fan out, one worker per source.** Each worker's writes are keyed to its
+source slug — `.archive/<slug>.md`, `extracts/ext-<slug>.md`, that source's own
+`raw::` line — and its reads are of state no mode A run writes: its own archive, and
+`atoms/` for pass 4 resolution. Two conditions:
+
+- **Workers do not append to `_meta/log.md`.** The coordinator writes every entry,
+  one after another, once the workers finish. Concurrent appends below one anchor
+  lose entries, and the losing write reports success.
+- **Candidate session ids come from the worker**, `YYYY-MM-DD-HHMM-<source-slug>`,
+  never from the wall clock alone, which gives every worker started in the same
+  minute the same id.
+
+**Mode B never runs in parallel**, not even for two sources that look unrelated. It
+recomputes `confidence:` from every source an atom cites, and independence is a
+property of the whole vault: concurrent promoters each see the vault as it was
+before either wrote, and each counts itself as a new independent source. On trial 1,
+four of the six papers queued together shared an author. The `high` that parallel
+promotion would have produced looks correct in every individual run. Atom edits and
+stub proposals collide the same way.
+
+The payoff from parallel mode A is **context, not wall time**: a normalized archive is
+75–100 KB, and fitting several in one window is the binding constraint.
+
+---
+
 ## Common Mistakes to Avoid
 
 - Don't extract from the source note's `## Summary` — that is a paraphrase, and
@@ -397,3 +481,7 @@ Stop and ask if any of these hold:
   every quote fails
 - Don't promote in mode A, and don't extract in mode B
 - Don't upgrade confidence on source count alone — the unit is independent claims
+- Don't skip mode B's candidates because the user approved a batch — see
+  § Candidate gating in mode B
+- Don't run mode B for two sources at once — see § Concurrency
+- Don't write a Promotion Log row with a Unicode arrow — lint reads `->` only

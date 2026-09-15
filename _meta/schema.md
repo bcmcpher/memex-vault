@@ -661,7 +661,7 @@ Skills that write vault notes, and what they produce:
 | `memex-meeting` | Meeting source note + atom/glossary stubs | Full | Yes |
 | `memex-topic-init` | New topic map + atom back-wires | Full | Yes |
 | `memex-topic-emerge` | Proposed topic maps from atom clusters + atom back-wires | Full | Yes |
-| `memex-deep-extract` | Mode A: one file in `extracts/`, nothing else. Mode B: atom edits from reviewed claims | Mode B only | Yes |
+| `memex-deep-extract` | Mode A: one file in `extracts/`, nothing else. Mode B: atom edits from reviewed claims, then the source note's `stage:` and any still-empty `## Summary` / `## Key Points` | Mode B only | Yes |
 | `memex-refactor` | Rewrites/splits/merges existing atoms | Varies | Yes |
 | `memex-glossary` | Glossary entries from existing notes | `defines::` only | No |
 | `memex-candidates` | Applies pending candidates from `_meta/candidates/` | Varies | No |
@@ -694,7 +694,7 @@ collide in `_meta/candidates/`.
 
 Candidate files in `_meta/candidates/` are ephemeral proposals written by writing skills before each vault change. They make proposed content durable across session drops. Use `memex-candidates` to review and apply pending candidates.
 
-**Two candidate types:**
+**Candidate types:**
 
 *Create candidate* — full proposed file content in body:
 ```markdown
@@ -725,6 +725,29 @@ stage: pending
 
 cites:: [[2026-05-01-flash-attention#Key Points]]
 ```
+
+*Replace candidate* — a modify candidate that swaps one exact line, for edits where
+an append would leave two conflicting values (`memex-topic-emerge` moving an atom
+onto a new sub-topic):
+```markdown
+---
+proposed: YYYY-MM-DD HH:MM
+skill: memex-topic-emerge
+action: modify
+target: atoms/bundle-segmentation.md
+section: "## Connections"
+change: replace
+replaces: "part-of:: [[brain-connectivity]]"
+session: YYYY-MM-DD-HHMM
+stage: pending
+---
+
+part-of:: [[tractography-methods]]
+```
+`memex-candidates` applies it only if a line equal to `replaces:` is still in the file.
+
+A create candidate's body is a whole note with its own frontmatter, so its file holds
+two `---` blocks; `memex-candidates` step 4 says how to split them.
 
 **Lifecycle:** Candidate written → user confirms interactively → vault file written → candidate deleted. If session ends before confirmation, candidate persists. `memex-candidates` resurfaces pending candidates for approval or rejection.
 

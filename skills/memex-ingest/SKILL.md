@@ -30,6 +30,12 @@ For the relationship taxonomy and full field definitions, read: `references/vaul
 
 The authoritative list is `_meta/domain.md` § Source Types, not this table — a
 fork adds a medium there and the table above is only the routing heuristic.
+`memex-save` § Medium Detection carries the fuller URL list, including publisher
+domains and the DOI-in-path rule.
+
+Only write a declared medium. If the heuristic names one this vault does not
+declare — the template declares no `code` — ask which declared medium to use, or
+suggest re-running `memex-init` to add it.
 
 All digital sources use `_templates/source-digital.md`. Meetings use `_templates/source-meeting.md`.
 
@@ -68,7 +74,7 @@ type: Source
 title: <from fetch>
 description: <first sentence of the summary, condensed to one line>
 url: <url>
-medium: <one of _meta/domain.md § Source Types — web|video|paper|docs|code>
+medium: <a medium declared in _meta/domain.md § Source Types>
 saved: <today YYYY-MM-DD>
 tags: []
 stage: unread
@@ -116,6 +122,21 @@ related:: [[Adjacent Concept]]
 Write candidate file before writing to the source note (see Candidate Gating below). Then write the Dataview inline fields under `## Connections`.
 
 Use `challenges::` when the source questions a claim without fully refuting it. Use `refutes::` when it provides direct counter-evidence. Use `related::` only as a fallback: type the relation now, while the source is open — no later pass is scheduled to type it, and an untyped link is usually permanent. See `references/vault-schema.md` for the full decision tree.
+
+### 5b. Back-wire existing atoms
+For every **existing** atom step 5 linked with `supports::`, `introduces::` or `demonstrates::`, add the source to that atom's `## Sources`:
+
+```
+cites:: [[source-filename#Key Points]]
+```
+
+Use the same section anchor as the step 5 link. Write a modify candidate first (see Candidate Gating below), ask before each atom, and bump the atom's `updated:`.
+
+This step is not optional. An atom's confidence is read from its own `cites::`, not from source fields pointing at it (`_meta/schema.md` § Confidence Values; `_meta/lint.sh` section 8), so evidence arriving from the source side is invisible until the atom cites it back. On the first run of this skill a source wrote `supports:: [[bundle-segmentation]]`, and the atom still counted one independent unit when it had just gained a second.
+
+Skeptical links (`challenges::`, `refutes::`) are not back-wired as `cites::` — a source against a claim is not backing for it. Describe the tension in the atom body instead, as `memex-conflicts` expects.
+
+If the atom may now have a second independent unit, ask about `confidence:` as a **separate** question — never bundled into the back-wire — and apply `_meta/schema.md` § Confidence Values: independent units, not sources. When independence is unclear, leave `confidence:` alone and name `memex-trust-audit`, which reads the author lists.
 
 ### 6. Promote to atoms (optional but encouraged)
 Most sources introduce **several** concepts, not one. Enumerate before proposing:

@@ -19,7 +19,7 @@ For meeting notes with no URL, use `memex-meeting` instead.
 
 | Pattern | Medium | Folder |
 |---------|--------|--------|
-| `arxiv.org`, `doi.org`, `semanticscholar.org`, `openreview.net` | `paper` | `sources/paper/` |
+| `arxiv.org`, `biorxiv.org`, `medrxiv.org`, `doi.org`, `semanticscholar.org`, `openreview.net`, `pubmed.ncbi.nlm.nih.gov`, `ncbi.nlm.nih.gov/pmc`; publisher article pages — `nature.com`, `science.org`, `cell.com`, `pnas.org`, `sciencedirect.com`, `link.springer.com`, `onlinelibrary.wiley.com`, `ieeexplore.ieee.org`, `dl.acm.org`, `frontiersin.org`, `journals.plos.org`, `academic.oup.com`, `tandfonline.com`, `journals.sagepub.com`, `elifesciences.org`, `direct.mit.edu`; **any URL whose path contains a DOI** (`/10.NNNN/…`) | `paper` | `sources/paper/` |
 | `youtube.com`, `youtu.be`, `vimeo.com` | `video` | `sources/video/` |
 | `docs.*`, `*.readthedocs.io`, `*.dev/docs*`, `*.io/docs*`, official library reference pages | `docs` | `sources/docs/` |
 | `github.com`, `gitlab.com`, `codeberg.org`, package registries, analysis/toolbox repos | `code` | `sources/code/` |
@@ -28,6 +28,20 @@ For meeting notes with no URL, use `memex-meeting` instead.
 The authoritative list is `_meta/domain.md` § Source Types, not this table — a
 fork adds a medium there and the table above is only the URL heuristic for it.
 Check that file when a URL fits nothing here.
+
+**Test the `paper` row before falling through to `web`.** It used to list four
+preprint and index domains, so every journal page — `nature.com`,
+`frontiersin.org`, `sciencedirect.com`, Springer, IEEE — was filed as `web`. The DOI
+rule catches publishers the domain list misses (`frontiersin.org/…/10.3389/…`); a
+publisher path with no DOI in it (`nature.com/articles/…`) needs the domain entry.
+If the step 2 fetch shows `citation_doi` or `citation_title` metadata on a page
+routed to `web`, it is a paper: re-route it and say so.
+
+**Only write a declared medium.** The heuristic can name one this vault does not
+declare — the template declares no `code`. Then ask which declared medium to use,
+or suggest re-running `memex-init` to add it. Lint does not check the `medium:`
+value itself, but a note in an undeclared `sources/<medium>/` folder is skipped by
+every per-medium check, and lint says only that the folder is undeclared.
 
 If the URL is ambiguous, ask once, listing the media declared in
 `_meta/domain.md` § Source Types: "Is this a paper, video, docs page, code
@@ -52,7 +66,7 @@ Fetch the URL immediately. Extract only what's needed for a useful stub:
 
 - **All sources**: real title from `<title>` or `<h1>`; one-sentence summary draft from lead paragraph, abstract first sentence, or page description
 - **Paper**: `authors` array and `year` from abstract page
-- **Video**: `channel` name from the page
+- **Video**: `channel` name. For YouTube, read it from the oEmbed endpoint — `https://www.youtube.com/oembed?url=<url>&format=json` returns JSON whose `author_name` is the channel and `title` the video title, with no API key. A plain fetch of the watch page does not reliably expose the channel; on the first real vault it left `channel:` empty. For other hosts, take it from the page, and leave `channel:` empty rather than guess
 - **Docs**: `tool` name from subdomain or page title
 
 This is a lightweight fetch — stop at the minimum. Full metadata enrichment (full author arrays, venue, version, structured Key Points) is `memex-connect`'s job.
@@ -95,7 +109,7 @@ Use their answers to draft `## Summary` (3–5 sentences) and `## Key Points` (3
 **If skip:** write the 1-sentence fetch draft into `## Summary` as a placeholder for `memex-connect` to expand.
 
 ### 6. Write the note
-Create the file at the correct `sources/<medium>/` path using `_templates/source-digital.md` as the base.
+Write a create candidate first (see Candidate Gating below), then create the file at the correct `sources/<medium>/` path using `_templates/source-digital.md` as the base.
 
 **Frontmatter:**
 ```yaml
@@ -104,7 +118,7 @@ type: Source
 title: <from fetch>
 description: <one line from the fetched summary; leave blank if the fetch failed>
 url: <url>
-medium: <one of _meta/domain.md § Source Types — web|video|paper|docs|code>
+medium: <a medium declared in _meta/domain.md § Source Types>
 saved: <today YYYY-MM-DD>
 tags: []
 stage: <unread|read>
@@ -162,6 +176,26 @@ notes: stage: <unread|read>; <"collaborative summary" | "reactions captured" | "
 Report the file path and stage. Suggest next step in one line:
 - If `unread`: "Run `memex-connect` when ready to enrich and wire this into the graph."
 - If `read`: "Run `memex-connect` when ready to wire this into the graph."
+
+---
+
+## Candidate Gating
+
+Before writing the source note, write a create candidate to `_meta/candidates/`. Use the session ID `YYYY-MM-DD-HHMM` from the start of this skill invocation.
+
+```yaml
+---
+proposed: YYYY-MM-DD HH:MM
+skill: memex-save
+action: create
+target: sources/<medium>/YYYY-MM-DD-slug.md
+session: YYYY-MM-DD-HHMM
+stage: pending
+---
+```
+Body: the full note, as step 6 would write it.
+
+Write candidate → show the user → write to vault → delete candidate. If the session ends first, the candidate persists for `memex-candidates`. This skill writes one file, so this is one candidate — but it is the most-invoked capture skill, and the collaborative summary in step 5b is user work that a dropped session would otherwise lose.
 
 ---
 

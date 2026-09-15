@@ -88,7 +88,7 @@ cat "$VAULT/atoms/<atom-name>.md"
 Ask the user to name both children and describe the conceptual boundary:
 - Child A1 name and concept scope
 - Child A2 name and concept scope
-- Which `cites::` sources go with each child (may overlap)
+- Which `cites::` go with each child (may overlap) — including block-anchored `[[ext-…#^cNN]]` citations, each of which needs a Promotion Log row (Step S6b)
 
 **Step S3. Identify incoming relations**
 Find all atoms that point to the source atom:
@@ -110,6 +110,9 @@ Will stub:
 
 Will re-point (each requires your confirmation):
   atoms/other-atom.md: extends:: [[atom-name]] → extends:: [[A1 or A2?]]
+
+Will log (one Promotion Log row per claim citation a child takes):
+  extracts/ext-<slug>.md: - ^c07 -> atoms/A1-name.md (cites, YYYY-MM-DD, split from atoms/<atom-name>.md)
 
 Topic membership: A1 and A2 each need their own part-of::; carry over
   part-of:: [[deep-learning]] from the source atom unless told otherwise.
@@ -156,6 +159,15 @@ Ask user to review the drafted summaries before writing.
 For each atom with a relation pointing to the source atom, propose which child it should now point to. Confirm each one individually — do not batch-assign. Write the change only after confirmation.
 
 Carry the source atom's `part-of::` onto A1 and A2 (or whichever subset the user specifies). No topic file is edited — membership is derived from `part-of::`.
+
+**Step S6b. Carry the Promotion Log**
+For every block-anchored `cites:: [[ext-<slug>#^cNN]]` that A1 or A2 takes, append a row to that extract's `## Promotion Log`:
+```
+- ^cNN -> atoms/A1-name.md (cites, YYYY-MM-DD, split from atoms/<atom-name>.md)
+```
+Keep the parent's rows: they are the history of where each claim went. The rows were confirmed with the plan in S4 — they record the split rather than decide anything, so do not ask for each one again.
+
+Why: rows name atoms. The Promotion Log is how `memex-deep-extract` mode B knows a claim is already promoted, and `_meta/lint.sh` 12g warns on every block-anchored citation whose extract has no row naming the citing atom. A split that moves citations onto new atoms without new rows leaves the log describing atoms that no longer hold those claims. On the first real vault, the split that was considered would have done that to 29 rows.
 
 **Step S7. Stub the source atom**
 Replace the source atom's body with:
@@ -224,6 +236,9 @@ Will stub:
 Will re-point (each requires confirmation):
   atoms/other.md: uses:: [[atom-a]] → uses:: [[C]]
 
+Will log (one Promotion Log row per claim citation C takes):
+  extracts/ext-<slug>.md: - ^c07 -> atoms/C-name.md (cites, YYYY-MM-DD, merged from atoms/<atom-a>.md)
+
 Topic membership: C takes part-of:: from A and B (deduplicated); if they
   disagree, ask which topic C belongs to.
 ```
@@ -235,6 +250,9 @@ Write `atoms/C-name.md` with merged content. Ask user to review the draft before
 For each atom with a relation pointing to A or B, propose re-pointing to C. Confirm individually.
 
 Set C's `part-of::` from A's and B's, deduplicated. If A and B belonged to different topics, ask which one C belongs to — an atom belongs to one topic. No topic file is edited.
+
+**Step M6b. Carry the Promotion Log**
+As Step S6b: for every block-anchored `cites::` C takes from A or B, append `- ^cNN -> atoms/C-name.md (cites, YYYY-MM-DD, merged from atoms/<atom-a>.md)` to that extract's `## Promotion Log`, and keep A's and B's rows.
 
 **Step M7. Stub A and B**
 For each source atom, replace body with:

@@ -1,6 +1,6 @@
 ---
 name: memex-candidates
-description: Review and apply pending candidate files from incomplete skill sessions. Use when a previous ingest, connect, meeting, or glossary session ended before all proposed writes were confirmed, and you want to recover those proposals. Triggers on: "show pending candidates", "what's waiting in candidates", "review pending writes", "apply candidates", "what did I not finish", "recover my session". Also useful as a pre-compose audit: "any unresolved candidates before I compose this topic?"
+description: Review and apply pending candidate files from incomplete skill sessions. Use when a previous save, ingest, connect, meeting, glossary, topic-emerge, or deep-extract session ended before all proposed writes were confirmed, and you want to recover those proposals. Triggers on: "show pending candidates", "what's waiting in candidates", "review pending writes", "apply candidates", "what did I not finish", "recover my session". Also useful as a pre-compose audit: "any unresolved candidates before I compose this topic?"
 ---
 
 # Memex Candidates
@@ -10,7 +10,7 @@ description: Review and apply pending candidate files from incomplete skill sess
 fork of this vault works unedited.
 **Candidates dir:** `_meta/candidates/`
 
-This skill resurfaces proposed vault writes from sessions that ended before the user confirmed them. Candidates are written by `memex-ingest`, `memex-connect`, `memex-meeting`, and `memex-glossary` before each file write. Approved candidates are applied and deleted; rejected ones are discarded.
+This skill resurfaces proposed vault writes from sessions that ended before the user confirmed them. Candidates are written by `memex-save`, `memex-ingest`, `memex-connect`, `memex-meeting`, `memex-glossary`, `memex-topic-emerge`, and `memex-deep-extract` (both modes) before each file write. Approved candidates are applied and deleted; rejected ones are discarded.
 
 ---
 
@@ -72,6 +72,15 @@ After all candidates in a session are resolved (or deferred), offer: "Apply all 
 
 ### 4. Apply approved candidates
 
+**Read the file correctly first — it can hold two frontmatter blocks.** A candidate's
+own fields are its first `---` block. A create candidate's body is a whole note, and
+a note starts with its own `---` frontmatter, so that file holds two blocks one after
+the other. Split on the **first two** `---` lines only: the candidate's fields sit
+between them, and everything after the second — leading blank lines trimmed — is the
+body, written verbatim. Splitting on every fence, or taking the last pair, returns
+the note without its frontmatter. Before writing a create, check the body's first
+line is `---`; a modify candidate's body has no frontmatter.
+
 **Create action** — write the candidate body to `target`:
 ```bash
 # Check target doesn't already exist
@@ -92,6 +101,12 @@ grep -n "^<section>" "$VAULT/<target>"
 ```
 
 Append the candidate body content immediately after the section header's last line. If the section doesn't exist in the target, ask before appending at end of file.
+
+**Modify action with `change: replace`** — find the line in `target` that equals the
+candidate's `replaces:` value exactly, and substitute the body for it. If no line
+matches, stop and show the file's current line instead: the target changed after
+the candidate was written, and replacing a guessed line is how a link silently
+disappears.
 
 ### 5. Session summary
 

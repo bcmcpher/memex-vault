@@ -141,14 +141,20 @@ misses ones that were not yet visible.
 4. **`memex-reconcile`** — repairs dangling `part-of::`. Structural repair before
    semantic audit. Its `related::` backlog pass has no lint signal: offer it, never
    schedule it.
-5. **`memex-trust-audit`** — needs 3 and 4 finished to be auditing the real graph.
+5. **`memex-topic-emerge`, then `memex-review`** — only when section 6 flagged a
+   broad concept map, or the user asked. Topic structure comes before the audits
+   because they read it: `memex-trust-audit` runs one topic at a time, and
+   `memex-conflicts` looks for cross-topic pairs, which a map holding every atom
+   cannot have. Splitting the map afterwards leaves both audited against topics that
+   no longer exist. On the first real vault this order was backwards — the plan put
+   trust-audit on nine section 8 findings while section 6 flagged the one map every
+   atom sat in.
+6. **`memex-trust-audit`** — needs 3–5 finished to be auditing the real graph.
    Includes the sign-off pass, which asks the human separately.
-6. **`memex-conflicts`** — documents bare conflict links. After trust-audit, whose
+7. **`memex-conflicts`** — documents bare conflict links. After trust-audit, whose
    `high`-with-contradictions finding often creates the ones worth documenting.
-7. **`memex-stale`** — read-only decay report. Last because it is advisory and its
+8. **`memex-stale`** — read-only decay report. Last because it is advisory and its
    output is a reading list, not a repair.
-8. **`memex-review` / `memex-topic-emerge`** — topic-level, optional, and only when
-   section 6 flagged a broad map or the user asked.
 
 Present this as a numbered plan with the finding counts that justify each step, and
 the steps with no findings marked *skipped*. Then ask to proceed.

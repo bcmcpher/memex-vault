@@ -453,11 +453,11 @@ The cadence it encodes, if you would rather drive by hand:
 | `memex-reconcile` | Maintain | "reconcile my vault", "check graph integrity", "fix bidirectional links" |
 | `memex-trust-audit` | Maintain | "audit confidence", "trust audit [topic]", "are my atoms overconfident", "sign off on [atom]" |
 | `memex-conflicts` | Maintain | "find conflicts", "what's in tension", "surface contradictions" |
-| `memex-stale` | Maintain | "find stale notes", "decay check", "what's been sitting unread" |
+| `memex-stale` | Maintain | "find stale notes", "decay check", "what have I neglected" |
 | `memex-compose` | Compose | "compose [topic]", "write up my notes on", "export my research on" |
 | `memex-search` | Navigate | "what do I know about", "find sources on", "search my wiki" |
 | `memex-review` | Navigate | "review this topic", "audit my concept map" |
-| `memex-log-query` | Navigate | "what did I ingest this week", "show unprocessed sources", "log stats" |
+| `memex-log-query` | Navigate | "what did I ingest this week", "what did [skill] do", "log stats" |
 | `memex-glossary` | Support | "scan this note for jargon", "what terms need defining", "build glossary from [atom]" |
 | `memex-candidates` | Support | "show pending candidates", "what's waiting to be applied", "recover my session" |
 | `memex-init` | Support | "initialize my vault", "set up this vault", "specialize this template", "I just forked this" |

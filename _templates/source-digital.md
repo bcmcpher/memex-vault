@@ -20,7 +20,8 @@ stage: unread
 <!-- Your note: what problem does this address, what prompted saving it? -->
 
 ## Summary
-<!-- 2–3 sentence digest — filled during connect step or from fetched URL.
+<!-- 2–3 sentence digest — filled by memex-save or memex-connect from the fetched
+     URL, or by memex-deep-extract mode B from promoted claims.
      Condense the first sentence into frontmatter `description:`. -->
 
 ## Key Points
