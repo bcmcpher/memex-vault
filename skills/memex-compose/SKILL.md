@@ -43,18 +43,34 @@ VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 find "$VAULT/topics" -name "<topic>.md" 2>/dev/null
 ```
 
-If no atom declares `part-of:: [[<topic>]]`, report that and stop — there is nothing to compose.
+Membership is resolved in step 2. Stop here only if step 2 finds no atoms on any basis.
 
 ### 2. Walk the graph
 
-Read the topic file for its `## Overview` and `cites::`. Collect its atom set by
-reverse lookup — membership lives on the atoms:
+Read the topic file for its `## Overview` and `cites::`. Collect its atom set, and
+**say which basis you used** at the top of the export:
+
+1. **Declared membership** — atoms whose `part-of::` names the topic. For a concept
+   map, add the members of its sub-topics (concept maps naming it as parent), and
+   group them by sub-topic in the output.
+2. **Body links, if (1) is empty** — atoms wikilinked from the topic's own body. A
+   topic that relates its atoms in prose is not an empty topic. On the first real
+   vault the richest node, a research question with seven atoms discussed inline,
+   had deliberately declared no members, and refusing it discarded the most
+   considered note in the vault (roadmap M21).
 
 ```bash
 VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
-# Topic membership is derived — read it off the atoms, not the topic file.
+# (1) Declared: read membership off the atoms, not the topic file.
 grep -rlE "^part-of::.*\[\[<topic>\]\]" "$VAULT/atoms/"
+# ... and for a concept map, its sub-topics, whose members join the set:
+grep -lE "^part-of::.*\[\[<topic>\]\]" "$VAULT"/topics/concepts/*.md
+# (2) Fallback: atoms linked from the topic body.
+grep -oE '\[\[[^]|#]+' "$VAULT/topics/<kind>/<topic>.md" | tr -d '[' | sort -u \
+  | while read -r t; do [ -f "$VAULT/atoms/$t.md" ] && echo "$t"; done
 ```
+
+If both are empty, report that and stop — there is nothing to compose.
 
 For each atom in scope:
 - Read the full atom file
@@ -63,7 +79,7 @@ For each atom in scope:
 - Follow `cites::` links to source files; read each source's `title`, `url`, `Summary`, `Key Points`, `stage:`
 - Collect `defines::` fields; follow each link to `glossary/<term>.md` and read the `## Definition`, `domain:`, and `stage:` frontmatter field
 
-Do not follow relation chains beyond the topic's atom set — only atoms declaring `part-of:: [[<topic>]]` contribute to the output. External atoms referenced via `extends::` or `uses::` are noted as pointers, not expanded.
+Do not follow relation chains beyond the topic's atom set — only atoms in the set collected above contribute to the output. External atoms referenced via `extends::` or `uses::` are noted as pointers, not expanded.
 
 ### 3. Compose the output
 

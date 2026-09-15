@@ -11,7 +11,7 @@ fork of this vault works unedited.
 
 This skill turns the template into *someone's* vault. It asks five questions,
 rewrites `_meta/domain.md` from the answers, scaffolds the folders that vocabulary
-implies, seeds one topic to enter at, and leaves the vault passing `_meta/lint.sh`.
+implies, seeds the topic tree to enter at, and leaves the vault passing `_meta/lint.sh`.
 
 It is the answer to "I forked this — now what?" Everything it writes is
 instance-specific by design. Everything it refuses to touch is the constitution.
@@ -66,9 +66,15 @@ of answers and confirm once, then write.
 One line of free text, e.g. *"Case law and civil procedure"*. Goes in
 `_meta/domain.md` § Domain Name, and into `getting-started.md`.
 
-Also derive a **slug** from it (kebab-case, ≤ 4 words) for the first topic's
+Also derive a **slug** from it (kebab-case, ≤ 4 words) for the root topic's
 filename. Confirm the slug with the user — it becomes a wikilink target that
 atoms will point at, and Obsidian resolves wikilinks by filename.
+
+Then ask, optionally, for the **sub-domains** the user already knows the vault
+will split into — e.g. *"civil procedure"* and *"evidence"* under *"case law"*.
+Each gets a slug the same way. None is a fine answer; so are two or three. More
+than that is a guess about notes that do not exist yet, and `memex-topic-emerge`
+will find the real ones.
 
 ### 2. Source types
 What kinds of thing will this vault save? The template ships
@@ -158,10 +164,21 @@ anything. See `_meta/deep-extract-design.md` § Implementation decisions 5.
 Do **not** create `anki/`. It belongs to a deferred phase and would leave the fork
 with an empty folder nothing writes to.
 
-### 8. First topic
+### 8. Topic scaffold
 
-Create one concept map at `topics/concepts/<slug>.md` from Q1, so the vault has a
-door rather than an empty `topics/`:
+Create the root concept map at `topics/concepts/<slug>.md` from Q1, and one
+concept map per sub-domain at `topics/concepts/<sub-slug>.md` whose
+`## Sub-topics and Relations` line names the root: `part-of:: [[<slug>]]`. The
+vault gets a door, and a tree for the first atoms to land in, rather than an empty
+`topics/` (`_meta/schema.md` § Topic Hierarchy).
+
+**Topics only — never atom stubs.** A topic asserts no evidence, so a scaffold of
+topics cannot be over-confident, orphaned or wrong about anything; an atom stub
+can be all three before a single source exists. This reverses the earlier rule of
+seeding exactly one topic, and it is a doctrine change: the scaffold is structure,
+and structure is cheap to have early when it holds no claims.
+
+The root, from Q1:
 
     ---
     type: Concept Map
@@ -178,25 +195,26 @@ door rather than an empty `topics/`:
     <1–2 sentences from Q1>
 
     ## Core Concepts
-    Membership is derived from each atom's `part-of::` — there is nothing to maintain
-    here. Add `part-of:: [[<slug>]]` to an atom and it appears below.
-
-    ```dataview
-    LIST FROM "atoms"
-    WHERE contains(row["part-of"], this.file.link)
-    ```
+    <both Dataview blocks, verbatim from _templates/topic-concept.md>
 
     ## Key Sources
     cites::
 
-    ## Related Domains
+    ## Sub-topics and Relations
     part-of::
     related::
 
-Copy the Dataview block verbatim from `_templates/topic-concept.md` — it is
-self-referential (`this.file.link`), so nothing needs substituting.
+Each sub-domain has the same shape, with its own title, description and slug, and
+`part-of:: [[<slug>]]` on its `## Sub-topics and Relations` line. Leave the root's
+`part-of::` empty: it is the root.
 
-**Never overwrite this file on a re-run.** If it exists, say so and move on.
+Copy both Dataview blocks — direct members, and members via sub-topics — verbatim
+from `_templates/topic-concept.md`. They are self-referential (`this.file.link`),
+so nothing needs substituting, and a hand-typed copy is how the stub drifted from
+the template before.
+
+**Never overwrite an existing topic file on a re-run.** If one exists, say so and
+move on; a re-run may add a sub-domain the user names, but never rewrites one.
 
 Do not call `memex-topic-init` here. That skill's value is searching existing atoms
 and sources to wire a new topic into them, and a fresh fork has none — it would run
@@ -293,7 +311,7 @@ url:: n/a
 atoms:: 
 skill:: memex-init
 template:: v<TEMPLATE_VERSION>
-notes: N source types (<list>); M domain tags; topic stub <slug>; projects: yes/no; research: yes/no
+notes: N source types (<list>); M domain tags; topics <slug> (+ K sub-topics: <list>); projects: yes/no; research: yes/no
 ```
 
 This entry is also the re-run detector at the top of this skill, so it must be
@@ -308,7 +326,7 @@ and the pair of entries is the record of which init ran against which template.
 
 State, in this order:
 
-1. Domain name and the slug of the topic created
+1. Domain name, and the slugs of the root topic and any sub-topics created
 2. Source types, and any folder now unused because a type was dropped
 3. Vocabulary counts written to `_meta/domain.md`
 4. `lint.sh` exit status, and the template version logged in step 12
@@ -335,7 +353,8 @@ those three are the difference between initialized and someone's.
   the missing row.
 - Don't scaffold `anki/` or `_okf/`. Empty folders for unbuilt features are noise;
   the `_okf` *exclusion* is the part that has to exist early.
-- Don't seed more than one topic. The vault should start sparse — `memex-topic-emerge`
-  discovers the rest from real notes rather than guesses.
+- Don't seed atom stubs, and don't seed more sub-topics than the user named. The
+  scaffold is topics only; `memex-topic-emerge` discovers the rest from real notes
+  rather than guesses.
 - Don't skip the lint run because "nothing was written yet". The OKF Types table is
   exactly the kind of edit that looks right and fails.

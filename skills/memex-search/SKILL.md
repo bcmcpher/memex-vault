@@ -27,31 +27,33 @@ Identify what kind of answer the user needs:
 
 | Query type | Starting point |
 |-----------|---------------|
-| "What do I know about domain X?" | `topics/concepts/` |
+| "What do I know about domain X?" | atoms matching X (title, `aliases:`, tags), then step 2 to place them |
 | "What sources support concept Y?" | `atoms/Y.md` → `cites::` |
 | "What's related to atom Z?" | `atoms/Z.md` → relationship fields |
 | "Define term T" | `glossary/T.md` |
 | "What's in my project notes for P?" | `topics/projects/proj-P.md` |
 | "Find evidence for/against claim C" | atoms matching C → `contradicts::` |
 
-### Step 2: Scan topic files (broad queries)
-Check all three topic directories for matches on filename or `tags` frontmatter:
-- `topics/concepts/` — domain concept maps
-- `topics/research/` — research synthesis notes (`question:` frontmatter)
-- `topics/projects/` — project workspaces
+### Step 2: Place atom hits in the topic tree
 
-Topic files do not list their atoms. Membership is declared on each atom's
-`part-of::` and surfaced by Dataview, so to walk from a topic to its atoms:
+Start from atoms, never from `topics/`. Walking down from a concept map returns
+every atom it contains, and on a vault with one broad map that is every atom for
+every query — the first real vault returned all 22 for each domain question, so
+the top-down entry point narrowed nothing (roadmap M21).
+
+Topics are for orientation *after* the hits are found. For each atom hit, read the
+concept map its `part-of::` names and walk that map's own `part-of::` upward, to
+say where in the domain the answer sits; note any project or research question the
+atom also belongs to:
 
 ```bash
 VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
-grep -rlE "^part-of::.*\[\[<topic>\]\]" "$VAULT/atoms/"
+grep -h "^part-of::" "$VAULT/atoms/<atom>.md"                # the atom's topics
+grep -h "^part-of::" "$VAULT/topics/concepts/<leaf>.md"      # that leaf's parent, and so on up
 ```
 
-If all three are empty (new vault), skip to the grep fallback section below and note that the graph hasn't been populated yet.
-
-Read matching topic files and extract:
-- member atoms — by the reverse lookup above
+If `topics/` is empty (new vault), skip this step and say the tree has not been
+built yet. From a topic file, read only:
 - `cites::` — high-level sources
 - `related::` — adjacent domains
 

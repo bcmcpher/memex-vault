@@ -108,7 +108,9 @@ hand fixes; say so rather than inventing a route.
 | 6 | inbox-only source | `memex-connect` |
 | 6 | bloated atom | `memex-refactor` split — **recommend only** |
 | 6 | broad topic map | `memex-topic-emerge`, then `memex-review` |
-| 7 | orphan `part-of::` | `memex-reconcile` |
+| 7 | orphan `part-of::` on an atom or a topic | `memex-reconcile` |
+| 7 | topic tree shape: a concept map naming two parents, a `part-of::` cycle, a project or research question naming a parent | hand fix — edit that topic's `part-of::` (`_meta/schema.md` § Topic Hierarchy) |
+| 7 | atom on a concept map that has sub-topics, or on two concept maps | hand fix — move its concept-map `part-of::` to one leaf, as `memex-topic-init` step 7 describes |
 | 7 | atom's newest source >18 months old | `memex-stale` |
 | 7 | unknown relation field | hand fix — it is a typo or a schema question |
 | 8 | over/under-confident, unvalidated, `high` with live contradictions | `memex-trust-audit` |

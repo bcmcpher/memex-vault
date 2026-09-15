@@ -130,10 +130,13 @@ WHERE length(filter(file.inlinks, (l) =>
 
 ### Concept Maps
 
+The topic tree: each map with the parent it names. Roots have no parent. See
+`_meta/schema.md` § Topic Hierarchy.
+
 ```dataview
-TABLE description, tags, file.ctime
+TABLE row["part-of"] AS "Parent", description, tags
 FROM "topics/concepts"
-SORT file.name ASC
+SORT row["part-of"] ASC, file.name ASC
 ```
 
 ### Active Projects

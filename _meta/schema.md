@@ -79,7 +79,7 @@ Relationships are grouped by **epistemic role**: affirmative (source builds on t
 |-------|---------|
 | `extends::` | Builds on / specializes another concept (A is a subtype or elaboration of B) |
 | `uses::` | Applies or depends on another concept (A requires B to function) |
-| `part-of::` | Component of a broader concept; drives concept map membership |
+| `part-of::` | On an atom: membership of a topic — exactly one leaf concept map, plus any projects or research questions. On a concept map: its one parent. See § Topic Hierarchy |
 
 ### Atom → Atom — Epistemic
 | Field | Meaning |
@@ -162,6 +162,48 @@ Outside Obsidian, the same set is recovered by reverse lookup:
 
 ```bash
 grep -rlE "^part-of::.*\[\[<topic-slug>\]\]" atoms/
+```
+
+### Topic Hierarchy
+
+Concept maps form a tree. A concept map may name one parent, on its own
+`## Sub-topics and Relations` line:
+
+```
+part-of:: [[parent-concept-map]]
+```
+
+Only concept maps are in the tree. Projects and research questions cut across it:
+they have no parent, and an atom's membership of them does not affect its place in
+the tree.
+
+The rules, all checked by `_meta/lint.sh` section 7:
+
+- **An atom names one concept map, and it is a leaf.** A leaf is a concept map that
+  no other concept map names as its parent. The atom's broader domains are its
+  leaf's ancestors — derived by walking `part-of::` upward, never written on the
+  atom. It may belong to any number of projects and research questions besides.
+  An atom naming no concept map is uncategorized, which `_meta/index.md` lists;
+  that is a gap, not an error.
+- **A concept map names at most one parent,** and the parent is a concept map that
+  exists.
+- **No cycles.** Walking `part-of::` upward from any concept map ends at a root.
+
+A concept map's members are its own direct members plus the members of its
+sub-topics; `_templates/topic-concept.md` rolls them up one level down, so a parent
+lists both.
+
+Why a tree rather than one flat layer: on the first real vault every atom declared
+the one concept map, so the topic layer discriminated nothing. `memex-search`
+returned all 22 atoms for every domain query, `memex-conflicts` found no
+cross-topic pairs, and lint flagged the map as undifferentiated (roadmap M21). A
+tree lets an atom sit where it is specific and still count toward the broad domain
+above it.
+
+Outside Obsidian, a concept map's children are:
+
+```bash
+grep -lE "^part-of::.*\[\[<topic-slug>\]\]" topics/concepts/*.md
 ```
 
 ### Navigational (any → any)
@@ -626,6 +668,25 @@ Skills that write vault notes, and what they produce:
 | `memex-compose` | Export document in `_exports/` | None (read-only) | Yes |
 
 Atom bodies may be modified by multiple skills (`memex-refactor` revise, `memex-connect` back-wiring, `memex-review` accepted findings). This is expected — the `updated:` frontmatter field is the authoritative timestamp for when an atom last changed, regardless of which skill made the change.
+
+---
+
+## Concurrency
+
+One rule, stated here so every skill can point at it instead of restating it:
+
+> **A step may run in parallel with others iff its writes are keyed to a single
+> source slug, and its reads do not depend on vault state another concurrent run
+> is writing.**
+
+`memex-deep-extract` mode A satisfies it: it writes one extract per source and
+reads only that source's archive — provided `_meta/log.md` appends are lifted out
+to a single coordinator, because the log is shared. Mode B does not: it edits
+atoms many sources feed and recomputes `confidence:` from every source they cite,
+so two runs promoting into one atom each read the other's half-written state and a
+`confidence:` comes out silently wrong. A skill that fans out takes candidate
+session ids from the worker, never from the wall clock, so parallel runs cannot
+collide in `_meta/candidates/`.
 
 ---
 

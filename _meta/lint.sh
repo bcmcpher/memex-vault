@@ -12,7 +12,8 @@
 #   4. Orphan atoms (no cites::, no inbound links from curated nodes)
 #   5. Archive mismatches (raw:: pointing to missing file)
 #   6. Graph health (inbox-only sources, isolated atoms, bloated atoms, broad topic maps)
-#   7. Structural integrity (orphan part-of, atom freshness, unknown relation fields)
+#   7. Structural integrity (orphan part-of, atom freshness, unknown relation fields,
+#      topic tree shape)
 #   8. Confidence and coverage (overconfident, underconfident, unvalidated, under-extracted)
 #   9. Conflict acknowledgment (bare conflict links)
 #  10. Tag vocabulary (unknown tags, from _meta/domain.md)
@@ -204,6 +205,34 @@ while IFS= read -r -d '' p; do
     b="${p##*/}"; b="${b%.md}"
     if [ -n "$b" ] && [ -z "${TOPIC_PATH[$b]+x}" ]; then TOPIC_PATH[$b]=$p; fi
 done < <(find "$VAULT/topics" -name "*.md" -print0 2>/dev/null)
+
+# field_targets <file> <field>: wikilink targets on `field::` lines outside fenced
+# code, one per line, deduplicated. Dataview ignores inline fields in a code
+# block, and so must anything that builds structure from them: the shipped
+# getting-started.md shows `part-of:: [[getting-started]]` inside a fence as a
+# worked example, which read as the map naming itself as parent.
+field_targets() {
+    awk -v k="$2" '/^[[:space:]]*(```|~~~)/ { fence = !fence; next }
+                   !fence && index($0, k "::") == 1 {
+                       s = $0
+                       while (match(s, /\[\[[^]|#]+/)) { print substr(s, RSTART + 2, RLENGTH - 2); s = substr(s, RSTART + RLENGTH) }
+                   }' "$1" 2>/dev/null | sort -u || true
+}
+
+# Topic tree (_meta/schema.md § Topic Hierarchy). CM_PARENTS[map] holds the
+# parents a concept map names on its own part-of::, one per line; a key exists for
+# every concept map, so it doubles as "is this slug a concept map". CM_HAS_CHILD
+# marks every concept map some other map names as its parent — i.e. non-leaves.
+declare -A CM_PARENTS=() CM_HAS_CHILD=()
+while IFS= read -r -d '' p; do
+    b="${p##*/}"; b="${b%.md}"
+    CM_PARENTS[$b]=$(field_targets "$p" part-of)
+done < <(find "$VAULT/topics/concepts" -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null)
+for b in "${!CM_PARENTS[@]}"; do
+    while IFS= read -r par; do
+        if [ -n "$par" ]; then CM_HAS_CHILD[$par]=1; fi
+    done <<< "${CM_PARENTS[$b]}"
+done
 
 # A note's frontmatter stage: / saved:, via fm_value — once per file instead of
 # once per citation per section. Sets REPLY.
@@ -737,8 +766,11 @@ fi
 
 # 6d. Broad topic maps: many member atoms (sub-domain split candidate)
 # Membership is derived, so count atoms pointing here rather than reading the topic.
+# Leaves only: a concept map with sub-topics has already been split, and its
+# breadth is its children's (_meta/schema.md § Topic Hierarchy).
 while IFS= read -r -d '' f; do
     topic_name="$(basename "$f" .md)"
+    [ -n "${CM_HAS_CHILD[$topic_name]+x}" ] && continue
     member_count=$(grep -rlE "^part-of::.*\[\[${topic_name}\]\]" \
         --include='*.md' "$VAULT/atoms" 2>/dev/null | wc -l || true)
     if [ "$member_count" -gt 15 ]; then
@@ -766,6 +798,60 @@ while IFS= read -r -d '' f; do
             fi
         done < <(echo "$line" | grep -oE '\[\[[^]|]+' | tr -d '[')
     done < <(grep "^part-of::" "$f" 2>/dev/null || true)
+done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
+
+# 7a, topics. A topic's own part-of:: names its parent. Only concept maps are in
+# the tree, and a concept map's parent must be another concept map. Neither lint
+# nor memex-reconcile checked these before the hierarchy existed.
+while IFS= read -r -d '' f; do
+    rel=${f#"$VAULT"/}
+    while IFS= read -r target; do
+        [ -z "$target" ] && continue
+        if [ -z "${TOPIC_PATH[$target]+x}" ]; then
+            warn "$rel — part-of:: [[${target}]] but no matching topic file found"
+        elif [[ $rel != topics/concepts/* ]]; then
+            warn "$rel — part-of:: [[${target}]], but only concept maps have a parent; projects and research questions sit outside the topic tree"
+        elif [ -z "${CM_PARENTS[$target]+x}" ]; then
+            warn "$rel — part-of:: [[${target}]] is not a concept map; a concept map's parent must be one"
+        fi
+    done < <(field_targets "$f" part-of)
+done < <(find "$VAULT/topics" -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null)
+
+# 7f. Topic tree shape: a concept map names at most one parent, and walking parents
+# upward ends at a root. A cycle warns once for each map on it.
+mapfile -t tree_maps < <(printf '%s\n' "${!CM_PARENTS[@]}" | grep -v '^$' | sort)
+for cm in "${tree_maps[@]}"; do
+    n_par=$(printf '%s\n' "${CM_PARENTS[$cm]}" | grep -c . || true)
+    if [ "$n_par" -gt 1 ]; then
+        warn "topics/concepts/${cm}.md — names $n_par parents ($(printf '%s\n' "${CM_PARENTS[$cm]}" | paste -sd, -)); a concept map has at most one"
+    fi
+    cur=$cm; steps=0
+    while [ "$steps" -le "${#tree_maps[@]}" ]; do
+        par=$(printf '%s\n' "${CM_PARENTS[$cur]:-}" | head -1)
+        [ -z "$par" ] && break
+        [ -z "${CM_PARENTS[$par]+x}" ] && break          # dangling or not a concept map: 7a reports it
+        if [ "$par" = "$cm" ]; then
+            warn "topics/concepts/${cm}.md — is on a part-of:: cycle; walking parents upward must end at a root"
+            break
+        fi
+        cur=$par; steps=$((steps + 1))
+    done
+done
+
+# 7g. An atom names one concept map, and it is a leaf. Project and research
+# memberships are additive and not counted. Naming none is a gap, not an error —
+# _meta/index.md lists uncategorized atoms.
+while IFS= read -r -d '' f; do
+    atom_name="$(basename "$f" .md)"
+    atom_maps=()
+    while IFS= read -r target; do
+        if [ -n "$target" ] && [ -n "${CM_PARENTS[$target]+x}" ]; then atom_maps+=("$target"); fi
+    done < <(field_targets "$f" part-of)
+    if [ "${#atom_maps[@]}" -gt 1 ]; then
+        warn "atoms/${atom_name}.md — names ${#atom_maps[@]} concept maps ($(IFS=,; echo "${atom_maps[*]}")); an atom names one leaf, and its ancestors derive"
+    elif [ "${#atom_maps[@]}" -eq 1 ] && [ -n "${CM_HAS_CHILD[${atom_maps[0]}]+x}" ]; then
+        warn "atoms/${atom_name}.md — part-of:: [[${atom_maps[0]}]] has sub-topics; name the leaf this atom belongs to"
+    fi
 done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
 # 7c. Atom freshness: newest cited source saved > 18 months ago

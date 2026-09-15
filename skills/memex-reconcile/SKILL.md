@@ -41,8 +41,12 @@ For the full relationship taxonomy, read: `references/vault-schema.md`
 
 ```bash
 VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
-grep -rn "^part-of::" "$VAULT/atoms/"
+grep -rn "^part-of::" "$VAULT/atoms/" "$VAULT/topics/"
 ```
+
+Both sides carry `part-of::`: an atom names its topics, and a concept map names its
+parent. A dangling parent is worse than a dangling atom — it detaches the whole
+sub-tree from its root (`_meta/schema.md` § Topic Hierarchy).
 
 Extract wikilink targets by stripping `[[` and `]]`; ignore display-text aliases
 (anything after `|`). For each target, check whether a matching topic file exists:

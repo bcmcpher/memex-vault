@@ -78,7 +78,7 @@ ls "$VAULT/topics/research/"
 
 Scan for topics that share atoms or keywords with the new one. Propose:
 - `related::` — topics in the same general space
-- `part-of::` — only if the new topic is clearly a subdomain of an existing one
+- `part-of::` — concept maps only: the one parent concept map, if the new map is clearly a sub-domain of an existing one. A concept map names at most one parent (`_meta/schema.md` § Topic Hierarchy)
 
 ### 6. Create the topic file
 Build the file from the appropriate template structure below. Populate all confirmed fields. Replace Templater placeholders (`<% tp.* %>`) with actual values.
@@ -176,9 +176,17 @@ Copy each Dataview block from the template file verbatim — it is self-referent
 This step is what actually creates the topic's membership — the Dataview block in
 step 6 returns nothing until it runs.
 
-For each atom confirmed in step 3, check whether it already has `part-of::` set.
-If it points elsewhere, leave it — an atom belongs to one topic. If `part-of::` is
-empty, offer to add `part-of:: [[new-topic]]`.
+For each atom confirmed in step 3, check which topics its `part-of::` already names.
+An atom names **one leaf concept map**, plus any number of projects and research
+questions (`_meta/schema.md` § Topic Hierarchy):
+
+- **New topic is a project or research question** — membership is additive; offer
+  to add `part-of:: [[new-topic]]` without touching the atom's concept map.
+- **New topic is a concept map, atom names none** — offer to add it.
+- **New topic is a concept map that is a sub-topic of the atom's current one** —
+  offer to *move* the atom's concept-map membership down to the new, more specific
+  leaf. It still counts toward the parent through the rollup.
+- **Atom names an unrelated concept map** — leave it.
 
 Ask before modifying any existing atom file. Report how many atoms were left
 pointing elsewhere, since those will not appear in the new topic.
@@ -212,5 +220,5 @@ Report:
 - Don't create the topic if one already exists with the same or very similar name — check `topics/` first
 - Don't wire `part-of::` on atoms that are only tangentially related; it's better to start sparse and grow than to pad the topic
 - Don't hand-write a membership list into the topic file — the Dataview block is the only membership view, and a stale hand-written list is exactly what Phase 1 removed
-- Don't set `part-of::` on an atom that already has one pointing somewhere else — an atom belongs to one topic
+- Don't give an atom a second concept map — it names one leaf. Move it to a more specific sub-topic, or leave it; projects and research questions are the only additive memberships
 - Don't create more than 3 atom stubs in one init session; stubs without content accumulate and become noise
