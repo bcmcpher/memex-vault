@@ -221,6 +221,160 @@ list_has() {
     [ -n "${LIST_MEMBER["$name"$'\x1f'"$word"]+x}" ]
 }
 
+# ── Source independence (finding 7, M15) ────────────────────────────────────
+# `_meta/schema.md` § Confidence Values counts *independent* sources: two are not
+# independent when one cites the other, directly or through a chain in the vault,
+# or they share an author (`authors:`, `channel:`, `tool:`). Counting sources
+# instead made 8b call seven correctly-hedged atoms upgrade candidates in trial 1;
+# Hagmann and Cammoun share six authors and are one unit. The schema's third test,
+# "one restates the other", is a judgement and stays with memex-trust-audit.
+#
+# A person is first initial + surname, letters only, hyphens read as spaces:
+# "Klaas E. Stephan" matches "K. Stephan" and "Julio E. Villalón-Reina" matches
+# "J. Villalon Reina", but "Cao T. Do" does not match "Kim Q. Do" — surname alone
+# chained two unrelated author groups into one through exactly that pair.
+# `channel:` and `tool:` compare as whole values, case-insensitively. Non-ASCII
+# letters are dropped on both sides, so one name spelled with and without
+# diacritics in different notes will not match.
+#
+# A source carrying none of those fields cannot be checked. It counts as its own
+# unit and is reported as unchecked, so the number never reads as a verdict.
+#
+# Sets UNITS_ALL / UNCHK_ALL (every backing source) and UNITS_PROC / UNCHK_PROC
+# (stage: processed only) per atom path, and VAULT_UNITS / VAULT_UNCHECKED /
+# VAULT_SOURCES for the summary.
+declare -A UNITS_ALL=() UNCHK_ALL=() UNITS_PROC=() UNCHK_PROC=()
+VAULT_UNITS=0; VAULT_UNCHECKED=0; VAULT_SOURCES=0
+compute_independence() {
+    local input="" slug p src kind a b c
+    for slug in "${!SRC_PATH[@]}"; do
+        input+="M"$'\t'"$slug"$'\t'"${SRC_PATH[$slug]}"$'\n'
+    done
+    while IFS= read -r -d '' p; do
+        backing_sources "$p"
+        while IFS= read -r src; do
+            [ -z "$src" ] && continue
+            note_stage "$src"
+            input+="A"$'\t'"$p"$'\t'"$src"$'\t'"${REPLY:-none}"$'\n'
+        done <<< "$REPLY"
+    done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null)
+
+    while IFS=$'\t' read -r kind p a b c; do
+        case "$kind" in
+            U) UNITS_ALL[$p]=$a;  UNCHK_ALL[$p]=$b ;;
+            P) UNITS_PROC[$p]=$a; UNCHK_PROC[$p]=$b ;;
+            V) VAULT_UNITS=$p; VAULT_UNCHECKED=$a; VAULT_SOURCES=$b ;;
+        esac
+    done < <(printf '%s' "$input" | LC_ALL=C awk -F'\t' '
+        function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
+        function person(s,   n, part, first, last) {
+            gsub(QUOTES, "", s); s = trim(s)
+            if (s == "" || tolower(s) ~ /^et al\.?$/) return ""
+            gsub(/-/, " ", s)
+            n = split(s, part, /[ \t]+/)
+            last = tolower(part[n]); gsub(/[^a-z]/, "", last)
+            if (last == "") return ""
+            first = tolower(part[1]); gsub(/[^a-z]/, "", first)
+            return (n > 1 ? substr(first, 1, 1) "." : "") last
+        }
+        function addkey(p, kind, s,   k) {
+            if (kind == "named") { gsub(QUOTES, "", s); k = tolower(trim(s)); if (k == "") return; k = "=" k }
+            else { k = person(s); if (k == "") return }
+            if (!((p, k) in has)) { has[p, k] = 1; nk[p]++; keys[p] = keys[p] SUBSEP k; holders[k] = holders[k] SUBSEP p }
+        }
+        function read_source(p,   line, lineno, fm, inlist, s, n, arr, i, t) {
+            lineno = 0; fm = 0; inlist = ""
+            while ((getline line < p) > 0) {
+                lineno++
+                if (lineno == 1 && line ~ /^---[ \t]*$/) { fm = 1; continue }
+                if (fm && line ~ /^---[ \t]*$/) { fm = 0; continue }
+                if (fm) {
+                    if (inlist != "" && line ~ /^[ \t]+-/) { s = line; sub(/^[ \t]+-[ \t]*/, "", s); addkey(p, inlist, s); continue }
+                    inlist = ""
+                    if (line ~ /^authors:/) {
+                        s = trim(substr(line, 9))
+                        if (s ~ /^\[/) { sub(/^\[/, "", s); sub(/\][ \t]*$/, "", s); n = split(s, arr, ","); for (i = 1; i <= n; i++) addkey(p, "person", arr[i]) }
+                        else if (s == "") inlist = "person"
+                        else addkey(p, "person", s)
+                    } else if (line ~ /^(channel|tool):/) {
+                        s = line; sub(/^(channel|tool):/, "", s); addkey(p, "named", s)
+                    }
+                } else if (line ~ /^cites::/) {
+                    s = line
+                    while (match(s, /\[\[[^]]+\]\]/)) {
+                        t = substr(s, RSTART + 2, RLENGTH - 4); s = substr(s, RSTART + RLENGTH)
+                        sub(/[#|].*/, "", t)
+                        if ((t in slugpath) && slugpath[t] != p) cite[p, ++ncite[p]] = slugpath[t]
+                    }
+                }
+            }
+            close(p)
+        }
+        function dependent(a, b,   n, k, i) {
+            if (((a, b) in reach) || ((b, a) in reach)) return 1
+            n = split(keys[a], k, SUBSEP)
+            for (i = 2; i <= n; i++) if ((b, k[i]) in has) return 1
+            return 0
+        }
+        # Independent units among set[1..n]: connected components of "dependent".
+        function units(set, n,   i, j, par, r, cnt, x, y) {
+            for (i = 1; i <= n; i++) par[i] = i
+            for (i = 1; i <= n; i++) for (j = i + 1; j <= n; j++) if (dependent(set[i], set[j])) {
+                x = i; while (par[x] != x) x = par[x]
+                y = j; while (par[y] != y) y = par[y]
+                if (x != y) par[x] = y
+            }
+            cnt = 0
+            for (i = 1; i <= n; i++) { x = i; while (par[x] != x) x = par[x]; if (!(x in r)) { r[x] = 1; cnt++ } }
+            return cnt
+        }
+        function unchecked(set, n,   i, c) { c = 0; for (i = 1; i <= n; i++) if (!(set[i] in nk)) c++; return c }
+        # Vault-wide units without testing every pair, which is quadratic in
+        # sources: union the holders of each author key, then each cites:: reach.
+        function root(x) { while (vpar[x] != x) x = vpar[x]; return x }
+        function join(a, b,   x, y) { x = root(a); y = root(b); if (x != y) vpar[x] = y }
+        function vault_units(   i, k, n, h, j, pr, cnt, seen2) {
+            for (i = 1; i <= nsrc; i++) vpar[srcs[i]] = srcs[i]
+            for (k in holders) { n = split(holders[k], h, SUBSEP); for (j = 3; j <= n; j++) join(h[2], h[j]) }
+            for (pr in reach) { split(pr, h, SUBSEP); join(h[1], h[2]) }
+            cnt = 0
+            for (i = 1; i <= nsrc; i++) { k = root(srcs[i]); if (!(k in seen2)) { seen2[k] = 1; cnt++ } }
+            return cnt
+        }
+
+        BEGIN { QUOTES = "[\"\047]" }
+        $1 == "M" { slugpath[$2] = $3; if (!($3 in isrc)) { isrc[$3] = 1; srcs[++nsrc] = $3 }; next }
+        $1 == "A" { all[$2, ++nall[$2]] = $3; if ($4 == "processed") proc[$2, ++nproc[$2]] = $3; next }
+        END {
+            for (i = 1; i <= nsrc; i++) read_source(srcs[i])
+            # Directed reachability over cites:: between sources, one BFS per source.
+            for (i = 1; i <= nsrc; i++) {
+                a = srcs[i]; head = 1; tail = 0; delete seen; delete q
+                for (j = 1; j <= ncite[a]; j++) { q[++tail] = cite[a, j] }
+                while (head <= tail) {
+                    x = q[head++]; if (x in seen) continue
+                    seen[x] = 1; reach[a, x] = 1
+                    for (j = 1; j <= ncite[x]; j++) q[++tail] = cite[x, j]
+                }
+            }
+            for (atom in nall) {
+                delete set; for (i = 1; i <= nall[atom]; i++) set[i] = all[atom, i]
+                printf "U\t%s\t%d\t%d\n", atom, units(set, nall[atom]), unchecked(set, nall[atom])
+                delete set; for (i = 1; i <= nproc[atom]; i++) set[i] = proc[atom, i]
+                printf "P\t%s\t%d\t%d\n", atom, units(set, nproc[atom] + 0), unchecked(set, nproc[atom] + 0)
+            }
+            delete set; for (i = 1; i <= nsrc; i++) set[i] = srcs[i]
+            printf "V\t%d\t%d\t%d\n", vault_units(), unchecked(set, nsrc), nsrc
+        }')
+}
+
+# " — independence unchecked for K source(s) …" when K > 0, else nothing.
+unchecked_note() {
+    if [ "${1:-0}" -gt 0 ]; then
+        printf ' — independence unchecked for %s source(s) with no authors:/channel:/tool:' "$1"
+    fi
+}
+
 # Source media come from _meta/domain.md § Source Types rather than a literal
 # list here: a fork that adds sources/hearing/ must get the same filename and
 # frontmatter checks as the shipped five without editing this script. Falls back
@@ -583,16 +737,19 @@ ok "structural integrity check complete"
 echo ""
 echo "── 8. Confidence and Coverage ─────────────────────────────────────────────"
 
-# 8a. Overconfident atom: confidence: high backed by fewer than 3 distinct sources.
+compute_independence
+
+# 8a. Overconfident atom: confidence: high backed by fewer than 3 independent units.
 #
 # Counts *distinct backing sources* via backing_sources(), not cites:: lines.
 # Since Phase 3 an atom can cite [[ext-slug#^c01]], [[ext-slug#^c07]] and
 # [[ext-slug#^c12]] — three citations, three claims, but ONE source, which is
 # `low` under the rubric and sailed past the old line count.
 #
-# Independence is NOT tested here: "same author", "one restates the other" and
-# "one cites the other through a chain" are judgements, and `memex-trust-audit`
-# owns them. This count is therefore an upper bound — it can only under-report.
+# Those sources are then grouped into independent units (see
+# compute_independence): shared author, or a cites:: chain between them. "One
+# restates the other" is still a judgement that `memex-trust-audit` owns, so the
+# unit count remains an upper bound — it can only under-report.
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
     confidence=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | sed 's/^confidence:[[:space:]]*//' || true)
@@ -603,13 +760,16 @@ while IFS= read -r -d '' f; do
             mapfile -t backing_list <<< "$REPLY"
             source_count=${#backing_list[@]}
         fi
-        if [ "$source_count" -lt 3 ]; then
-            warn "atoms/${atom_name}.md — confidence: high backed by only $source_count distinct source(s) (needs 3+ independent for high)"
+        units=${UNITS_ALL[$f]:-0}
+        if [ "$units" -lt 3 ]; then
+            warn "atoms/${atom_name}.md — confidence: high backed by $source_count distinct source(s) in $units independent unit(s)$(unchecked_note "${UNCHK_ALL[$f]:-0}") (needs 3+ independent for high)"
         fi
     fi
 done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
-# 8b. Underconfident atom: confidence: low with 2+ processed sources
+# 8b. Underconfident atom: confidence: low with processed sources in 2+ independent
+# units. Counting sources alone was trial 1's noisiest check (finding 7): seven
+# false positives in one run, every one two sources from one author group.
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
     confidence=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | sed 's/^confidence:[[:space:]]*//' || true)
@@ -623,8 +783,8 @@ while IFS= read -r -d '' f; do
                 processed_count=$((processed_count + 1))
             fi
         done <<< "$REPLY"
-        if [ "$processed_count" -ge 2 ]; then
-            warn "atoms/${atom_name}.md — confidence: low but $processed_count processed sources support it (upgrade candidate)"
+        if [ "$processed_count" -ge 2 ] && [ "${UNITS_PROC[$f]:-0}" -ge 2 ]; then
+            warn "atoms/${atom_name}.md — confidence: low but $processed_count processed sources in ${UNITS_PROC[$f]} independent units support it$(unchecked_note "${UNCHK_PROC[$f]:-0}") (upgrade candidate)"
         fi
     fi
 done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
@@ -1140,6 +1300,9 @@ printf "  %-22s %s\n" "Sources (paper):"   "$(count_md "$VAULT/sources/paper")"
 printf "  %-22s %s\n" "Sources (docs):"    "$(count_md "$VAULT/sources/docs")"
 printf "  %-22s %s\n" "Sources (code):"    "$(count_md "$VAULT/sources/code")"
 printf "  %-22s %s\n" "Sources (meeting):" "$(count_md "$VAULT/sources/meeting")"
+units_line="$VAULT_UNITS of $VAULT_SOURCES sources"
+[ "$VAULT_UNCHECKED" -gt 0 ] && units_line+=" ($VAULT_UNCHECKED with no authors:/channel:/tool:, unchecked)"
+printf "  %-22s %s\n" "Independent units:" "$units_line"
 printf "  %-22s %s\n" "Extracts:"          "$(count_md "$VAULT/extracts")"
 printf "  %-22s %s\n" "Atoms:"             "$(count_md "$VAULT/atoms")"
 printf "  %-22s %s\n" "Glossary terms:"    "$(count_md "$VAULT/glossary")"
