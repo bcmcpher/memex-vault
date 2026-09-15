@@ -380,7 +380,7 @@ that show it:
 
 ---
 
-## Stage 5 — the remaining verdict fixes
+## Stage 5 — the remaining verdict fixes *(done)*
 
 | Skill | Fix |
 |---|---|
@@ -400,6 +400,74 @@ that show it:
 `memex-topic-init` need no changes. M7 is closed: the glossary is a **disjoint
 set**, not a lossy view of `atoms/`, and retiring it would have deleted the only
 place those four terms can live.
+
+Done 2026-09-15 — `9470a70`. Each row was re-read against the skill and the fork's
+per-skill campaign commit before editing. What differs from the table, with the
+numbers that show it:
+
+- **`memex-connect`.** The campaign re-run (fork `8405fcb`) found two faults, not one.
+  The bare-field-name query returns only `.gitkeep`, and outbound fields alone miss
+  papers that atoms cite, because deep-extract never writes back onto the source.
+  Discovery now requires no outbound relation *and* no inbound link from `atoms/` or
+  `extracts/`, whatever the stage; step 9 says stage records reading, not wiring.
+  Fork: `crane` (`read`, cited only by a project and a research note) and the video
+  (`unread`). Fresh clone: the new query reports no source notes; the old one returns
+  five `.gitkeep` files.
+- **`memex-save`.** The paper row gains 16 publisher and index domains plus a
+  DOI-in-path rule. Against the fork's 21 URLs it reproduces 20 media and moves
+  Moon et al. `web` → `paper`, the one filed wrong on purpose. The video channel comes
+  from YouTube's oEmbed `author_name`, verified on the fork's video. Vimeo's endpoint
+  404'd on the one test URL, so it is not documented. Adds one create candidate, and a
+  declared-medium rule: the template declares no `code`, and lint checks folders, not
+  `medium:` values.
+- **`memex-tend`.** The M12 half was done in Stage 2. topic-emerge and review move to
+  step 5, before trust-audit (topic-scoped) and conflicts (cross-topic pairs).
+- **`memex-log-query` takes neither option in the table.** 1 of 36 fork log headers
+  carries a medium (`memex-save` writes `saved`), so the medium filter now resolves
+  `url::` to the source note's `medium:` rather than changing eleven writers' formats.
+  The stage cross-check is dropped in favour of lint 6, stale Check 2 and connect
+  step 1.
+- **`memex-candidates`.**
+  - The writer list now names seven skills.
+  - Step 4 documents the two-frontmatter split. Tested: a naive split drops the
+    note's own frontmatter.
+  - New `change: replace` modify candidate, added to `schema.md` § Candidate
+    Lifecycle for topic-emerge's moves.
+- **`memex-refactor`.** S6b and M6b append a Promotion Log row for every
+  block-anchored citation a child atom takes. Fixture: a child citing `^c01` gets a
+  12g warning without the row and none with it.
+- **`memex-init`.** `reviewed:` is restored. Q2 and Q5 read `domain.md` instead of
+  reciting it, and Q2 offers `code`.
+- **`memex-ingest`.** The campaign's reading was right (fork `8d86fe1`): the unused
+  candidate type is the atom back-wire. New step 5b writes `cites::` onto existing
+  atoms linked with `supports::`, `introduces::` or `demonstrates::`, and asks about
+  confidence as a separate question. Skeptical links are not backing.
+- **`memex-stale`.** Check 4 lists `medium: code` apart, with no route. Fork: 5 code
+  sources, 2 prose.
+- **`memex-deep-extract`.** The table's first premise was wrong: the skill never told
+  mode B to set stage or fill Summary — the trial operator did it anyway (§ Deviations).
+  - New mode B step 7 sanctions it: `stage: processed` is asked; Summary and Key Points
+    are drafted only where they are empty, as candidates. The source template's
+    placeholder now names this skill.
+  - New § Candidate gating in mode B (a batched confirmation is allowed; candidates
+    are still required) and § Concurrency, pointing at the schema.
+  - **Also found:** the Promotion Log example used `→`, but 12g parses `->` only, and
+    all 288 fork rows use `->`. A run that followed the skill literally would have
+    raised one 12g warning per promoted citation.
+- **`memex-topic-emerge`.**
+  - Step 7 is a three-way rule — append, replace, or ask — and never writes a second
+    concept map.
+  - New Sub-topic option.
+  - Step 6 builds topics from the template (both Dataview blocks, `reviewed:`).
+  - **Part-of chains count only targets with no topic file**, which fixes Stage 2's
+    whole-vault absorption directly: both fork targets exist, so the fork yields no
+    part-of candidate, and a fixture with three atoms naming a missing target yields
+    one. The Stage 4 note's re-run on a real tree still belongs to trial 2.
+- README's trigger rows for log-query and stale no longer advertise removed behaviour.
+
+Lint: template exit 0; fork output identical to post-Stage-4 (exit 0, 4 warnings, 365
+quotes). Skill evals were not touched (out of scope, § Two repos); `memex-ingest`
+eval 3 links to existing atoms, so step 5b now applies to it.
 
 ---
 
@@ -511,7 +579,9 @@ verdict before Stage 8, or trial 2 will re-report it as new.
 
 - Port the fork's `_meta/roadmap.md` (98 KB, carries M11–M22, the rewritten M7 and
   the amended corpus spec) over this repo's 57 KB copy; mark each finding applied,
-  and each § Not in RC-2 item as deferred with its reason.
+  and each § Not in RC-2 item as deferred with its reason. Skills already cite
+  roadmap M8, M11, M13, M14 and M21, and this repo's copy stops at M5: after the
+  port, grep `roadmap M[0-9]+` in `skills/` and confirm every number exists.
 - Ship `_meta/skill-evaluation.md` as an **empty scaffold** with its header and
   usage note. Every fork should keep one; trial-1's evidence stays in the fork.
 - Carry Stage 7's **Roadmap** verdicts into the ported roadmap, each pointing at
@@ -561,6 +631,8 @@ trial 2 shows it is worse than recorded, which is new.
 | `warn()`/`error()` use `echo -e`, so a backslash in quoted text is interpreted | Cosmetic; seen only in a synthetic quote *(added Stage 3)* |
 | `stage: unread` as a reader-facing flag in memex-compose, -search, -topic-init, -review | Finding 11 changed the evidence test; these label workflow state for a reader, which `unread` still does honestly *(added Stage 3)* |
 | `validate-archive.sh` holes: snippets + full reference list pass; superscript citations invisible; IEEE abstract + references rejection rests on a synthetic page | Recorded in the script header; no real page of either kind exists to test *(added Stage 3)* |
+| Candidate filenames: `schema.md` says `YYYY-MM-DD-HHMMSS-…`, `memex-ingest` says `YYYYMMDD-HHMMSS-…` | Nothing parses the name; `memex-candidates` groups by `session:` *(added Stage 5)* |
+| `memex-save` has no verified channel route for Vimeo | The one test URL 404'd; the trial's only video is YouTube, whose oEmbed route is verified *(added Stage 5)* |
 
 Resolved elsewhere, listed so nothing looks missing: finding 1 → fixed, reaches
 here via Stage 1, residue in Stage 5 `memex-init`; 2 → Stage 5 `memex-connect`;
