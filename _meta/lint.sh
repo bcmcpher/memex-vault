@@ -1264,6 +1264,46 @@ while IFS= read -r -d '' f; do
     fi
 done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
+# 12g. Unlogged promotion: an atom cites [[ext-slug#^cNN]] on a cites:: line, but
+# that extract's ## Promotion Log has no "^cNN -> atoms/<atom>.md" row. Either the
+# append failed or a promotion was never logged. The log exists for idempotence —
+# mode B reads it so claims are not offered twice — and a silently failed append
+# looks identical to success (trial-1 finding 13). This is the standing half of
+# that finding; post-write assertions in the skills are deferred.
+#
+# Rows are read once per extract. A target may be written atoms/x.md, atoms/x,
+# x.md, x or [[x]]; all name the same atom.
+declare -A PROMO_ROW=() PROMO_READ=()
+promo_rows() {
+    local ext="$1" file="$VAULT/extracts/$1.md" id target
+    [ -n "${PROMO_READ[$ext]+x}" ] && return 0
+    PROMO_READ[$ext]=1
+    [ -f "$file" ] || return 0
+    while IFS=$'\t' read -r id target; do
+        target="${target#\[\[}"; target="${target%%\]\]*}"; target="${target%%|*}"
+        target="${target#atoms/}"; target="${target%.md}"
+        PROMO_ROW["$ext"$'\x1f'"$id"$'\x1f'"$target"]=1
+    done < <(awk '/^## Promotion Log/ { f = 1; next }
+                  f && /^## /           { exit }
+                  f && match($0, /^[[:space:]]*-[[:space:]]*\^c[0-9]+[[:space:]]*->[[:space:]]*[^[:space:]]+/) {
+                      s = substr($0, RSTART, RLENGTH)
+                      id = s; sub(/^[[:space:]]*-[[:space:]]*/, "", id); sub(/[[:space:]]*->.*/, "", id)
+                      t = s; sub(/.*->[[:space:]]*/, "", t)
+                      print id "\t" t
+                  }' "$file" 2>/dev/null)
+}
+while IFS= read -r -d '' f; do
+    atom_name="$(basename "$f" .md)"
+    while IFS= read -r ref; do
+        ext="${ref%%#*}"; id="${ref#*#}"
+        [ -f "$VAULT/extracts/${ext}.md" ] || continue   # 12e already reports it
+        promo_rows "$ext"
+        if [ -z "${PROMO_ROW["$ext"$'\x1f'"$id"$'\x1f'"$atom_name"]+x}" ]; then
+            warn "atoms/${atom_name}.md — cites [[${ext}#${id}]] but ${ext}'s Promotion Log has no row for ${id} -> atoms/${atom_name}.md (failed append, or a promotion nobody logged)"
+        fi
+    done < <(grep -E '^cites::' "$f" 2>/dev/null | grep -oE '\[\[ext-[^]|#]+#\^c[0-9]+' | sed 's/^\[\[//' | sort -u || true)
+done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
+
 ok "extract grounding check complete"
 
 # ── 13. Provenance blocks ────────────────────────────────────────────────────
