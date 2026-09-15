@@ -11,7 +11,7 @@ trial-1 evidence and a template ships with none:
 `~/Projects/memex/_meta/skill-evaluation.md` holds the *evidence* that it needs
 doing. This file holds the *order* — the execution plan that turns them into
 `v1.0.0-rc.2` of this template. Delete it once `rc.2` is tagged and the trial has
-started; the durable record is the other two, and Stage 7 ports the roadmap here.
+started; the durable record is the other two, and Stage 8 ports the roadmap here.
 
 Throughout, **"the fork"** is `~/Projects/memex` and bare paths are relative to
 whichever repo the step names — the two repos share a layout.
@@ -59,7 +59,7 @@ produces another RC, and that is the process working rather than failing.
 4. **Every known finding is dispositioned before the trial.** *(Added
    2026-09-15.)* The gate is "a trial that surfaces nothing new", so an issue that
    is known but unrecorded would come back as a false "new" finding and make the
-   gate unreadable. Everything not scheduled in Stages 1–7 is in § Not in RC-2,
+   gate unreadable. Everything not scheduled in Stages 1–8 is in § Not in RC-2,
    and trial-2 findings are checked against that table before they are logged.
 
 ---
@@ -445,14 +445,79 @@ creation, no graph wiring, no confidence assignment.
 
 ---
 
-## Stage 7 — docs and release
+## Stage 7 — conceptual comparison with claude-obsidian
+
+*(Added 2026-09-15, at the user's request.)* `claude-obsidian`
+(<https://github.com/AgriciDaniel/claude-obsidian>) is a widely used vault-plus-skills
+system that does the same job as memex with a different design. Before the tag,
+decide which differences are gaps worth closing here. Compare organization,
+evidence model and write safety; do not count features. The stage reads their
+repo and writes one document. No code is ported in this stage.
+
+**Pin it.** Compare against `32ac5a0` (v2.2.0, committed 2026-09-10), cloned to
+`/tmp`, and record that commit in the output. The project moves fast, and a
+verdict against a later release is a different verdict.
+
+**Dimensions.** The claude-obsidian column comes from a first read of their tree
+on 2026-09-15. Verify every cell before relying on it, and add any dimension the
+read turns up.
+
+| Dimension | claude-obsidian | memex |
+|---|---|---|
+| Product vs vault | Plugin checkout kept separate from the user's vault. The vault is picked by env var, `.claude-obsidian.json`, or one initialized ancestor; if none is certain, nothing is written | The template is the vault; forks carry the code; `MEMEX_VAULT` |
+| Note ontology | `wiki/` concepts, entities, sources, questions, comparisons; `overview.md`; `hot.md` | atoms, sources, extracts, topics (concept / project / research), glossary |
+| Filing methodology | Selectable modes (generic, LYT, PARA, Zettelkasten) plus domain scaffold profiles | One schema, `domain.md` vocabulary, the D2 topic tree |
+| Evidence | Content-addressed raw copies. JSON source and claim ledgers, kept apart from the notes, record authority, freshness, `independence_key`, support, contradiction, confidence and review state | Archived source. Extracts hold `^cNN` quoted claims, which lint checks against the archive. Atoms `cites::` claim anchors. Confidence comes from independent units. `verified:` |
+| Write safety | Plan, then an approved SHA-256, then apply. Transactions and a lock. Workers return drafts; one orchestrator applies them | Candidate files with interactive confirmation; the M9 concurrency rule |
+| Enforcement | Python package, JSON contracts, tests, CI | `lint.sh` plus skill prose; fixtures diffed by hand |
+| Retrieval and session context | BM25 with contextual prefixes and optional rerank; `hot.md` recent-context cache; `wiki-fold` log rollups | `memex-search` over atoms; `log.md` and `memex-log-query` |
+| Obsidian surfaces | Bases, Canvas, CSS snippet | Dataview inline fields and queries |
+| Hosts | Claude Code, Codex, Gemini, OpenCode, Cursor, Windsurf | Claude Code |
+| Egress | `autoresearch` (bounded web research), `defuddle`, explicit network consent | `memex-save`, `pdf-clean.sh`, `validate-archive.sh`; Stage 6 seed fetches nothing |
+
+**Method.** For each difference:
+1. Name the problem their design solves.
+2. Check whether memex has that problem, with evidence: a trial-1 finding, a
+   roadmap M-number, a Stage 2–6 result, or a failure you can demonstrate. "They
+   have it" is not evidence.
+3. Give one verdict.
+
+Then run the comparison the other way: what memex has that they lack (quote
+grounding checked per claim, a topic tree, …). That is positioning, not work, but
+it shows which of memex's costs buy something.
+
+**Verdicts.**
+- **Adopt in RC-2.** memex has the problem, and the fix can be verified before
+  Stage 8. It gets its own commit and re-runs the § Verification checks of every
+  stage it touches.
+- **Roadmap.** The gap is real but too large, or needs a trial to justify it. It
+  gets a § Not in RC-2 row now and goes into the roadmap in Stage 8.
+- **Decline.** memex does not have the problem, or the design conflicts with a
+  memex principle; name the principle.
+
+**Guard.** Some verdicts would change the architecture: a Python runtime, a
+ledger store that replaces fields in the notes, a separate product and vault, or
+more hosts. Record those as Roadmap and put them to the user. They are not RC-2
+work, however strong the case.
+
+**Output:** `_meta/comparison-claude-obsidian.md`, an infrastructure doc like
+this one. It records the pinned commit, the verified table, and a verdict with
+evidence for every difference. Principle 4 applies: every difference needs a
+verdict before Stage 8, or trial 2 will re-report it as new.
+
+---
+
+## Stage 8 — docs and release
 
 - Port the fork's `_meta/roadmap.md` (98 KB, carries M11–M22, the rewritten M7 and
   the amended corpus spec) over this repo's 57 KB copy; mark each finding applied,
   and each § Not in RC-2 item as deferred with its reason.
 - Ship `_meta/skill-evaluation.md` as an **empty scaffold** with its header and
   usage note. Every fork should keep one; trial-1's evidence stays in the fork.
-- `CHANGELOG.md` — an RC-2 entry naming the schema amendment.
+- Carry Stage 7's **Roadmap** verdicts into the ported roadmap, each pointing at
+  `_meta/comparison-claude-obsidian.md`.
+- `CHANGELOG.md` — an RC-2 entry naming the schema amendment and any Stage 7
+  adoptions.
 - `VERSION` → `1.0.0-rc.2`; tag `v1.0.0-rc.2`.
 - README — the hierarchy, `memex-seed`, and the skill count 20 → 21.
 - **Rewrite § Release Status's criterion.** This repo's copy still reads "the four
@@ -470,7 +535,7 @@ a trial that finds something means `rc.3`.
 
 ## Not in RC-2
 
-*(Added 2026-09-15.)* Every known finding that Stages 1–7 do not schedule, with
+*(Added 2026-09-15.)* Every known finding that Stages 1–8 do not schedule, with
 the reason. **Before logging a trial-2 finding as new, check it here.** A trial-2
 re-occurrence of anything below is a known issue, not a new finding — unless
 trial 2 shows it is worse than recorded, which is new.
@@ -537,6 +602,9 @@ fork unless noted):
 - Stage 5 — the `memex-connect` proof needs both halves: discovery returns the
   right set on the fork **and** returns "nothing to process" for the right reason
   on a fresh clone of this repo.
+- Stage 7 — every difference in `_meta/comparison-claude-obsidian.md` has exactly
+  one verdict with its evidence. Each Adopt names its commit and passes the
+  checks for the stages it touched, and each Roadmap has a § Not in RC-2 row.
 
 **Fresh-fork test before tagging:** clone this repo to `/tmp`, run
 `_meta/lint.sh` (must pass with zero notes), run `memex-init`, then run
