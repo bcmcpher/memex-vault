@@ -55,7 +55,50 @@ and is the authority on what remains.
   **20 → 21**; the "20 skills" statements inside released sections below are
   historical records of what `v1.0.0-rc.1` shipped and are left alone.
 
+- **Three `lint.sh` checks adopted from claude-obsidian** (roadmap Stage 7,
+  `_meta/comparison-claude-obsidian.md`). Each closes a hole demonstrated on a
+  throwaway clone, and each is a WARN — a dangling link and a duplicate URL are
+  bookkeeping a human resolves, not corruption.
+  - **7h — dangling relation target.** Until now a `[[target]]` was resolved in
+    exactly two places: `part-of::`, and a `cites::` whose anchor was *block*-form.
+    So `cites:: [[ghost]]` and `cites:: [[ghost#Summary]]` both linted clean at
+    exit 0 — and worse, writing one into an isolated atom *silenced* the section 4
+    orphan warning, because section 6b counts `cites::[[` occurrences without
+    resolving them. A fabricated citation read as evidence and suppressed the only
+    check that would have caught the atom. 7h resolves every `field:: [[Target]]`
+    on every layer against one table. On the reference vault it resolved **191
+    targets with no findings** and cost 0.25s.
+  - **2b — two sources at one URL.** A duplicate adds no evidence, and if neither
+    note carries `authors:`/`channel:`/`tool:` it adds a phantom unit to the
+    independent-source count that § Confidence Values reads. Comparison is
+    deliberately shallow: scheme and host lowercased, one trailing slash and any
+    `#fragment` dropped. The three capture skills had three different answers to
+    this and none of them was in the oracle.
+  - **2c — a credential in a saved URL.** `sources/` is tracked, so a signed link
+    or share token pasted once is committed and rewriting history is the only
+    removal. The sensitive-key vocabulary is ported from claude-obsidian's
+    `url_safety.py` rather than invented, which is what catches the vendor forms
+    (`X-Amz-Signature`, `X-Amz-Security-Token`).
+
+- **`memex-reconcile` gained Pass 2 — dangling everything else.** 7h's findings
+  needed an owner, or a new WARN class would simply accumulate. The pass takes
+  `cites::` first and separately: a dangling `related::` is a broken
+  cross-reference, a dangling `cites::` is an atom that reads as grounded and is
+  not. Its old Pass 2 is now Pass 3.
+
+- **`_meta/comparison-claude-obsidian.md`** — the Stage 7 output. Fifteen
+  differences against `claude-obsidian` pinned at `32ac5a0` (v2.2.0, 2026-09-10),
+  each with a verdict and evidence: 3 adopted, 7 roadmap, 5 declined. Two
+  architectural questions are recorded for the user rather than decided. Required
+  by RC-2 Decision 4 — an undecided difference is something trial 2 would report
+  as new.
+
 ### Changed
+
+- **`_meta/schema.md` § Source URLs.** A new subsection under Node Types stating
+  the two rules section 2 now checks: one source note per URL, and a URL never
+  carries a credential. `memex-save` and `memex-ingest` cite it instead of each
+  carrying a private version of the rule.
 
 - **`year:` on source notes is now `published:`, with variable precision.**
   `year:` could only ever hold the coarsest publication date, so a skill that

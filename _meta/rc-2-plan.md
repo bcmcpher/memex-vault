@@ -613,7 +613,7 @@ gap is documented inside the skill, where a resumed session will actually read i
 
 ---
 
-## Stage 7 — conceptual comparison with claude-obsidian
+## Stage 7 — conceptual comparison with claude-obsidian *(done)*
 
 *(Added 2026-09-15, at the user's request.)* `claude-obsidian`
 (<https://github.com/AgriciDaniel/claude-obsidian>) is a widely used vault-plus-skills
@@ -672,6 +672,56 @@ work, however strong the case.
 this one. It records the pinned commit, the verified table, and a verdict with
 evidence for every difference. Principle 4 applies: every difference needs a
 verdict before Stage 8, or trial 2 will re-report it as new.
+
+**Result (2026-09-17).** `_meta/comparison-claude-obsidian.md`, 515 lines, pinned
+at `32ac5a02c4e082e4a5628ca810776375e134708e`. Fifteen differences, fifteen
+verdicts: **3 Adopt, 7 Roadmap, 5 Decline.** Five cells of the dimension table
+above were wrong or incomplete and are corrected in the output's own
+§ Corrections rather than here, since that is the file Stage 8 and trial 2 read.
+
+*The correction that mattered most:* their `independence_key` is **declared**, not
+derived. `ledgers.py:797` computes connected components by union-find over the
+declared key, the canonical origin URL and the payload SHA-256 — structurally the
+same algorithm as `lint.sh:281-426`, arrived at independently, with different
+inputs. And it binds in exactly one place (`ledgers.py:1130`, high-risk accepted
+claims needing two sources), where memex applies its count to every atom.
+
+**The three adoptions, all in `lint.sh`, all against demonstrated failures:**
+
+1. **7h — dangling relation target.** Until rc.2 a link was resolved only for
+   `part-of::` (7a) and for a *block*-anchored `cites::` (12e). Demonstrated:
+   `cites:: [[ghost]]` and `cites:: [[ghost#Summary]]` each linted clean at exit 0
+   **and silenced the section 4 orphan warning**, because 6b counts `cites::[[`
+   without resolving it — so a fabricated citation read as evidence and suppressed
+   the check that would have caught the atom. Only `confidence: high` caught it, via
+   section 8. 7h resolves every field on every layer against one new `ANY_PATH`
+   table; `part-of::` and `#^` links are excluded so 7a and 12e keep their own,
+   better-worded findings.
+2. **2b — two sources at one URL.** Demonstrated: two notes with an identical
+   `url:` and no `authors:` lint clean and report `2 of 2 sources … unchecked`,
+   inflating the number section 8 reads. Three capture skills had three different
+   guards and none was in the oracle.
+3. **2c — a credential in a saved URL.** Demonstrated: `?access_token=SECRET123`
+   committed to a tracked `sources/` note at exit 0, with zero matches for
+   `token|credential|secret|api_key` anywhere in `lint.sh` or the capture skills.
+   Key vocabulary ported from their `url_safety.py`, not invented.
+
+`memex-reconcile` gained **Pass 2** so 7h's findings have an owner; `_meta/schema.md`
+gained § **Source URLs** so 2b and 2c have a rule, per this vault's own standard
+that a check needs a rule and a field with a writer needs a check.
+
+**Two architectural questions are recorded, not decided** (the stage's Guard): a
+transaction runtime, which would put Python in a tree that is deliberately bash +
+awk/sed/grep; and `AGENTS.md`-style multi-host support, which is cheaper before 21
+skills accumulate host-specific prose than after. Both are in the output's § To put
+to the user.
+
+**The largest asymmetry runs the other way.** memex checks a claim's quote against
+the archived bytes (§ 12, a FAIL); grepping their v2.2.0 for verbatim-quote
+verification returns instructions only. Their `ledgers.py` verifies that a claim's
+*anchor resolves* — never what it points at. Their apparatus is better; memex's
+evidence checking is better. The three adoptions are precisely where memex's own
+checking had a hole their linter happened to cover.
 
 ---
 
@@ -786,6 +836,17 @@ fork unless noted):
 - Stage 7 — every difference in `_meta/comparison-claude-obsidian.md` has exactly
   one verdict with its evidence. Each Adopt names its commit and passes the
   checks for the stages it touched, and each Roadmap has a § Not in RC-2 row.
+  *Achieved:* 15 verdicts (3/7/5). Template lint **exit 0, 0 warnings**. Against
+  the fork, before and after the three checks: **identical output** — the same 4
+  pre-existing warnings, **365 quotes verified** either way, and **191 relation
+  targets resolved with no findings**, at a cost of 13.45 s → 13.71 s (+1.9%). The
+  Stage 6 post-conditions were rebuilt from the manifest and re-linted under the
+  new checks: **exit 0, `Sources (paper): 12`, `Independent units: 12 of 12
+  sources`, `Concept maps: 4`, 12 warnings, all section 6a inbox-only** — the three
+  additions fire on nothing seed emits. Each check was also exercised against its
+  own positive and negative cases, including ten realistic URLs where only the four
+  credential-bearing ones warn (`?v=`, a DOI, an arXiv id and `?sortkey=` stay
+  clean).
 
 **Fresh-fork test before tagging:** clone this repo to `/tmp`, run
 `_meta/lint.sh` (must pass with zero notes), run `memex-init`, then run
