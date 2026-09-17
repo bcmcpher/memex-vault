@@ -734,10 +734,54 @@ checking had a hole their linter happened to cover.
   port, grep `roadmap M[0-9]+` in `skills/` and confirm every number exists.
 - Ship `_meta/skill-evaluation.md` as an **empty scaffold** with its header and
   usage note. Every fork should keep one; trial-1's evidence stays in the fork.
+- **Consolidate the findings convention, before the tag.** *(Added 2026-09-17, at
+  the user's request, after Stage 7's verdict list made the scheme's cost
+  visible.)* The port classifies all 35 findings as applied or deferred anyway, so
+  renumbering is marginal work on top of work already required.
+
+  What is wrong with the current scheme, so the replacement is judged against
+  something concrete:
+  1. **Six prefixes** — `L S E P M O` — whose meanings appear nowhere near the
+     labels. They are historical revision markers, not categories.
+  2. **`M` spans two tiers.** M1–M16 are Tier 3, M17–M22 are Tier 4. The prefix
+     does not give the tier and the tier does not bound the number.
+  3. **Numbers are chronological by discovery, not priority.** M20 is a parser bug
+     that shipped in `rc.1`; M4 is a nice-to-have. M20 sorts last.
+  4. **Ad-hoc sub-letters** (M11a, M11c, M6b) with no rule for when one exists.
+  5. **No per-finding status.** Status lives in prose across § Summary Verdict,
+     § Implementation Order, § Where to Start Next and § Phase Detail, so the
+     findings list cannot answer "what is open?".
+  6. **No way to merge.** Stage 7's item 4 *is* M6 + M19 and the scheme has no
+     mechanism to say so.
+
+  *Why before the tag rather than after.* The `v1.0.0` gate is "a trial that
+  surfaces nothing new worth fixing", and trial 2 reads this file to decide what
+  counts as new. A roadmap whose open set cannot be read makes that gate
+  unreliable — the same failure mode as `rc.1`'s too-weak criterion, one level up.
+
+  *Scope is deliberately undecided.* Whether applied findings keep a row or
+  collapse into a short "Applied in rc.2" list is decided **after** the port has
+  produced a real open/closed count, not against the current estimate (well under
+  half of 35 open; a consolidated list plausibly 12–18 rows). Put it to the user
+  then.
+
+  *Cost, measured.* 16 citation sites across 9 files: `_meta/lint.sh` ×6,
+  `skills/memex-stale` ×3, and one each in `_meta/schema.md`,
+  `_meta/validate-archive.sh`, `memex-compose`, `memex-conflicts`,
+  `memex-reconcile`, `memex-search`, `memex-topic-emerge`. Rewrite them in the same
+  commit as the renumber, then re-grep to confirm every cited label resolves.
+
 - Carry Stage 7's **Roadmap** verdicts into the ported roadmap, each pointing at
-  `_meta/comparison-claude-obsidian.md`.
-- `CHANGELOG.md` — an RC-2 entry naming the schema amendment and any Stage 7
-  adoptions.
+  `_meta/comparison-claude-obsidian.md`. **Record them; do not schedule them.**
+  *(User, 2026-09-17: the seven additions are to be evaluated alongside other
+  pending plans once RC-2 is finished.)* So each lands as a row in whatever scheme
+  the consolidation settles on, carrying its evidence and its verdict, marked
+  pending evaluation — not slotted into § Implementation Order and not given a
+  priority. Two of the seven are cross-references rather than new items: Stage 7's
+  source-version finding **is** M6 + M19, and gains only the "record the archive
+  hash at capture" slice.
+- `CHANGELOG.md` — an RC-2 entry naming the schema amendment, the Stage 7
+  adoptions, and the findings-convention consolidation.
 - `VERSION` → `1.0.0-rc.2`; tag `v1.0.0-rc.2`.
 - README — the hierarchy, `memex-seed`, and the skill count 20 → 21.
 - **Rewrite § Release Status's criterion.** This repo's copy still reads "the four
@@ -750,6 +794,10 @@ checking had a hole their linter happened to cover.
 
 Tagging `rc.2` does not promote anything. `v1.0.0` waits on a *clean* trial, and
 a trial that finds something means `rc.3`.
+
+**"Stage 8 closes" means the tag exists**, with the roadmap ported, consolidated
+and readable, and every Stage 7 verdict recorded. It does not mean any Stage 7
+Roadmap item has been scheduled, costed or built.
 
 ---
 
