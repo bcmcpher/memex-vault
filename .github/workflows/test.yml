@@ -1,0 +1,50 @@
+# Runs the vault's own checks on every push and pull request.
+#
+# Forks inherit this workflow, which is intended: a fork gets its vault linted on
+# every commit without configuring anything. Two things it deliberately does not
+# claim, both worth knowing before reading a green check as an all-clear:
+#
+#   1. `.archive/` is gitignored, so lint section 12 SKIPs in CI. **Quote
+#      grounding is never verified here.** A green run means no quote was found
+#      to be fabricated, not that any quote was checked. Grounding is a local
+#      guarantee by construction — run `bash _meta/lint.sh` on a working copy.
+#   2. Warnings do not fail the build, because lint exits 0 on them by design. A
+#      red check means a FAIL: a naming violation, a dangling `raw::`, a
+#      duplicate claim id, or a fabricated quote in a local run.
+#
+# `_meta/test-lint.sh` is the part that protects lint itself. Its fixtures are
+# self-contained, so it means the same thing in CI as on a laptop.
+
+name: test
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Report the toolchain
+        run: |
+          echo "bash: $BASH_VERSION"
+          awk --version | head -1 || true
+          # lint.sh needs bash 4+ for associative arrays. ubuntu-latest ships 5.
+          [ "${BASH_VERSINFO[0]}" -ge 4 ] || { echo "bash 4+ required"; exit 1; }
+
+      - name: Shell syntax
+        run: |
+          for f in _meta/*.sh; do bash -n "$f" || exit 1; done
+          echo "all _meta/*.sh parse"
+
+      - name: lint.sh regression fixtures
+        run: bash _meta/test-lint.sh
+
+      - name: lint.sh on this vault
+        run: bash _meta/lint.sh

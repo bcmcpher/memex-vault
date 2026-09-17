@@ -1,0 +1,27 @@
+exit=0
+WARN  atoms/bad-actor.md — atom has no populated relation fields (fully isolated)
+WARN  atoms/bad-actor.md — no cites:: and no inbound links from sources atoms topics glossary
+WARN  atoms/bad-actor.md — verified.by 'somebody' is not a human: actor — verified: records human sign-off only
+WARN  atoms/bad-actor.md — verified.by 'somebody' is not a valid actor string
+WARN  atoms/missing-at.md — atom has no populated relation fields (fully isolated)
+WARN  atoms/missing-at.md — generated: is missing by: or at:
+WARN  atoms/missing-at.md — no cites:: and no inbound links from sources atoms topics glossary
+WARN  atoms/verified-as-mapping.md — atom has no populated relation fields (fully isolated)
+WARN  atoms/verified-as-mapping.md — no cites:: and no inbound links from sources atoms topics glossary
+WARN  atoms/verified-as-mapping.md — verified: is present but has no list entries (expected '- by:' / '  at:')
+WARN  atoms/well-formed.md — atom has no populated relation fields (fully isolated)
+WARN  atoms/well-formed.md — no cites:: and no inbound links from sources atoms topics glossary
+--- summary ---
+Sources (web): 0
+Sources (video): 0
+Sources (paper): 0
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 0
+Independent units: 0 of 0 sources
+Extracts: 0
+Atoms: 4
+Glossary terms: 0
+Concept maps: 0
+Projects: 0
+Research notes: 0

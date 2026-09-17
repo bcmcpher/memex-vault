@@ -1,0 +1,21 @@
+exit=0
+WARN  sources/paper/2026-09-17-cammoun.md — unread with no Connections wired (inbox-only; run memex-connect)
+WARN  sources/paper/2026-09-17-do-one.md — unread with no Connections wired (inbox-only; run memex-connect)
+WARN  sources/paper/2026-09-17-do-two.md — unread with no Connections wired (inbox-only; run memex-connect)
+WARN  sources/paper/2026-09-17-hagmann.md — unread with no Connections wired (inbox-only; run memex-connect)
+WARN  sources/paper/2026-09-17-sporns.md — unread with no Connections wired (inbox-only; run memex-connect)
+WARN  sources/web/2026-09-17-no-authors.md — unread with no Connections wired (inbox-only; run memex-connect)
+--- summary ---
+Sources (web): 1
+Sources (video): 0
+Sources (paper): 5
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 0
+Independent units: 4 of 6 sources (1 with no authors:/channel:/tool:, unchecked)
+Extracts: 0
+Atoms: 0
+Glossary terms: 0
+Concept maps: 0
+Projects: 0
+Research notes: 0

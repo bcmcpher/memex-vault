@@ -1,0 +1,22 @@
+exit=0
+WARN  atoms/names-interior.md — no cites:: and no inbound links from sources atoms topics glossary
+WARN  atoms/names-interior.md — part-of:: [[fixture-root]] has sub-topics; name the leaf this atom belongs to
+WARN  atoms/on-leaf.md — no cites:: and no inbound links from sources atoms topics glossary
+WARN  topics/concepts/cycle-a.md — is on a part-of:: cycle; walking parents upward must end at a root
+WARN  topics/concepts/cycle-b.md — is on a part-of:: cycle; walking parents upward must end at a root
+WARN  topics/concepts/orphan-parent.md — part-of:: [[no-such-map]] but no matching topic file found
+WARN  topics/concepts/two-parents.md — names 2 parents (fixture-root,other-leaf); a concept map has at most one
+--- summary ---
+Sources (web): 0
+Sources (video): 0
+Sources (paper): 0
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 0
+Independent units: 0 of 0 sources
+Extracts: 0
+Atoms: 2
+Glossary terms: 0
+Concept maps: 7
+Projects: 0
+Research notes: 0

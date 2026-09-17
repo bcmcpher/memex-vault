@@ -1,0 +1,25 @@
+exit=0
+WARN  atoms/dangling-cites.md — cites:: [[ghost-bare]] but no such note
+WARN  atoms/dangling-cites.md — cites:: [[ghost-block#^c07]] but no such note
+WARN  atoms/dangling-cites.md — cites:: [[ghost-section]] but no such note
+WARN  atoms/dangling-cites.md — confidence: medium but no cited source has been read claim by claim
+WARN  atoms/dangling-cites.md — no cited source has been read claim by claim (no block-anchored cites::, and no cited source has an extract)
+WARN  atoms/dangling-cites.md — related:: [[also-missing]] but no such note
+WARN  atoms/missing-anchor.md — cites:: [[2026-09-17-real-source#^c99]] but 2026-09-17-real-source has no block ^c99
+WARN  atoms/missing-anchor.md — confidence: medium but no cited source has been read claim by claim
+WARN  atoms/missing-anchor.md — no cited source has been read claim by claim (no block-anchored cites::, and no cited source has an extract)
+WARN  sources/paper/2026-09-17-real-source.md — supports:: [[no-such-atom]] but no such note
+--- summary ---
+Sources (web): 0
+Sources (video): 0
+Sources (paper): 1
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 0
+Independent units: 1 of 1 sources
+Extracts: 0
+Atoms: 2
+Glossary terms: 0
+Concept maps: 0
+Projects: 0
+Research notes: 0

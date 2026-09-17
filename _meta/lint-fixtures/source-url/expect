@@ -1,0 +1,27 @@
+exit=0
+WARN  sources/web/2026-09-17-cred-token.md — unread with no Connections wired (inbox-only; run memex-connect)
+WARN  sources/web/2026-09-17-cred-token.md — url: carries query parameter access_token; save the bare URL and keep the credential out of the vault
+WARN  sources/web/2026-09-17-cred-userinfo.md — unread with no Connections wired (inbox-only; run memex-connect)
+WARN  sources/web/2026-09-17-cred-userinfo.md — url: carries userinfo credentials before the host; save the bare URL and keep the credential out of the vault
+WARN  sources/web/2026-09-17-cred-vendor.md — unread with no Connections wired (inbox-only; run memex-connect)
+WARN  sources/web/2026-09-17-cred-vendor.md — url: carries query parameter x-amz-signature; save the bare URL and keep the credential out of the vault
+WARN  sources/web/2026-09-17-dup-a.md — unread with no Connections wired (inbox-only; run memex-connect)
+WARN  sources/web/2026-09-17-dup-b.md — same url: as sources/web/2026-09-17-dup-a.md (duplicate source; one of the two should be removed or merged)
+WARN  sources/web/2026-09-17-dup-b.md — unread with no Connections wired (inbox-only; run memex-connect)
+WARN  sources/web/2026-09-17-ok-arxiv.md — unread with no Connections wired (inbox-only; run memex-connect)
+WARN  sources/web/2026-09-17-ok-doi.md — unread with no Connections wired (inbox-only; run memex-connect)
+WARN  sources/web/2026-09-17-ok-query.md — unread with no Connections wired (inbox-only; run memex-connect)
+--- summary ---
+Sources (web): 8
+Sources (video): 0
+Sources (paper): 0
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 0
+Independent units: 8 of 8 sources (8 with no authors:/channel:/tool:, unchecked)
+Extracts: 0
+Atoms: 0
+Glossary terms: 0
+Concept maps: 0
+Projects: 0
+Research notes: 0

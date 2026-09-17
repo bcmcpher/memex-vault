@@ -1,0 +1,17 @@
+exit=1
+FAIL  extracts/ext-2026-09-17-grounded-paper.md — quote not found in 2026-09-17-grounded-paper.md: "The estimator is unbiased in every finite sample we tested."
+FAIL  extracts/ext-2026-09-17-grounded-paper.md — quote not found in 2026-09-17-grounded-paper.md: "The method requires no tuning parameter ... distinguishes it from prio" [contains an ellipsis — quotes must be contiguous; emit two quote: lines]
+--- summary ---
+Sources (web): 0
+Sources (video): 0
+Sources (paper): 1
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 0
+Independent units: 1 of 1 sources
+Extracts: 1
+Atoms: 0
+Glossary terms: 0
+Concept maps: 0
+Projects: 0
+Research notes: 0

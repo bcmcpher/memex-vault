@@ -1,0 +1,18 @@
+exit=1
+FAIL  sources/paper/2026-09-17-dangling-raw.md — raw:: points to missing file: .archive/2026-09-17-this-file-is-not-there.md
+FAIL  sources/paper/no-date-prefix.md — missing YYYY-MM-DD prefix
+WARN  sources/paper/no-date-prefix.md — unread with no Connections wired (inbox-only; run memex-connect)
+--- summary ---
+Sources (web): 0
+Sources (video): 0
+Sources (paper): 3
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 0
+Independent units: 2 of 3 sources
+Extracts: 0
+Atoms: 0
+Glossary terms: 0
+Concept maps: 0
+Projects: 0
+Research notes: 0
