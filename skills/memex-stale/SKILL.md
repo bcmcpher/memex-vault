@@ -68,7 +68,7 @@ skill in the vault and is user-invoked by design.
 
 **Report `medium: code` sources apart, with no recommendation.** `memex-deep-extract`
 assumes prose; pointed at a repository it would pull out claims about control flow
-and I/O plumbing. Extraction from code is not designed yet (roadmap M8), so
+and I/O plumbing. Extraction from code is not designed yet (roadmap R3, was M8), so
 recommending it sends the user into an operation that does not exist. List them
 under their own heading as having *no extraction path yet*. The count is still worth
 knowing: no atom resting only on them can reach `confidence: high`.
@@ -105,7 +105,7 @@ These are highest priority: you've already read them.
 | Title | Atoms citing it |
 |-------|-----------------|
 | ...   | ...             |
-Listed, not routed: extraction from code is undesigned (roadmap M8).
+Listed, not routed: extraction from code is undesigned (roadmap R3, was M8).
 
 ---
 Total: N findings across 3 checks.
