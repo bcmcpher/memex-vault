@@ -17,6 +17,22 @@ and is the authority on what remains.
 
 ## [Unreleased]
 
+Nothing yet. The next change is trial 2 — a full run against `v1.0.0-rc.2` on a
+fresh fork. A trial that surfaces nothing new worth fixing promotes `v1.0.0`; a
+trial that surfaces something produces `rc.3`, which is the process working rather
+than failing.
+
+## [1.0.0-rc.2] — 2026-09-17
+
+Applies every trial-1 finding that was going to be applied, adds one skill, and
+dispositions every known open question — including fifteen differences against a
+comparable system. **Tagging this does not promote anything:** what promotes
+`v1.0.0` is a trial against the tag that finds nothing new, and the honest
+expectation is that trial 2 finds something.
+
+Findings referenced as `M*` are in `_meta/roadmap-applied.md`; open work is
+`R1`–`R16` in `_meta/roadmap.md`.
+
 ### Added
 
 - **`memex-seed` — manifest-driven bulk seed.** The 21st skill, and the one new
@@ -132,19 +148,71 @@ and is the authority on what remains.
   `README.md`, `_meta/schema.md` § Node Types, and `topics/concepts/getting-started.md`
   now say explicitly that "one concept per file" bounds an *atom*, not a source.
 
+### Documentation
+
+- **The roadmap reached the template, and split in two.** This repository's copy
+  stopped at M5 while skills in it already cited roadmap M8, M11, M11a, M11c, M13,
+  M14, M16, M18, M20 and M21 — ten labels absent from the file they pointed at. The
+  2026-09-11 fork revision is now ported (M6–M22 and § The RC-2 seed corpus), every
+  finding carries a status marker, and the file is split by status:
+
+  - **`_meta/roadmap.md`** — what is **open**. Sixteen `R` rows, the release state,
+    the phase sequence, and what trial 2 is for.
+  - **`_meta/roadmap-applied.md`** — what **shipped**. 25 applied findings with
+    their full arguments and their original labels, the seven completed phases, and
+    the retired verification-debt rows.
+
+  The old convention was six prefixes — `L S E P M O F` — whose meanings appeared
+  nowhere, with `M` spanning two tiers, numbers ordered by discovery, ad-hoc
+  sub-letters, no status field, and no way to record that two findings were one.
+  Eighteen live rows became sixteen because `M6`, `M19` and comparison verdict 1
+  were one problem stated three times; `R2` merges them and keeps all three original
+  statements. Applied labels were **not** renamed: nine of the ten labels cited from
+  code are applied ones, and `lint.sh` cites them in comments that explain why the
+  code is shaped as it is. § Renumbering carries the mapping.
+
+  Three stale claims were corrected in the port rather than carried forward — most
+  importantly § The RC-2 seed corpus, which described a manifest field that does not
+  exist and four validator failures that a re-run does not reproduce.
+
+- **`_meta/skill-evaluation.md` ships empty, with instructions.** A template has no
+  usage to evaluate, and trial evidence belongs to the vault that produced it: the
+  trial-1 campaign ran on 16 sources by named authors in one field, and shipping it
+  would hand a fork a filled-in log of somebody else's vault. The findings that
+  generalized are in the roadmap, carrying the measurement they rest on. What ships
+  is the scaffold plus the rule that makes it useful — a finding needs an observed
+  trigger, or it belongs in the roadmap as an idea.
+
+- **README documents the concept-map hierarchy.** New § Concept maps nest, and only
+  concept maps: `part-of::` does double duty, the child names the parent, one parent
+  maximum, `topics/projects/` and `topics/research/` sit outside the tree, and an
+  atom names a leaf. The `_meta/` tree listing is also current — it was missing the
+  roadmap, the validators, and `_meta/candidates/`.
+
 ### Planned
 
-- **Phase 8** — OKF export layer: `_meta/okf-export.py` plus a `memex-export`
+- **R1 / Phase 8** — OKF export layer: `_meta/okf-export.py` plus a `memex-export`
   skill, emitting an Open Knowledge Format v0.2 bundle to `_okf/`. Designed in
-  `_meta/okf-alignment.md`; the only unblocked phase.
+  `_meta/okf-alignment.md`; the only unblocked phase. Ships as `v1.1.0`.
 
 ### Deferred
+
+Full statements with evidence in `_meta/roadmap.md` § Open Work.
 
 - **Phase 5** — Anki render mode on `memex-compose`. Designed, unscheduled.
 - **Phase 9** — OKF import (`memex-import`). Waiting on a real consumer; its shape
   depends on what third-party bundles turn out to look like.
-- **M3** — temporal claim fields. **M4** — typed open questions. Neither blocks
-  anything.
+- **R2** *(was M6 + M19)* — source version model and the content hash that would
+  make drift detectable. **R3** *(M8)* — conceptual extraction from code
+  repositories. **R4** *(M10)* — the Zotero retrieval tier; its validation half
+  shipped. **R5** *(M3)* — temporal claim fields. **R6** *(M4)* — typed open
+  questions. **R7** *(S2)* — a worked example.
+- **R8–R14, from the `claude-obsidian` comparison** — recorded, not scheduled, to be
+  evaluated alongside other pending plans. Transactional multi-file writes (`R8`,
+  architectural — it means a second language in the tree); lint fixtures and CI
+  (`R9`, the highest-value one); source authority (`R10`) and bounded session context
+  (`R11`), both pending evidence that this vault has the problem; log rollup (`R12`);
+  a retrieval index (`R13`); and a `$VAULT` sanity guard (`R14`, the cheapest).
 
 ## [1.0.0-rc.1] — 2026-09-02
 

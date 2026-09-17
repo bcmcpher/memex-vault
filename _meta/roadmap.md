@@ -61,9 +61,10 @@ comparison against `claude-obsidian`, with a verdict on every difference. Its se
 Roadmap verdicts are `R8`–`R13` and `R2` below; `R14` is salvaged from a difference
 that was otherwise declined.
 
-`_meta/rc-2-plan.md` held the execution order that produced `v1.0.0-rc.2`. It is a
-working document, deleted once the tag lands — this file and `CHANGELOG.md` are the
-durable record. `_meta/skill-evaluation.md` ships as an empty scaffold: trial
+`_meta/rc-2-plan.md` holds the execution order that produced `v1.0.0-rc.2`. It is a
+working document, to be deleted once the tag has landed **and** trial 2 has started
+— its § Verification is what trial 2 checks the tag against, so it outlives the tag
+by one step. This file and `CHANGELOG.md` are the durable record. `_meta/skill-evaluation.md` ships as an empty scaffold: trial
 evidence belongs to the vault that produced it, so the trial-1 campaign that
 sourced M11–M22 stays in the brain-connectivity fork. Where a finding below cites
 it, the citation is to that fork's copy and is kept because it names what the

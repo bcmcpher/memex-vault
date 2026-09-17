@@ -59,8 +59,15 @@ vault/
 │   ├── log.md                # Append-only ingest history
 │   ├── schema.md             # Relationship types, naming conventions (authoritative)
 │   ├── domain.md             # Instance vocabulary — tags, node types (edit on fork)
-│   ├── lint.sh               # Programmatic health checks
-│   └── normalize.sh          # Archive text normalizer — every .archive/ write pipes through it
+│   ├── lint.sh               # Programmatic health checks — the only executable oracle
+│   ├── normalize.sh          # Archive text normalizer — every .archive/ write pipes through it
+│   ├── validate-archive.sh   # Is this archive a real full text, or a landing page?
+│   ├── pdf-clean.sh          # pdftotext output → archivable prose
+│   ├── roadmap.md            # Work that is still open (R1–R16), and the release state
+│   ├── roadmap-applied.md    # What shipped, and why — the applied findings and phases
+│   ├── skill-evaluation.md   # Empty by design — your fork's record of observed friction
+│   ├── candidates/           # Gitignored. Pending writes, for crash recovery
+│   └── …                     # Design docs: deep-extract, okf-alignment, comparison, forge
 │
 ├── sources/                  # One file per URL or meeting — summary only
 │   ├── web/
@@ -187,6 +194,33 @@ WHERE contains(row["part-of"], this.file.link)
 
 There is one source of truth and nothing to keep in sync. Outside Obsidian, the
 same set is recovered with `grep -rlE "^part-of::.*\[\[<topic>\]\]" atoms/`.
+
+### Concept maps nest, and only concept maps
+
+`part-of::` does double duty: an atom uses it to name its topic, and a concept map
+uses it to name its **one** parent concept map. So `topics/concepts/` is a tree.
+
+```
+connectome-methods          part-of::                    (root — empty)
+├── tractography            part-of:: [[connectome-methods]]
+└── network-analysis        part-of:: [[connectome-methods]]
+```
+
+Four rules, all checked by `_meta/lint.sh` section 7:
+
+- **The child names the parent.** A parent never lists its children — that would be
+  the same two-sources-of-truth problem membership already avoids.
+- **One parent maximum**, and **no cycles**.
+- **Only `topics/concepts/` is in the tree.** `topics/projects/` and
+  `topics/research/` sit outside it; they cross-cut concepts by design and a project
+  that is "part of" a concept is a category error.
+- **An atom names a leaf**, never an interior map. A root with zero direct atoms is
+  correct, not a gap: its breadth is its children's.
+
+Why it exists: with one flat layer of concept maps, walking down from a map returns
+every atom in the vault, so the top-down entry point narrows nothing. On the first
+real vault, a domain question returned all 22 atoms whichever map it started from
+(`_meta/roadmap-applied.md`, M21).
 
 Full taxonomy with decision tree for skeptical relations: `_meta/schema.md`
 
