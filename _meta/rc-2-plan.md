@@ -471,45 +471,145 @@ eval 3 links to existing atoms, so step 5b now applies to it.
 
 ---
 
-## Stage 6 — `memex-seed`, the one new skill
+## Stage 6 — `memex-seed`, the one new skill *(done)*
 
 The corpus is already fetched, normalized and validated with a manifest, so the
 missing path is not `memex-bulk-save` as specified (URL list → fetch) and not
 `memex-save --batch` (whose whole design is fetch-and-ask-per-URL). It is:
 **manifest + archives → source notes → topic scaffold → hand off.**
 
-Input: a manifest path and an archive directory
-(`~/Projects/memex-seed-corpus/manifest.json` is the reference shape: branch,
-title, doi, year, venue, authors, surnames, route, version, archive, validation).
+Input: a manifest path. `~/Projects/memex-seed-corpus/manifest.json` is the
+reference shape. *(Corrected 2026-09-17: the real keys are branch, title, doi,
+year, venue, authors, surnames, route, zotero_key, pdf, overlap_with_trial1,
+slug, archive, archive_bytes, version, retrieval_note, validate_pass and
+validate_detail — nineteen, not the eleven listed here before, and there is no
+`validation` key. A second "archive directory" input is a footgun: `archive`
+values already resolve against the manifest's own directory, so derive it with
+`dirname`.)*
 
 1. **Validate** — required keys present, every archive exists and passes the
    Stage-3 `validate-archive.sh`, **run at seed time**; report overrides
-   explicitly rather than silently. Do not trust the manifest's `validation`
-   field: it is `null` on all 12 reference rows, although the corpus README
-   records 4 archives failing the pre-M18 validator. After Stage 3 all 12 should
-   pass with no override; if one does not, that is a finding, not an override.
-2. **Independence report (M15)** — pairwise surname intersection across the batch
-   *and* against existing `sources/`; print the independent-unit count and refuse
-   to proceed quietly when two documents are one unit. Trial 1 got 5 units from 16
-   documents because the saves were correlated by construction, and nothing warned.
-3. **Topic scaffold (D3/D2)** — propose the tree from the manifest's `branch` field
-   and `domain.md`'s tag vocabulary; topics only, parents wired with `part-of::`.
+   explicitly rather than silently. Do not trust the manifest's own verdict.
+   *(Corrected: that verdict is `validate_pass` + `validate_detail`, not
+   `validation`, and it is **`false` on 4 of 12 rows** rather than null — a
+   snapshot of the retired pre-M18 validator, whose `FAIL` tokens no longer
+   exist. The current validator passes all 12. The prediction that "after Stage 3
+   all 12 should pass with no override" was right; the field name and value were
+   not.)*
+2. **Independence report (M15)** — across the batch *and* against existing
+   `sources/`; print the independent-unit count and refuse to proceed quietly
+   when two documents are one unit. Trial 1 got 5 units from 16 documents because
+   the saves were correlated by construction, and nothing warned. *(Corrected:
+   **not** "pairwise surname intersection". `lint.sh:281-426` computes connected
+   components of a shares-a-person-key-or-cites relation, and dependence is
+   transitive — an A–B–C author chain is one unit and no pairwise test finds it.
+   The two rules agree on this corpus, where all 66 pairs are disjoint, and
+   diverge the moment they are used on anything else.)*
+3. **Topic scaffold (D3/D2)** — propose the tree from the manifest's `branch`
+   field and `domain.md`'s tag vocabulary; topics only, parents wired with
+   `part-of::`. *(Clarified: `domain.md` has no branch vocabulary and will not get
+   one. `branch` is routing input for the question round and never lands on a
+   note; the mapped topic slug does.)*
 4. **One shared question round** — default tags, stage, branch→topic map, with
    per-row override. Not N rounds.
 5. **Write** — N source notes (`medium: paper`, `raw::` → `.archive/`,
    `stage: unread`) and **one** grouped log entry. The manifest's `version` is
    free text (`arXiv:2201.11941v2 (preprint, 2023-06-26)`); carry it into the
    provenance comment above `raw::`, not into a field — M6's `version:` field does
-   not exist in RC-2.
+   not exist in RC-2. *(Added: this step also has to **copy the archives into the
+   vault and normalize them**, before the note that names them. `.archive/` and
+   `_meta/candidates/` are both gitignored and so absent from the fresh clone seed
+   runs on, and `lint.sh:694` FAILs on a `raw::` naming a missing file. The spec
+   said where `raw::` points and never said how the file got there.)*
 6. **Hand off** — "N sources seeded across K topics, M independent units; run
    `memex-deep-extract` mode A."
 
 **Candidate-gate the whole batch under one session id.** This is the longest
 write sequence in the vault and therefore the one most likely to be interrupted —
-the same argument that decides mode B's gating in Stage 5.
+the same argument that decides mode B's gating in Stage 5. *(Added: gating cannot
+cover the `_meta/log.md` append. No skill gates the log and `memex-candidates`
+never writes one, so a run that dies after the notes leaves a complete-looking
+vault with no history — and lint exits 0 on it, so nothing catches it. The skill
+logs before reporting and documents the manual recovery.)*
 
 Non-goals, stated in the skill so it does not drift: no fetching, no atom
 creation, no graph wiring, no confidence assignment.
+
+Done 2026-09-17 — `018af64`, with the schema amendment in `18153c6` and the
+registration in `9b6fd10`. Decisions taken while writing it:
+
+- **`year:` became `published:` vault-wide**, variable precision (`YYYY`,
+  `YYYY-MM`, `YYYY-MM-DD`), its own commit. `year:` could only hold the coarsest
+  of the three, so `memex-connect` reading a full arXiv submission date had
+  nowhere to put it. Padding a partial date is forbidden: `2012-01-01` for a paper
+  known only to be from 2012 is a fabricated day that reads as a measured one.
+  `year:` was required by schema but **never checked by lint**, so nothing flags a
+  note left on the old field — grepped instead. Touches `schema.md`,
+  `source-digital.md`, `okf-alignment.md` and the `memex-save` /
+  `memex-ingest` / `memex-connect` field lists.
+- **A truncated `authors` is recovered from the archive head.** Exactly **one** of
+  the twelve rows is truncated (`2012-cammoun`, `["Leila Cammoun", "et al."]`
+  against nine `surnames`), and the full byline with given names is in the file
+  seed already copies — a local read, not a fetch. This matters because `et al.`
+  yields no person key, so the row would have entered every future independence
+  check with one author instead of nine. The recovered byline includes
+  **`Kim Q. Do`** — the exact name `lint.sh:291` cites for keying on first initial
+  rather than bare surname.
+- **Source filenames take today's date; archives keep the corpus slug.**
+  `lint.sh:494` FAILs without a full `YYYY-MM-DD-` prefix and the manifest carries
+  only a year, so a publication-dated filename would need a fabricated month and
+  day. The archive keeps its own name so the file that was validated is the file
+  that is named. The two differ on purpose and `raw::` is the link.
+- **Provenance is a labelled multi-line HTML comment**, single colons, `version`
+  last. Single colons because `lint.sh:909` scans body lines after the second
+  `---` against `^[a-z][a-z-]*::`, so a `doi::` line would be an unknown-relation
+  warning the skill created. `version` last because it is the one free-text value
+  and may contain a colon, comma or parentheses, so it needs the position with no
+  delimiter after it.
+- **Manifest reading is a three-tier probe** — `jq`, else `python3`, else read it
+  with the Read tool — all emitting one TSV, so one loop is authored. `jq` appears
+  nowhere in this repo and no skill uses `python3`; the vault's zero-dependency
+  guarantee stays literally true and tier 3 is stated to be legitimate rather than
+  degraded.
+- Registered in the four README surfaces, `schema.md` § Workflow Stages,
+  `memex-candidates` (producer list **and** its frontmatter description, which
+  enumerates producers separately and drives triggering), and `memex-tend`'s
+  never-invokes list. Skill count 20 → 21 in `README.md` and the CHANGELOG's
+  Unreleased entry. **The two "20 skills" lines inside the released `[1.0.0-rc.1]`
+  section were left at 20** — they record what that tag shipped, and it did ship
+  20.
+
+§ Verification, run against a `/tmp` clone plus the corpus, fork never touched:
+
+- Baseline clone — lint exit 0, `Concept maps: 1`, `Independent units: 0 of 0`,
+  and neither `.archive/` nor `_meta/candidates/` present. That is the state the
+  skill has to handle.
+- Pre-flight — **12 PASS, 0 REJECT, 0 exit-2** against the manifest's claimed four
+  failures. The instruction to ignore `validate_pass` is load-bearing, not
+  cautious.
+- Independence — **12 units of 12, 0 unchecked, no shared-key pair.**
+- Seeded clone — lint **exit 0**, `Sources (paper): 12`,
+  `Independent units: 12 of 12 sources`, `Concept maps: 4`, `Atoms: 0`, and **12
+  warnings, every one section 6a inbox-only**. No other warning class appeared, so
+  no unknown tag, no leaked `key::`, no naming failure, no dangling `raw::`.
+- Structural — 12 notes, 12 archives, exactly one `raw::` per note and every
+  target resolving, no `status:`, no `year:` residue, `reviewed:` on all three new
+  topics, `part-of::` on both leaves and empty on the root, one
+  `skill:: memex-seed` log line, `_meta/candidates/` empty, all 12 copied archives
+  still passing the validator, and `normalize.sh --in-place` a diff-clean no-op.
+- **Interruption drill** — killed after 6 of 12 notes: 6 notes, 12 archives
+  (orphan archives are harmless, as the skill says), 6 candidates under one
+  session id, **0 log entries, and lint exits 0 on that state** — which is
+  precisely why the gap needed documenting rather than describing. Applying the
+  candidates through `memex-candidates`' first-two-`---` split recovered all six
+  with their own frontmatter intact and reached the same 12/12/4 shape.
+- **Re-run drill** — matching the manifest by `doi` finds all **12 already
+  present**; matching by slug finds **0 of 12** and would have re-seeded the whole
+  corpus, because a filename carries the date of the run that wrote it. This is
+  why the re-run guard specifies `doi`.
+
+Not carried into `§ Not in RC-2` because nothing new was deferred; the log-append
+gap is documented inside the skill, where a resumed session will actually read it.
 
 ---
 
@@ -674,6 +774,15 @@ fork unless noted):
 - Stage 5 — the `memex-connect` proof needs both halves: discovery returns the
   right set on the fork **and** returns "nothing to process" for the right reason
   on a fresh clone of this repo.
+- Stage 6 — on a `/tmp` clone plus the corpus, never the fork: the pre-flight
+  validator loop reports **12 PASS, 0 REJECT** against the manifest's claimed four
+  failures; the seed reports **12 independent units of 12, 0 unchecked**; and lint
+  on the seeded clone exits 0 with `Independent units: 12 of 12 sources` and
+  **12 warnings, all section 6a inbox-only** — any other warning class is a
+  finding. Two drills carry their own numbers: killed after 6 notes the vault has
+  6 notes, 6 candidates under one session id and **0 log entries while lint still
+  exits 0**; and a re-run matched by `doi` finds **12 already present** where a
+  slug match finds **0 of 12**.
 - Stage 7 — every difference in `_meta/comparison-claude-obsidian.md` has exactly
   one verdict with its evidence. Each Adopt names its commit and passes the
   checks for the stages it touched, and each Roadmap has a § Not in RC-2 row.
