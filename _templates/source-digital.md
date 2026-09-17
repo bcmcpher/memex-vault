@@ -10,7 +10,7 @@ stage: unread
 ---
 
 <!-- Type-specific fields added by skill based on medium:
-     paper  → authors: [], year:, venue:
+     paper  → authors: [], published:, venue:
      video  → channel:
      docs   → tool:, version:, section:
      code   → repo:, language:, version:

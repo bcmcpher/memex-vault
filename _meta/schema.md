@@ -14,7 +14,7 @@ is what a fork changes.
 |------|--------|---------|-------------|-----------------------|
 | Source (web) | `sources/web/` | `Source` | One file per URL | `title`, `url`, `medium`, `saved`, `stage` |
 | Source (video) | `sources/video/` | `Source` | One file per URL | `title`, `url`, `medium`, `channel`, `saved`, `stage` |
-| Source (paper) | `sources/paper/` | `Source` | One file per URL | `title`, `url`, `medium`, `authors`, `year`, `saved`, `stage` |
+| Source (paper) | `sources/paper/` | `Source` | One file per URL | `title`, `url`, `medium`, `authors`, `published`, `saved`, `stage` |
 | Source (docs) | `sources/docs/` | `Source` | One file per URL | `title`, `url`, `medium`, `tool`, `saved`, `stage` |
 | Source (meeting) | `sources/meeting/` | `Source` | One file per meeting | `title`, `medium`, `date`, `stage` |
 | Extract | `extracts/` | `Extract` | One file per deep-extracted source | `title`, `extracted`, `claims` |
@@ -52,6 +52,29 @@ said, claim by claim, each claim carrying a verbatim quote checkable against the
 archived text. Atoms remain the curated layer: one hand-written concept per file.
 Nothing is ever promoted from `extracts/` to `atoms/` automatically — see
 § Extract Claims and `_meta/deep-extract-design.md`.
+
+### Publication Dates
+
+`published:` is when the *source* was published; `saved:` is when this vault
+acquired it. They answer different questions and neither substitutes for the
+other, so a paper note carries both.
+
+**`published:` takes the most precise value that is reliably known, and no more:**
+
+| Written | Means |
+|---------|-------|
+| `2012` | The year is known, the month is not |
+| `2012-09` | Year and month known |
+| `2012-09-14` | The full date is known |
+
+Never pad a partial date to make it look complete. `2012-01-01` for a paper known
+only to be from 2012 is a fabricated day that reads as a measured one, and nothing
+downstream can tell the difference. A shorter value is the honest one.
+
+This field replaced `year:`, which could only ever hold the coarsest of the three
+and gave a skill filling it from a real publication date nowhere to put the rest.
+Unlike `saved:` and `created:`, `published:` is therefore **not** a fixed-width
+date — do not sort or subtract it without normalising first.
 
 ---
 

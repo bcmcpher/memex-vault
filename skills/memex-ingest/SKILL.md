@@ -88,7 +88,7 @@ records origin once and is never updated — `updated:` is what moves when a not
 is revised. Both are defined in `_meta/schema.md`.
 
 Type-specific fields to add:
-- **Paper**: `authors: []`, `year:`, optionally `venue:`
+- **Paper**: `authors: []`, `published:`, optionally `venue:`
 - **Video**: `channel:`
 - **Docs**: `tool:`, optionally `version:`, `section:`
 

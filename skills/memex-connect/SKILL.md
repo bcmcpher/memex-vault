@@ -68,11 +68,11 @@ Update frontmatter `title`. Add `author:` field if found. Draft `## Summary` for
 Fetch `https://arxiv.org/abs/<id>` or the DOI/journal page. Extract:
 - `title` — from `<h1>`
 - `authors` — from author list (write as YAML array)
-- `year` — from submission date
+- `published` — from the submission date, full `YYYY-MM-DD` when arXiv gives one; a journal page stating only a month is `YYYY-MM`. Never pad to a day (`_meta/schema.md` § Publication Dates)
 - `venue` — from journal name or conference if present
 - `Summary` — from the abstract
 
-Update frontmatter `title`, add `authors: []`, `year:`, `venue:` fields. Write `## Summary` with the abstract.
+Update frontmatter `title`, add `authors: []`, `published:`, `venue:` fields. Write `## Summary` with the abstract.
 
 #### YouTube / video
 Fetch the YouTube page. Extract:

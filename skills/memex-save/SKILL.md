@@ -65,7 +65,7 @@ Detect medium from the URL pattern above.
 Fetch the URL immediately. Extract only what's needed for a useful stub:
 
 - **All sources**: real title from `<title>` or `<h1>`; one-sentence summary draft from lead paragraph, abstract first sentence, or page description
-- **Paper**: `authors` array and `year` from abstract page
+- **Paper**: `authors` array and `published` from the abstract page — the year alone is fine here if that is all the page states plainly; `memex-connect` refines it
 - **Video**: `channel` name. For YouTube, read it from the oEmbed endpoint — `https://www.youtube.com/oembed?url=<url>&format=json` returns JSON whose `author_name` is the channel and `title` the video title, with no API key. A plain fetch of the watch page does not reliably expose the channel; on the first real vault it left `channel:` empty. For other hosts, take it from the page, and leave `channel:` empty rather than guess
 - **Docs**: `tool` name from subdomain or page title
 
@@ -128,7 +128,7 @@ generated:
 ---
 ```
 
-Add type-specific fields when extractable from the fetch: `authors: []` and `year:` for papers; `channel:` for video; `tool:` for docs; `repo:`, `language:`, and `license:` for code.
+Add type-specific fields when extractable from the fetch: `authors: []` and `published:` for papers; `channel:` for video; `tool:` for docs; `repo:`, `language:`, and `license:` for code.
 
 **Body:**
 ```markdown

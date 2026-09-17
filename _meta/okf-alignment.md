@@ -67,9 +67,9 @@ So the work splits in two:
 | `okf_version` (§12) | — | Emitted by the exporter on the bundle-root `index.md` only |
 
 Extension keys kept as-is, permitted by §4.1: `confidence:`, `aliases:`,
-`medium:`, `authors:`, `year:`, `venue:`, `channel:`, `tool:`, `domain:`,
+`medium:`, `authors:`, `venue:`, `channel:`, `tool:`, `domain:`,
 `term:`, `question:`, `attendees:`, `context:`, `created:`, `updated:`,
-`saved:`, `reviewed:`.
+`saved:`, `reviewed:`, `published:`.
 
 ## Deliberate divergences
 
