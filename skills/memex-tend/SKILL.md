@@ -48,6 +48,8 @@ they have nothing to do.
 - **Never invokes `memex-refactor`.** Split and merge are irreversible judgement
   calls about what a concept *is*. Surface the candidates; let the user run it.
 - **Never invokes `memex-init`.** It runs once, before there is anything to tend.
+- **Never invokes `memex-seed`.** It runs once, at bootstrap, from a manifest
+  path outside the vault that tend cannot see.
 - **Never chains without confirmation.** Present the plan, then run one skill at a
   time, reporting after each.
 
@@ -223,8 +225,9 @@ pass from re-deriving the same conclusion an hour later.
 
 ## Common Mistakes to Avoid
 
-- Don't run `memex-deep-extract`, `memex-compose`, `memex-refactor`, or `memex-init`.
-  The first three are the user's call; the fourth already happened.
+- Don't run `memex-deep-extract`, `memex-compose`, `memex-refactor`, `memex-init`,
+  or `memex-seed`. The first three are the user's call; the last two already
+  happened, and seed needs a manifest path tend was never given.
 - Don't propose a skill whose lint sections are clean, to look thorough. An
   eight-step plan on a healthy vault teaches the user to ignore this skill.
 - Don't run the plan without confirming it first. The whole point is deciding

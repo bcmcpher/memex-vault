@@ -682,6 +682,7 @@ Skills that write vault notes, and what they produce:
 | `memex-ingest` | Source note + atoms + connections | Full | Yes |
 | `memex-connect` | Updates existing unread notes | Full | Yes |
 | `memex-meeting` | Meeting source note + atom/glossary stubs | Full | Yes |
+| `memex-seed` | N paper source notes + their `.archive/` copies + a concept-map scaffold, from a manifest | None | Yes (one grouped entry for the batch) |
 | `memex-topic-init` | New topic map + atom back-wires | Full | Yes |
 | `memex-topic-emerge` | Proposed topic maps from atom clusters + atom back-wires | Full | Yes |
 | `memex-deep-extract` | Mode A: one file in `extracts/`, nothing else. Mode B: atom edits from reviewed claims, then the source note's `stage:` and any still-empty `## Summary` / `## Key Points` | Mode B only | Yes |

@@ -1,6 +1,6 @@
 ---
 name: memex-candidates
-description: Review and apply pending candidate files from incomplete skill sessions. Use when a previous save, ingest, connect, meeting, glossary, topic-emerge, or deep-extract session ended before all proposed writes were confirmed, and you want to recover those proposals. Triggers on: "show pending candidates", "what's waiting in candidates", "review pending writes", "apply candidates", "what did I not finish", "recover my session". Also useful as a pre-compose audit: "any unresolved candidates before I compose this topic?"
+description: Review and apply pending candidate files from incomplete skill sessions. Use when a previous save, ingest, connect, meeting, seed, glossary, topic-emerge, or deep-extract session ended before all proposed writes were confirmed, and you want to recover those proposals. Triggers on: "show pending candidates", "what's waiting in candidates", "review pending writes", "apply candidates", "what did I not finish", "recover my session". Also useful as a pre-compose audit: "any unresolved candidates before I compose this topic?"
 ---
 
 # Memex Candidates
@@ -10,7 +10,7 @@ description: Review and apply pending candidate files from incomplete skill sess
 fork of this vault works unedited.
 **Candidates dir:** `_meta/candidates/`
 
-This skill resurfaces proposed vault writes from sessions that ended before the user confirmed them. Candidates are written by `memex-save`, `memex-ingest`, `memex-connect`, `memex-meeting`, `memex-glossary`, `memex-topic-emerge`, and `memex-deep-extract` (both modes) before each file write. Approved candidates are applied and deleted; rejected ones are discarded.
+This skill resurfaces proposed vault writes from sessions that ended before the user confirmed them. Candidates are written by `memex-save`, `memex-ingest`, `memex-connect`, `memex-meeting`, `memex-seed`, `memex-glossary`, `memex-topic-emerge`, and `memex-deep-extract` (both modes) before each file write. Approved candidates are applied and deleted; rejected ones are discarded.
 
 ---
 

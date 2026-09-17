@@ -346,6 +346,7 @@ CAPTURE ────────────────────────
                  optional collaborative summary session
   ingest         URL → fully processed note + atoms
   meeting        meeting notes → structured source note
+  seed           manifest + archives → N source notes + topic scaffold
 
 STRUCTURE ───────────────────────────────────────────────
   connect        inbox notes → enrich metadata + wire connections
@@ -393,6 +394,7 @@ replace `ingest` (which summarizes) or `connect` (which wires whole sources).
 | A URL to save (read or unread) | "save this: [url]" | save |
 | A URL ready to process with atoms | "ingest this: [url]" | ingest |
 | Meeting notes | "log this meeting" | meeting |
+| A manifest of already-fetched papers | "seed my vault from this manifest" | seed |
 
 **Building and maintaining the graph**
 
@@ -445,6 +447,7 @@ The cadence it encodes, if you would rather drive by hand:
 | `memex-save` | Capture | "quick save", "just bookmark", "save this", "I've read this", "mark as read" |
 | `memex-ingest` | Capture | "ingest this", "add to wiki with atoms", "full ingest" |
 | `memex-meeting` | Capture | "log this meeting", "save meeting notes", "record this discussion" |
+| `memex-seed` | Capture | "seed my vault", "seed from manifest", "bulk load this corpus", "I have a manifest of papers" |
 | `memex-connect` | Structure | "process my inbox", "wire up my notes" |
 | `memex-deep-extract` | Structure | "deep extract [source]", "what did [paper] actually say", "promote the claims in [extract]" |
 | `memex-topic-init` | Structure | "create topic map", "start a new topic", "initialize [domain]" |
@@ -490,7 +493,7 @@ That file is **`_meta/domain.md`**. It holds everything instance-specific:
 means editing a script.
 
 **What you keep:** `_meta/schema.md` (relation types, stage values, naming
-patterns), all 20 skills, all 8 templates, `_meta/lint.sh`, and
+patterns), all 21 skills, all 8 templates, `_meta/lint.sh`, and
 `_meta/normalize.sh`. These are the structure every memex-vault shares.
 
 **Paths need no editing.** Every skill resolves the vault root at run time —

@@ -17,6 +17,61 @@ and is the authority on what remains.
 
 ## [Unreleased]
 
+### Added
+
+- **`memex-seed` — manifest-driven bulk seed.** The 21st skill, and the one new
+  capability in RC-2 (roadmap Stage 6). Input is a manifest path plus a directory
+  of already-fetched, already-normalized archives; output is N paper source notes
+  with their `.archive/` copies, a concept-map scaffold, and **one** grouped log
+  entry. Six steps: validate, report independence, propose the topic tree, one
+  shared question round, write, log and hand off to `memex-deep-extract` mode A.
+  It fetches nothing, creates no atoms, wires no relations and assigns no
+  `confidence:` — stated in the skill so it cannot drift.
+
+  The gap it fills is narrow on purpose. When a corpus is already retrieved, the
+  expensive and failure-prone step has happened, and the per-URL path just asks the
+  same five questions N times. So this is not a batched `memex-save`.
+
+  Four decisions worth recording, because each is a trap:
+  - A manifest's own validation verdict is **ignored**. It is a snapshot of
+    whichever validator built it; on the RC-2 reference corpus it records four
+    failures the current `_meta/validate-archive.sh` passes. Seed re-validates at
+    seed time, one file per call, and reports exit 2 apart from exit 1 — a usage
+    error is not a verdict about a document.
+  - Independence (M15) is **connected components** of a
+    shares-a-person-key-or-cites relation, not pairwise author overlap. Dependence
+    is transitive, so an A–B–C author chain is one unit and no pairwise test finds
+    it. Seed refuses to proceed quietly past any component of size ≥ 2.
+  - Archives are copied in and normalized **before** their note is written, since
+    a `raw::` naming a missing file is a lint FAIL. Seed is also the one skill that
+    creates `.archive/` and `_meta/candidates/`, both gitignored and so absent from
+    the fresh clone it runs on.
+  - Candidate gating cannot cover the `_meta/log.md` append, because no skill gates
+    the log and `memex-candidates` never writes one. Seed logs before reporting and
+    documents the manual recovery.
+
+  Registered in the README skill tables and lifecycle block, `_meta/schema.md`
+  § Workflow Stages, and `memex-candidates`' producer list. The skill count moves
+  **20 → 21**; the "20 skills" statements inside released sections below are
+  historical records of what `v1.0.0-rc.1` shipped and are left alone.
+
+### Changed
+
+- **`year:` on source notes is now `published:`, with variable precision.**
+  `year:` could only ever hold the coarsest publication date, so a skill that
+  fetched a real one — arXiv gives a full submission date — had nowhere to put
+  anything but the year. `published:` takes the most precise value reliably known:
+  `YYYY`, `YYYY-MM`, or `YYYY-MM-DD`. Padding a partial date is forbidden;
+  `2012-01-01` for a paper known only to be from 2012 is a fabricated day that
+  reads as a measured one. `published:` and `saved:` answer different questions and
+  a paper note carries both. New `_meta/schema.md` § Publication Dates; updated in
+  `_templates/source-digital.md`, `_meta/okf-alignment.md`, and the
+  `memex-save` / `memex-ingest` / `memex-connect` field lists.
+
+  **Forks with existing paper notes:** rename the field. `year:` was required by
+  schema but never checked by `_meta/lint.sh`, so nothing flags a note left
+  behind.
+
 ### Fixed
 
 - **Lint counted relation lines, not link targets.** `_meta/lint.sh` sections 6c,
