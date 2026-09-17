@@ -17,6 +17,29 @@ and is the authority on what remains.
 
 ## [Unreleased]
 
+*Nothing. Trial 2 runs against `v1.0.0-rc.2`, and whatever it surfaces opens
+`rc.3`.*
+
+## [1.0.0-rc.2] — 2026-09-17
+
+Applies every trial-1 finding that was going to be applied, adds one skill, and
+dispositions every known open question — including fifteen differences against a
+comparable system. **Tagging this does not promote anything:** what promotes
+`v1.0.0` is a trial against the tag that finds nothing new, and the honest
+expectation is that trial 2 finds something.
+
+Findings referenced as `M*` are in `_meta/roadmap-applied.md`; open work is
+`R1`–`R16` in `_meta/roadmap.md`.
+
+**The tag was moved once, before it was ever published.** It first pointed at the
+commit that shipped the release docs; two roadmap items then landed, and the
+decision was that `rc.2` means the tree trial 2 is run against rather than the tree
+as of the first tagging. Both are instrument changes, not behaviour changes — see
+§ Applied after the first tagging below. The tag had not been pushed, so nothing
+downstream saw the earlier target.
+
+### Applied after the first tagging, before trial 2
+
 **Two roadmap items applied before trial 2**, at the user's request. Both were
 chosen on one test: does it change *what* the trial measures, or *how reliably* it
 is measured? Neither changes vault semantics, so the trial still measures `rc.2`'s
@@ -24,7 +47,7 @@ behaviour — with a better instrument and a safer working directory. Everything
 open was left alone, because applying a behaviour change and then trialling it is
 what `rc.1` did.
 
-### Added
+#### Added
 
 - **`R9` — regression fixtures and CI for `lint.sh`.** `_meta/test-lint.sh` plus
   eight fixtures in `_meta/lint-fixtures/`, and `.github/workflows/test.yml`.
@@ -53,7 +76,7 @@ what `rc.1` did.
   gitignored, so section 12 SKIPs there and quote grounding is never verified in
   CI. It is a local guarantee by construction, and the workflow says so.
 
-### Changed
+#### Changed
 
 - **`R14` — skills refuse to write when `$VAULT` is not a memex vault.** The
   invariant vault-root block in all 21 skills now carries
@@ -64,27 +87,17 @@ what `rc.1` did.
 
 - **Open roadmap rows now carry a release target**, not just a status. *Deferred*
   said whether something was done, never whether it blocks `1.0` — different
-  questions, and the second is the one a release decision turns on. Of the fourteen
-  rows not yet done: **eleven are `1.x`** (new capability; the vault is coherent
-  without them), **one blocks `1.0` in part** (`R2`, the labelling half — the README
-  says quote-grounded and M19 showed the guarantee is narrower than it reads), **one
-  is undecided and with the user** (`R8`, a demonstrated defect whose only known fix
-  is a runtime), and `R4` is a partial whose remaining half is `1.x`.
+  questions, and the second is the one a release decision turns on. Of the twelve
+  rows not yet done: **ten are `1.x`** (new capability; the vault is coherent
+  without them, `R4` among them as a partial whose remaining half is `1.x`), **one
+  blocks `1.0` in part** (`R2`, the labelling half — the README says quote-grounded
+  and M19 showed the guarantee is narrower than it reads), and **one is undecided
+  and with the user** (`R8`, a demonstrated defect whose only known fix is a
+  runtime).
 
 *Next: trial 2 — a full run against this tree on a fresh fork. A trial that
 surfaces nothing new worth fixing promotes `v1.0.0`; a trial that surfaces
 something produces the next RC, which is the process working rather than failing.*
-
-## [1.0.0-rc.2] — 2026-09-17
-
-Applies every trial-1 finding that was going to be applied, adds one skill, and
-dispositions every known open question — including fifteen differences against a
-comparable system. **Tagging this does not promote anything:** what promotes
-`v1.0.0` is a trial against the tag that finds nothing new, and the honest
-expectation is that trial 2 finds something.
-
-Findings referenced as `M*` are in `_meta/roadmap-applied.md`; open work is
-`R1`–`R16` in `_meta/roadmap.md`.
 
 ### Added
 

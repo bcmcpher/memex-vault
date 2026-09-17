@@ -50,7 +50,7 @@ A marker is not a verdict on the finding's quality. `Closed` and `Accepted` both
 mean the row stays as a record so a later trial does not re-derive it.
 
 **"Deferred" does not say deferred to *when*, so open rows also carry a release
-target.** *(Added 2026-09-18, at the user's request — the markers answered "is it
+target.** *(Added 2026-09-17, at the user's request — the markers answered "is it
 done?" and not "does it block 1.0?", which are different questions and the second
 is the one a release decision turns on.)*
 
@@ -114,6 +114,14 @@ recalibrated thresholds (M11, M12, M13, M14); `lint.sh` correctness and cost (M1
 M16); the topic hierarchy and seed scaffold (M21); eleven per-skill verdict fixes
 (M7 closed, M8 bounded); `memex-seed`; and three lint checks adopted from the
 comparison. Full detail is in `CHANGELOG.md`.
+
+**The `rc.2` tag was moved once, before publication,** from the release-docs
+commit to the head that also carries `R9` and `R14`. `rc.2` is defined as the tree
+trial 2 runs against, and both rows are instrument changes — a test harness and a
+pre-write guard — rather than behaviour changes, so the trial still measures
+`rc.2`'s behaviour. The tag had not been pushed. Under the rule that any change
+after a tag produces the next RC, these two would otherwise have been `rc.3`
+before `rc.2` had ever been trialled.
 
 **`rc.2` is not closer to `v1.0.0` than `rc.1` was in the way a version number
 suggests.** It is closer in one specific way: the criterion below is now the right
@@ -267,11 +275,11 @@ evidence that the problem is real — for the comparison rows, "claude-obsidian 
 it" was not accepted as evidence anywhere in that document.
 
 **The tally, because it is the question this file gets opened for.** Of the
-fourteen rows that are not yet done: **eleven are `1.x`** — new capability, and
-the vault is coherent without them. **One blocks 1.0 in part** (`R2`, the
+twelve rows that are not yet done: **ten are `1.x`** — new capability, and the
+vault is coherent without them (`R1`, `R3`–`R7`, `R10`–`R13`, one of which, `R4`,
+is a partial whose remaining half is `1.x`). **One blocks 1.0 in part** (`R2`, the
 labelling half: the README says quote-grounded and M19 showed the guarantee is
-narrower than it reads). **One is undecided and with the user** (`R8`). And `R4`
-is a partial whose remaining half is `1.x`.
+narrower than it reads). **One is undecided and with the user** (`R8`).
 
 So the shape of what is left is *scope growth, not unfinished work* — with one
 labelling defect and one architectural question as the exceptions. The two rows
@@ -535,7 +543,7 @@ plus awk/sed/grep by decision — `jq` appears nowhere in it and no skill uses
 `python3`. Building this means accepting a second language in the tree, which is a
 call for the user and not a refactor.
 
-**R9. `lint.sh` has no test suite and no CI.** *Applied — `rc.3`, 2026-09-18.
+**R9. `lint.sh` has no test suite and no CI.** *Applied — `rc.2`, 2026-09-17.
 `_meta/test-lint.sh` plus eight fixtures in `_meta/lint-fixtures/`, and
 `.github/workflows/test.yml`. Verified by reverting two real fixes and confirming
 the suite fails: deleting section 7h fails `dangling-targets`, and removing the
@@ -601,7 +609,7 @@ go stale, and this vault's working principle is that the notes are the only stat
 so the cost is real and the need is unmeasured.
 
 **R14. Nothing checks that `$VAULT` is a memex vault before writing to it.**
-*Applied — `rc.3`, 2026-09-18. `[ -f "$VAULT/_meta/schema.md" ]` in the invariant
+*Applied — `rc.2`, 2026-09-17. `[ -f "$VAULT/_meta/schema.md" ]` in the invariant
 vault-root block of all 21 skills, with the instruction to stop and tell the user
 rather than create the missing paths. Applied before trial 2 at the user's request:
 a trial writes a lot, and this is what stops it writing into the wrong repository.* Their `paths.py` raises `VaultSelectionError` and **writes nothing** when
@@ -810,17 +818,28 @@ its shape is § The RC-2 seed corpus plus `memex-seed`. A trial that surfaces
 nothing new promotes `v1.0.0`; a trial that surfaces something produces `rc.3`,
 which is the process working.
 
-*The open set trial 2 is judged against* is this file's `Open` and `Deferred`
-rows — `O3`, `M3`, `M4`, `M6`, `M8`, `S2`, `F1`–`F8` — plus the `Partially
-applied` remainders of `M10` and `M19`. A finding trial 2 reports is new only if
-it is not one of those. That list is the whole reason this revision added status
-markers.
+*The open set trial 2 is judged against* is § Open Work — `R1`–`R8` and
+`R10`–`R13`, including the `Partially applied` remainder of `R4` and the half of
+`R2` that carries `M19` — plus the two decided rows kept as records, `R15` and
+`R16`. `R9` and `R14` are in the tag and so are not in the set. A finding trial 2
+reports is new only if it is not one of those. That list is the whole reason this
+revision added status markers.
+
+**Trial 2 runs on a fresh fork at its own path, not on a branch of the trial-1
+fork.** Two mechanical reasons, either sufficient. `.archive/` and
+`_meta/candidates/` are gitignored, so they do not switch with a branch: a
+"fresh" branch inside the trial-1 fork inherits its archives, and quote grounding
+(lint § 12) would then ground trial-2 notes against trial-1 files. And the trial-1
+fork has no shared history with this template — its root commit is a squashed
+copy of `v1.0.0-rc.1` — so a trial-2 branch could not be cut from `rc.2` there
+without grafting unrelated histories. The trial-1 fork therefore stays exactly as
+it is, which is also what makes it usable as the comparison baseline.
 
 **Then Phase 8, the next *build*.** The post-1.0 WikiSkill fork is written up in
 `_meta/forge-design.md`, gated on `v1.0.0` final; it needs no phase here because
 it happens in another repository.
 
-**Two questions are with the user, not with this file** — F2 (a transaction
+**Two questions are with the user, not with this file** — `R8` (a transaction
 runtime, which means accepting a second language in the tree) and multi-host
 support on the `AGENTS.md` pattern, which is not a gap but is the widest-reaching
 difference the comparison found. Neither is scheduled. Both are recorded so a
@@ -834,10 +853,10 @@ attribution, the exporter must not duplicate `_meta/normalize.sh`, and it create
 It is also the first phase that is real code rather than a skill document.
 
 Everything else outstanding is deferred: Phase 5 (Anki), Phase 9 (OKF import),
-M3 (temporal claim fields), M4 (typed open questions), M6 (source versions), M8
-(code extraction), S2 (a worked example), and F1–F8 from the `claude-obsidian`
-comparison. None blocks anything. F3 (lint fixtures and CI) and F8 (the `$VAULT`
-guard) are the two most likely to be worth pulling forward.
+and `R2`–`R8` and `R10`–`R13` in § Open Work. None blocks anything except the
+labelling half of `R2`. The two rows that were worth pulling forward, `R9` (lint
+fixtures and CI) and `R14` (the `$VAULT` guard), were pulled forward and are in
+`rc.2`.
 
 
 ### The RC-2 seed corpus

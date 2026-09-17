@@ -963,3 +963,52 @@ v1.0.0 caveat.
 **Port discipline:** the Stage 1 diff is reviewed path by path against the
 exclusion list above. A fork's `domain.md` reaching the template is the one
 mistake that would be invisible until someone else forked it.
+
+---
+
+## Trial 2 setup *(decided 2026-09-17)*
+
+**Target: the `v1.0.0-rc.2` tag, which was moved to the head carrying `R9` and
+`R14`.** The rule above — any change after the tag is an `rc.3` entry — was written
+for changes a trial could measure. These two are a test harness and a pre-write
+guard: they change how reliably the trial is measured, not what it measures. The
+tag had not been pushed, so moving it cost nothing downstream, and `rc.2` now
+means *the tree trial 2 runs against*. `CHANGELOG.md` and § Release Status both
+record the move rather than leaving the tag's target unexplained.
+
+**Fork: fresh, at its own path.** `~/Projects/memex-trial2`, cloned from this
+repository at the tag. Not a branch of the trial-1 fork, for two mechanical
+reasons, either sufficient on its own:
+
+1. `.archive/` and `_meta/candidates/` are gitignored, so they do not switch with
+   a branch. A "fresh" branch inside `~/Projects/memex` would inherit trial 1's
+   nine archives, and lint § 12 would ground trial-2 quotes against trial-1 files
+   — the one check whose whole value is that it cannot be satisfied by accident.
+2. The trial-1 fork has **no shared history** with this template. Its root commit
+   is `5e1dd42 chore: fork memex-vault template v1.0.0-rc.1`, a squashed copy, so
+   there is no `rc.2` to branch from there without grafting unrelated histories.
+
+The trial-1 fork therefore stays exactly as it is — 22 atoms, 11 papers, 8
+extracts, 365 grounded quotes — which is also what makes it the baseline trial 2
+is compared against. It is read-only for the duration.
+
+Bootstrap:
+
+```bash
+git clone -b rc-2 --single-branch \
+    /home/bcmcpher/Projects/claude/memex-vault ~/Projects/memex-trial2
+cd ~/Projects/memex-trial2
+git checkout v1.0.0-rc.2          # detached; memex-init makes the fork's own root
+bash _meta/lint.sh                # must be exit 0 on zero notes
+bash _meta/test-lint.sh           # 8/8, before the instrument is trusted
+```
+
+Then `memex-init` for the domain, `memex-seed` against
+`~/Projects/memex-seed-corpus/manifest.json`, and the reading pass.
+
+**One carried item is trial-1-fork-only:** the `memex-trust-audit` re-run on
+`bundle-segmentation`, which is still `confidence: low` while now medium-eligible.
+That note does not exist in a fresh fork, so either re-run it in `~/Projects/memex`
+before freezing that fork, or accept that trial 2 re-tests the recalibrated
+threshold against new content instead. The second is the better test; the first is
+the cheaper confirmation that M13's recalibration actually moved a real note.
