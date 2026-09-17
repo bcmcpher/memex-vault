@@ -319,7 +319,8 @@ bash "$VAULT/_meta/normalize.sh" --in-place "$VAULT/.archive/YYYY-MM-DD-slug.md"
 ---
 
 ## Common Mistakes to Avoid
-- Don't ingest a source that's already in `sources/` under a different filename — check before creating
+- Don't ingest a source that's already in `sources/` under a different filename — `grep -rl "<url>" "$VAULT/sources/"` first. One source note per URL (`_meta/schema.md` § Source URLs); `lint.sh` section 2b catches what this misses
+- Don't write a URL carrying a credential into `url:` — strip the token first; `sources/` is tracked, so section 2c warns after the fact
 - Don't create an atom for a term that already exists in `glossary/` or vice versa
 - Don't leave `related::` as the only connection on every note — push for `supports::` or `introduces::` when the relationship is clear
 - Meetings don't have `url` fields; don't add one

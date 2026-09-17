@@ -585,6 +585,66 @@ check_field() {
     fi
 }
 
+# 2b/2c support. `url:` is the only field that identifies a source independently
+# of who wrote it, so it answers two questions nothing else in this file could.
+#
+# norm_url is deliberately shallow: lowercase the scheme and host, drop one
+# trailing slash, drop a `#fragment`. claude-obsidian canonicalizes much further
+# — IPv6, IDN, dot-segments, default ports, percent-encoding
+# (`skills/wiki/references/provenance.md`) — and that is the right depth for a
+# tested Python module and the wrong depth for bash. A shallow rule that fires on
+# the real case (the same URL pasted twice) beats a deep one nobody can audit.
+norm_url() {
+    local u="$1"
+    u="${u%%#*}"
+    u="${u%/}"
+    if [[ $u =~ ^([A-Za-z][A-Za-z0-9+.-]*)://([^/?]*)(.*)$ ]]; then
+        u="${BASH_REMATCH[1],,}://${BASH_REMATCH[2],,}${BASH_REMATCH[3]}"
+    fi
+    REPLY="$u"
+}
+
+# Sensitive query-key vocabulary, ported from claude-obsidian's
+# `claude_obsidian/url_safety.py:11-50` rather than invented. A key is sensitive
+# when any of its alphanumeric parts is a bare secret word, or when the parts
+# concatenated end in one of the vendor forms — which is what catches
+# `X-Amz-Signature`, `X-Amz-Credential` and `X-Amz-Security-Token`.
+CRED_PARTS="apikey auth authorization credential key password secret sig signature token"
+CRED_SUFFIXES="accesskey accesskeyid accesstoken apikey authtoken credential idtoken securitytoken signature"
+
+# Sets REPLY to a human description of the first credential found, or empty.
+url_credential() {
+    local u="$1" query pair k part collapsed suf
+    REPLY=""
+    if [[ $u =~ ^[A-Za-z][A-Za-z0-9+.-]*://[^/?#]*@ ]]; then
+        REPLY="userinfo credentials before the host"
+        return
+    fi
+    query="${u#*\?}"
+    [ "$query" = "$u" ] && return
+    query="${query%%#*}"
+    # `|| [ -n "$pair" ]`: tr emits no trailing newline, so the final (and for a
+    # one-parameter query, only) pair arrives with read returning non-zero.
+    while IFS= read -r pair || [ -n "$pair" ]; do
+        k="${pair%%=*}"
+        k=$(printf '%s' "$k" | tr '[:upper:]' '[:lower:]')
+        collapsed=""
+        for part in $(printf '%s' "$k" | tr -c 'a-z0-9' ' '); do
+            collapsed="$collapsed$part"
+            if list_has credparts "$(printf '%s\n' $CRED_PARTS)" "$part"; then
+                REPLY="query parameter ${k}"
+                return
+            fi
+        done
+        for suf in $CRED_SUFFIXES; do
+            case "$collapsed" in
+                *"$suf") REPLY="query parameter ${k}"; return ;;
+            esac
+        done
+    done < <(printf '%s' "$query" | tr '&' '\n')
+}
+
+declare -A URL_FIRST=()
 for medium in $source_media; do
     [ "$medium" = "meeting" ] && continue   # checked separately just below
     dir="$VAULT/sources/$medium"
@@ -592,8 +652,36 @@ for medium in $source_media; do
     while IFS= read -r -d '' f; do
         label="sources/$medium/$(basename "$f")"
         check_field "$f" "url"    "$label"
+        fm_value "$f" url; url_value=$REPLY
         check_field "$f" "stage"  "$label"
         check_field "$f" "saved"  "$label"
+
+        [ -n "$url_value" ] || continue
+
+        # 2b. Two sources at one URL. Nothing else notices: both notes lint clean,
+        # and if neither carries authors:/channel:/tool: the M15 summary reports
+        # them as two independent units — inflating the number section 8 reads to
+        # decide whether confidence: high is earned. The per-skill guards are
+        # memex-save step 1 and memex-seed's doi match; memex-ingest has only a
+        # Common Mistakes bullet. Three skills, three answers, nothing in the
+        # oracle. (_meta/comparison-claude-obsidian.md verdict 2.)
+        norm_url "$url_value"; url_key=$REPLY
+        if [ -n "${URL_FIRST[$url_key]+x}" ]; then
+            warn "$label — same url: as ${URL_FIRST[$url_key]} (duplicate source; one of the two should be removed or merged)"
+        else
+            URL_FIRST[$url_key]=$label
+        fi
+
+        # 2c. A credential in a saved URL. sources/ is tracked, so a signed link
+        # or a share token copied out of an authenticated session is committed,
+        # and rewriting history is the only removal. WARN, not FAIL: a legitimate
+        # URL can contain the substring "key", and a false FAIL at capture time is
+        # worse than a warning the operator reads.
+        # (_meta/comparison-claude-obsidian.md verdict 3.)
+        url_credential "$url_value"
+        if [ -n "$REPLY" ]; then
+            warn "$label — url: carries $REPLY; save the bare URL and keep the credential out of the vault"
+        fi
     done < <(find "$dir" -name "*.md" ! -name ".gitkeep" -print0)
 done
 

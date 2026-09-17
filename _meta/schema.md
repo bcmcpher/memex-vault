@@ -76,6 +76,25 @@ and gave a skill filling it from a real publication date nowhere to put the rest
 Unlike `saved:` and `created:`, `published:` is therefore **not** a fixed-width
 date — do not sort or subtract it without normalising first.
 
+### Source URLs
+
+`url:` is the only field that identifies a source independently of who wrote it.
+Two rules follow, both checked by `_meta/lint.sh` section 2.
+
+**One source note per URL.** A second note at the same URL is a duplicate, not a
+second source: it adds no evidence, and if neither note carries
+`authors:`/`channel:`/`tool:` it adds a phantom unit to the independent-source
+count that § Confidence Values reads. Comparison is deliberately shallow — scheme
+and host lowercased, one trailing slash and any `#fragment` dropped — so two
+spellings of one URL that differ in percent-encoding still read as two. Capture
+skills check before writing; lint is the backstop.
+
+**A URL never carries a credential.** No userinfo (`https://user:pass@host/…`),
+no signed-link or session token in the query string. `sources/` is tracked by git,
+so a credential pasted once is committed, and rewriting history is the only way to
+remove it. Save the bare URL; if the resource is unreachable without the token,
+that is a note in `## Why Saved`, not a field value.
+
 ---
 
 ## Relationship Types (Dataview Inline Fields)

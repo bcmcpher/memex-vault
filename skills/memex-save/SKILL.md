@@ -57,7 +57,17 @@ Take the URL. Check for an existing source note first — avoid duplicates:
 VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 grep -rl "<url>" "$VAULT/sources/"
 ```
-If a match is found, show it and stop — no action needed.
+If a match is found, show it and stop — no action needed. The rule is
+`_meta/schema.md` § Source URLs: one source note per URL. `lint.sh` section 2b is
+the backstop, so a duplicate that slips past this grep is caught at the next lint
+rather than silently inflating the independent-source count.
+
+**Strip credentials before the URL touches a note.** A signed link or a share
+token copied out of an authenticated session — `?access_token=`, `?sig=`,
+`https://user:pass@host/…` — gets committed the moment the note is written, and
+`sources/` is tracked. Save the bare URL. If the resource is unreachable without
+the token, say so in `## Why Saved` rather than putting it in `url:`. `lint.sh`
+section 2c warns, but only after the commit that needs rewriting.
 
 Detect medium from the URL pattern above.
 
