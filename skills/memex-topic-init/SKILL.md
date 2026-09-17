@@ -7,7 +7,11 @@ description: Create and bootstrap a new topic node in the personal Karpathy-styl
 
 **Vault root:** `$VAULT`, resolved at run time as
 `VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
-fork of this vault works unedited.
+fork of this vault works unedited. **Confirm it resolved to a vault before writing
+anything:** `[ -f "$VAULT/_meta/schema.md" ]`. If that fails, stop and tell the
+user — a stale `MEMEX_VAULT`, or this skill invoked from an unrelated repository,
+otherwise writes `sources/`, `atoms/` and `_meta/log.md` into *that* repository,
+and the first sign is `git status` (roadmap R14).
 
 This skill creates a new topic node — a concept map, research note, or project workspace — and immediately wires it into the existing graph. The goal is to give a freshly named topic a meaningful starting structure rather than an empty shell: atoms already in the vault get linked, relevant sources get cited, and adjacent topics get connected.
 

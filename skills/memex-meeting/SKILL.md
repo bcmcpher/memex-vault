@@ -7,7 +7,11 @@ description: Save meeting notes to the vault as a structured source note. Use wh
 
 **Vault root:** `$VAULT`, resolved at run time as
 `VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
-fork of this vault works unedited.
+fork of this vault works unedited. **Confirm it resolved to a vault before writing
+anything:** `[ -f "$VAULT/_meta/schema.md" ]`. If that fails, stop and tell the
+user — a stale `MEMEX_VAULT`, or this skill invoked from an unrelated repository,
+otherwise writes `sources/`, `atoms/` and `_meta/log.md` into *that* repository,
+and the first sign is `git status` (roadmap R14).
 
 This skill takes meeting notes — spoken, typed, or pasted — and creates a properly structured source note in `sources/meeting/`. It extracts decisions, action items, and follow-up sources, wires connections to existing atoms, and seeds stubs for new concepts that emerged. Unlike digital sources, meeting notes have no URL and use their own template.
 

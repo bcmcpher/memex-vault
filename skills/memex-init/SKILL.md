@@ -7,7 +7,11 @@ description: Specialize a freshly forked memex-vault for its own subject matter.
 
 **Vault root:** `$VAULT`, resolved at run time as
 `VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
-fork of this vault works unedited.
+fork of this vault works unedited. **Confirm it resolved to a vault before writing
+anything:** `[ -f "$VAULT/_meta/schema.md" ]`. If that fails, stop and tell the
+user — a stale `MEMEX_VAULT`, or this skill invoked from an unrelated repository,
+otherwise writes `sources/`, `atoms/` and `_meta/log.md` into *that* repository,
+and the first sign is `git status` (roadmap R14).
 
 This skill turns the template into *someone's* vault. It asks five questions,
 rewrites `_meta/domain.md` from the answers, scaffolds the folders that vocabulary

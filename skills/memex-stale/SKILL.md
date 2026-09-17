@@ -7,7 +7,11 @@ description: Surface neglect in the vault — sources marked read but never inte
 
 **Vault root:** `$VAULT`, resolved at run time as
 `VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
-fork of this vault works unedited.
+fork of this vault works unedited. **Confirm it resolved to a vault before writing
+anything:** `[ -f "$VAULT/_meta/schema.md" ]`. If that fails, stop and tell the
+user — a stale `MEMEX_VAULT`, or this skill invoked from an unrelated repository,
+otherwise writes `sources/`, `atoms/` and `_meta/log.md` into *that* repository,
+and the first sign is `git status` (roadmap R14).
 
 This skill is a read-only decay detector. It finds three categories of staleness and reports them as a prioritized list. It never modifies vault files — it tells you what to act on, and which skill to use.
 

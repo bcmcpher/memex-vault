@@ -7,7 +7,11 @@ description: Review and apply pending candidate files from incomplete skill sess
 
 **Vault root:** `$VAULT`, resolved at run time as
 `VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
-fork of this vault works unedited.
+fork of this vault works unedited. **Confirm it resolved to a vault before writing
+anything:** `[ -f "$VAULT/_meta/schema.md" ]`. If that fails, stop and tell the
+user — a stale `MEMEX_VAULT`, or this skill invoked from an unrelated repository,
+otherwise writes `sources/`, `atoms/` and `_meta/log.md` into *that* repository,
+and the first sign is `git status` (roadmap R14).
 **Candidates dir:** `_meta/candidates/`
 
 This skill resurfaces proposed vault writes from sessions that ended before the user confirmed them. Candidates are written by `memex-save`, `memex-ingest`, `memex-connect`, `memex-meeting`, `memex-seed`, `memex-glossary`, `memex-topic-emerge`, and `memex-deep-extract` (both modes) before each file write. Approved candidates are applied and deleted; rejected ones are discarded.

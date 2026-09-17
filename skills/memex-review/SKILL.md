@@ -7,7 +7,11 @@ description: Evaluate the semantic validity and structural coherence of topic-le
 
 **Vault root:** `$VAULT`, resolved at run time as
 `VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
-fork of this vault works unedited.
+fork of this vault works unedited. **Confirm it resolved to a vault before writing
+anything:** `[ -f "$VAULT/_meta/schema.md" ]`. If that fails, stop and tell the
+user — a stale `MEMEX_VAULT`, or this skill invoked from an unrelated repository,
+otherwise writes `sources/`, `atoms/` and `_meta/log.md` into *that* repository,
+and the first sign is `git status` (roadmap R14).
 
 This skill performs a semantic audit of topic-level nodes. It reads a topic map alongside all its linked atoms and sources, then evaluates whether the knowledge structure makes sense — flagging misclassified relationships, surface-level contradictions that haven't been acknowledged, atoms that belong in a different topic, atoms missing from this topic, and relationship types that could be made more precise.
 

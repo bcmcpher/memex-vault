@@ -7,7 +7,11 @@ description: Evolve atom structure through revise, split, or merge operations. U
 
 **Vault root:** `$VAULT`, resolved at run time as
 `VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
-fork of this vault works unedited.
+fork of this vault works unedited. **Confirm it resolved to a vault before writing
+anything:** `[ -f "$VAULT/_meta/schema.md" ]`. If that fails, stop and tell the
+user — a stale `MEMEX_VAULT`, or this skill invoked from an unrelated repository,
+otherwise writes `sources/`, `atoms/` and `_meta/log.md` into *that* repository,
+and the first sign is `git status` (roadmap R14).
 
 This skill handles three types of atom evolution: **revise** (update body in place), **split** (one atom becomes two), and **merge** (two atoms become one). All three require a user-supplied reason and confirm each write step before executing. Atoms are never deleted — retired atoms become stubs with `supersedes::` pointing to their successors.
 

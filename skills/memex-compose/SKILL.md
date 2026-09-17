@@ -7,7 +7,11 @@ description: Synthesize a topic's knowledge into a structured Markdown export. U
 
 **Vault root:** `$VAULT`, resolved at run time as
 `VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
-fork of this vault works unedited.
+fork of this vault works unedited. **Confirm it resolved to a vault before writing
+anything:** `[ -f "$VAULT/_meta/schema.md" ]`. If that fails, stop and tell the
+user — a stale `MEMEX_VAULT`, or this skill invoked from an unrelated repository,
+otherwise writes `sources/`, `atoms/` and `_meta/log.md` into *that* repository,
+and the first sign is `git status` (roadmap R14).
 
 This skill synthesizes vault knowledge into a structured export document. Every sentence in the output traces to an atom or source body — nothing is invented. Run `memex-reconcile` and `memex-trust-audit` before composing a topic you plan to share; the quality of the output depends directly on graph integrity and trustworthy confidence signals.
 

@@ -7,7 +7,11 @@ description: Surface and document unacknowledged conflicts in the vault graph. U
 
 **Vault root:** `$VAULT`, resolved at run time as
 `VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
-fork of this vault works unedited.
+fork of this vault works unedited. **Confirm it resolved to a vault before writing
+anything:** `[ -f "$VAULT/_meta/schema.md" ]`. If that fails, stop and tell the
+user — a stale `MEMEX_VAULT`, or this skill invoked from an unrelated repository,
+otherwise writes `sources/`, `atoms/` and `_meta/log.md` into *that* repository,
+and the first sign is `git status` (roadmap R14).
 
 This skill follows explicit conflict relation fields already in the graph — it does not infer conflicts from atom content. Its job is to distinguish acknowledged conflicts (tension described, both sides linked) from unacknowledged ones (link present but no explanation), and to help you document the ones that are bare.
 

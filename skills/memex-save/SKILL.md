@@ -7,7 +7,11 @@ description: Save a URL to the vault with a lightweight fetch — always gets th
 
 **Vault root:** `$VAULT`, resolved at run time as
 `VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
-fork of this vault works unedited.
+fork of this vault works unedited. **Confirm it resolved to a vault before writing
+anything:** `[ -f "$VAULT/_meta/schema.md" ]`. If that fails, stop and tell the
+user — a stale `MEMEX_VAULT`, or this skill invoked from an unrelated repository,
+otherwise writes `sources/`, `atoms/` and `_meta/log.md` into *that* repository,
+and the first sign is `git status` (roadmap R14).
 
 This skill gets a source into the vault with a real title and a short summary — enough to be useful immediately, without doing the full graph wiring that `memex-connect` handles. It always fetches the URL, asks whether the source has been read, and branches from there: unread sources land as clean inbox items; read sources optionally support a collaborative summary-building session to capture your understanding before you move on.
 
