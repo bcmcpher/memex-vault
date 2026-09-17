@@ -725,7 +725,7 @@ checking had a hole their linter happened to cover.
 
 ---
 
-## Stage 8 — docs and release
+## Stage 8 — docs and release *(done)*
 
 - Port the fork's `_meta/roadmap.md` (98 KB, carries M11–M22, the rewritten M7 and
   the amended corpus spec) over this repo's 57 KB copy; mark each finding applied,
@@ -798,6 +798,56 @@ a trial that finds something means `rc.3`.
 **"Stage 8 closes" means the tag exists**, with the roadmap ported, consolidated
 and readable, and every Stage 7 verdict recorded. It does not mean any Stage 7
 Roadmap item has been scheduled, costed or built.
+
+**Result (2026-09-17).** Tagged `v1.0.0-rc.2`.
+
+*The port.* `_meta/roadmap.md` went 991 → 1,952 lines carrying M6–M22 across, and
+all 35 findings got a status marker: **25 Applied, 13 Deferred, 2 Partially
+applied, 1 Open, 1 Closed, 1 Accepted** — 43 rows once Stage 7's eight were added.
+Three stale claims were corrected in the port rather than carried forward, the
+material one being § The RC-2 seed corpus, which described a manifest key that does
+not exist (`validation`, null) and four validator failures a re-run does not
+reproduce (the key is `validate_pass`, and the current validator returns 12 PASS).
+
+*The consolidation.* The scope question was deferred to this point by the user and
+answered with the real count in hand: **split into two files.** `_meta/roadmap.md`
+keeps open work — sixteen `R` rows, 997 lines. `_meta/roadmap-applied.md` takes the
+25 applied findings with their full arguments, the seven completed phases and the
+retired verification-debt rows — 1,151 lines. Eighteen live rows became sixteen
+because `M6`, `M19` and comparison verdict 1 were one problem stated three times;
+`R2` merges them and keeps all three statements.
+
+Two deliberate inconsistencies, both cheaper than the alternative. **Applied labels
+were not renamed** — nine of the ten labels cited from code are applied ones, and
+`lint.sh` cites `M11a`, `M11c`, `M16`, `M18` and `M20` in comments that explain why
+the code is shaped as it is, so renaming would have meant editing sixteen sites to
+point at entries saying less than the comments already do. **Bare labels in prose
+still mean the old numbering**, because both files argue by cross-reference and
+rewriting those sentences would have meant re-editing arguments to change a name.
+Both headers state the rule. One citation did need updating: `memex-stale` cited
+`roadmap M8` twice, now `R3`.
+
+*What I got wrong.* I told the user the live file would land at roughly 600–700
+lines. It is 997. § Phase Detail's completed phases and § Verification debt were
+moved across for the same reason as the findings, which is what got it under 1,000
+at all; the estimate did not account for § Release Status, § The RC-2 seed corpus
+and `R2` being as long as they are.
+
+*Fresh-fork test, on a `/tmp` clone of the tagged tree.* `VERSION` reads
+`1.0.0-rc.2`; **lint exit 0 with 0 warnings** on zero notes; 21 skills, 8 templates,
+`.claude/skills -> ../skills` intact. The shipped validator over the corpus:
+**12 PASS, 0 REJECT, 0 exit-2**. Seeded to the Stage 6 shape: **exit 0,
+`Sources (paper): 12`, `Independent units: 12 of 12 sources`, `Concept maps: 4`,
+`Atoms: 0`, 12 warnings and every one section 6a inbox-only.**
+
+*Standing gates.* Against the fork: exit 0, 4 warnings, **365 quotes verified** —
+unchanged through every RC-2 stage. The fork's only dirty file is
+`.obsidian/workspace.json`, per-machine UI state this work never wrote.
+
+*Not done, deliberately.* `_meta/rc-2-plan.md` is **not** deleted. Its
+§ Verification is what trial 2 checks the tag against, so it outlives the tag by one
+step; the roadmap header now says so. And none of `R8`–`R14` is scheduled — the user
+evaluates them alongside other pending plans now that RC-2 is finished.
 
 ---
 
