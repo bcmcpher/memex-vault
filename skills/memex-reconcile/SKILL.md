@@ -1,6 +1,6 @@
 ---
 name: memex-reconcile
-description: Repair dangling part-of:: links and work the backlog of untyped related:: links, promoting each to a typed relation where one genuinely fits. Use when running a vault health check, after bulk ingest, or when lint Section 7a surfaces orphan part-of warnings. Triggers on: "reconcile my vault", "check graph integrity", "fix dangling links", "part-of points nowhere", "promote related links", "retype my related links".
+description: Repair dangling link targets — a part-of:: naming no topic, or any relation field naming a note that does not exist — and work the backlog of untyped related:: links, promoting each to a typed relation where one genuinely fits. Use when running a vault health check, after bulk ingest, or when lint Section 7a or 7h surfaces dangling-link warnings. Triggers on: "reconcile my vault", "check graph integrity", "fix dangling links", "part-of points nowhere", "cites points nowhere", "promote related links", "retype my related links".
 ---
 
 # Karpathy Wiki Reconcile
@@ -9,10 +9,12 @@ description: Repair dangling part-of:: links and work the backlog of untyped rel
 `VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"` — never hard-coded, so a
 fork of this vault works unedited.
 
-This skill runs two repair passes over the graph:
+This skill runs three repair passes over the graph:
 
 1. **Dangling `part-of::`** — an atom names a topic file that does not exist.
-2. **Untyped `related::`** — a fallback link, worked as a backlog and resolved
+2. **Dangling everything else** — any other relation field naming a note that
+   does not exist.
+3. **Untyped `related::`** — a fallback link, worked as a backlog and resolved
    into a precise relation where one genuinely fits.
 
 For the full relationship taxonomy, read: `references/vault-schema.md`
@@ -28,8 +30,9 @@ For the full relationship taxonomy, read: `references/vault-schema.md`
 ## When to Run
 
 - After bulk ingest of multiple sources
-- When `_meta/lint.sh` Section 7a surfaces orphan `part-of::` WARNs
-- When the user asks to work the `related::` backlog — Pass 2 has no schedule and
+- When `_meta/lint.sh` Section 7a surfaces orphan `part-of::` WARNs, or Section 7h
+  surfaces `but no such note` WARNs
+- When the user asks to work the `related::` backlog — Pass 3 has no schedule and
   no lint signal, so it runs only when invoked
 - Before running `memex-compose` (composition depends on correct membership)
 
@@ -93,7 +96,79 @@ Never batch-apply. Never auto-repair without confirmation.
 
 ---
 
-## Pass 2 — `related::` promotion
+## Pass 2 — Dangling everything else
+
+`part-of::` was the only field lint resolved until rc.2. Section 7h now resolves
+every `field:: [[Target]]` on every layer, which is how a `cites::` pointing at a
+source that was never written became visible
+(`_meta/comparison-claude-obsidian.md` verdict 1). This pass is where those get
+repaired.
+
+**Take `cites::` first, and treat it differently from the rest.** A dangling
+`related::` is a broken cross-reference. A dangling `cites::` is an atom that
+*reads as grounded and is not* — and because Section 6b counts the field rather
+than resolving it, that atom was also exempt from the orphan check for as long as
+the bad link stood. Report the two groups separately and say which is which.
+
+### 1. Discover
+
+```bash
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
+bash "$VAULT/_meta/lint.sh" 2>/dev/null | grep "but no such note"
+```
+
+Read the findings from lint rather than re-deriving them: lint already skips
+fenced code, aliases and frontmatter, and a second implementation of that parse
+is a second thing that can disagree. Section 12e's `[[target#^anchor]]` findings
+are the same defect at claim grain — work them in this pass too.
+
+### 2. Present, grouped by field
+
+```
+DANGLING cites:: — the atom reads as grounded and is not
+  atoms/connectome-node-definition.md
+    cites:: [[2026-09-11-hagman-mapping-the-structural-core]]
+    No note matches. Nearest: 2026-09-11-hagmann-mapping-the-structural-core
+    → Proposed fix: retarget (one-character difference in the surname)
+
+DANGLING related:: — a broken cross-reference
+  atoms/bundle-segmentation.md
+    related:: [[tractography-filtering]]
+    No note matches, and nothing is close.
+```
+
+Offer nearest existing names by slug similarity, exactly as Pass 1 does. Most
+dangling links are typos or renames; a genuinely missing note is the minority
+case and should be stated as such rather than assumed.
+
+### 3. Confirm each fix individually
+
+Per finding, the user can:
+
+- **Retarget** — point at the note that exists
+- **Create** — the note genuinely does not exist; hand off to the skill that owns
+  that layer (`memex-save` or `memex-ingest` for a source, `memex-ingest` for an
+  atom, `memex-glossary` for a term). Never write the stub here
+- **Remove** — drop the target. For `cites::`, say plainly that removing it may
+  drop the atom to zero grounded sources and re-expose it to the Section 4 orphan
+  check — that is the check working, not a new problem
+- **Skip** — leave it
+
+Never batch-apply. A dangling `cites::` in particular is evidence of how a claim
+was made; deleting the link without deciding what it was *meant* to say loses the
+only record that the atom ever claimed grounding.
+
+### 4. Apply
+
+- Edit the field in place, in the note's own `## Sources` or `## Connections`
+  section
+- Update `updated:` in the frontmatter to today, for any layer that carries it
+- Re-run `bash "$VAULT/_meta/lint.sh"` at the end of the pass and confirm the
+  `but no such note` lines are gone
+
+---
+
+## Pass 3 — `related::` promotion
 
 `related::` is the documented fallback for "loosely connected, refine later."
 Without a pass that actually refines it, every hard call silently becomes
@@ -172,11 +247,11 @@ url:: n/a
 atoms:: [[Atom A]], [[Atom B]]
 skill:: memex-reconcile
 kept:: atoms/flash-attention.md -> [[attention-mechanism]]
-notes: N dangling part-of fixed; M related:: promoted, K kept, J dropped
+notes: N dangling part-of fixed; P other dangling targets fixed; M related:: promoted, K kept, J dropped
 ```
 
 List every note that was modified. Write one `kept::` line per link kept this
-session — Pass 2 reads them back, and they are the only record a Keep exists. Do
+session — Pass 3 reads them back, and they are the only record a Keep exists. Do
 not log a session where nothing was applied or kept.
 
 ---
@@ -186,7 +261,9 @@ not log a session where nothing was applied or kept.
 - Does not create topic files — that is `memex-topic-init`
 - Does not create or split atoms — that is `memex-refactor`
 - Never auto-repairs without explicit user confirmation per item
-- Does not touch source connection fields in Pass 1
+- Does not touch source connection fields in Pass 1. Pass 2 does, but only to
+  repair a target that resolves to nothing — never to add, retype or remove a
+  link that works
 - Does not reconcile topic membership in either direction; membership is derived
   from `part-of::` and cannot drift
 

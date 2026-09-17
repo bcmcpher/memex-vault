@@ -206,6 +206,17 @@ while IFS= read -r -d '' p; do
     if [ -n "$b" ] && [ -z "${TOPIC_PATH[$b]+x}" ]; then TOPIC_PATH[$b]=$p; fi
 done < <(find "$VAULT/topics" -name "*.md" -print0 2>/dev/null)
 
+# Every note a wikilink can name, by basename — the union of the three tables
+# above plus glossary/, which none of them covers. Section 7h resolves link
+# targets against this and nothing else, so "resolves" means the same thing for
+# every field and every layer. First path wins, matching SRC_PATH/NOTE_PATH.
+declare -A ANY_PATH=()
+while IFS= read -r -d '' p; do
+    b="${p##*/}"; b="${b%.md}"
+    if [ -n "$b" ] && [ -z "${ANY_PATH[$b]+x}" ]; then ANY_PATH[$b]=$p; fi
+done < <(find "$VAULT/extracts" "$VAULT/sources" "$VAULT/atoms" "$VAULT/topics" \
+              "$VAULT/glossary" -name "*.md" -print0 2>/dev/null)
+
 # field_targets <file> <field>: wikilink targets on `field::` lines outside fenced
 # code, one per line, deduplicated. Dataview ignores inline fields in a code
 # block, and so must anything that builds structure from them: the shipped
@@ -910,6 +921,51 @@ if [ -f "$schema_file" ]; then
         done < <(find "$VAULT/sources" "$VAULT/atoms" "$VAULT/extracts" -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null)
     fi
 fi
+
+# 7h. Dangling relation target: a `field:: [[Target]]` naming a note that does
+# not exist. Until rc.2 a target was resolved in exactly two places — `part-of::`
+# (7a) and a *block-anchored* `cites::` (12e) — so the other two spellings passed
+# silently: `cites:: [[ghost]]` and `cites:: [[ghost#Summary]]` both linted clean
+# at exit 0. That is worse than a dead link. Section 6b counts `cites::[[`
+# occurrences without resolving them, so a citation to a note that was never
+# written both reads as evidence *and* silences the orphan warning that was the
+# only thing flagging the atom. Found by the RC-2 Stage 7 comparison against
+# claude-obsidian, whose linter resolves every link
+# (`_meta/comparison-claude-obsidian.md` verdict 1).
+#
+# WARN, matching 7a: a dangling link is bad bookkeeping until a human decides
+# which way to repair it, and `memex-reconcile` owns that repair.
+#
+# `part-of::` is excluded — 7a already reports it against the topic tables, with
+# a message that names the tree. A `[[target#^anchor]]` link is excluded — 12e
+# already resolves the note *and* the anchor, and reporting both would double
+# every fabricated claim anchor.
+while IFS= read -r -d '' f; do
+    label=${f#"$VAULT"/}
+    while IFS=$'\t' read -r field target; do
+        [ -n "$target" ] || continue
+        if [ -z "${ANY_PATH[$target]+x}" ]; then
+            warn "$label — ${field}:: [[${target}]] but no such note"
+        fi
+    done < <(awk '/^[[:space:]]*(```|~~~)/ { fence = !fence; next }
+                  !fence && /^---[[:space:]]*$/ { fm++; next }
+                  fm >= 2 && !fence && match($0, /^[a-z][a-z-]*::/) {
+                      k = substr($0, 1, RLENGTH - 2)
+                      if (k == "part-of") next
+                      s = $0
+                      while (match(s, /\[\[[^]]+\]\]/)) {
+                          t = substr(s, RSTART + 2, RLENGTH - 4)
+                          s = substr(s, RSTART + RLENGTH)
+                          sub(/\|.*/, "", t)
+                          if (t ~ /#\^/) continue
+                          sub(/#.*/, "", t)
+                          sub(/^.*\//, "", t)
+                          gsub(/^[ \t]+|[ \t]+$/, "", t)
+                          if (t != "") print k "\t" t
+                      }
+                  }' "$f" 2>/dev/null | sort -u)
+done < <(find "$VAULT/sources" "$VAULT/atoms" "$VAULT/extracts" "$VAULT/topics" \
+              "$VAULT/glossary" -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null)
 
 ok "structural integrity check complete"
 
