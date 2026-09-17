@@ -60,6 +60,8 @@ vault/
 │   ├── schema.md             # Relationship types, naming conventions (authoritative)
 │   ├── domain.md             # Instance vocabulary — tags, node types (edit on fork)
 │   ├── lint.sh               # Programmatic health checks — the only executable oracle
+│   ├── test-lint.sh          # Regression tests for lint.sh — run after editing it
+│   ├── lint-fixtures/        # Minimal vaults with expected lint output, one per check
 │   ├── normalize.sh          # Archive text normalizer — every .archive/ write pipes through it
 │   ├── validate-archive.sh   # Is this archive a real full text, or a landing page?
 │   ├── pdf-clean.sh          # pdftotext output → archivable prose
@@ -552,6 +554,37 @@ rename cannot go quiet. The source-type vocabulary is read from `_meta/domain.md
 too: add `hearing` to § Source Types and lint applies every naming and frontmatter
 check to `sources/hearing/`, and warns if the folder is missing — or if a folder
 under `sources/` was never declared, whose notes would otherwise go unchecked.
+
+### If you edit `_meta/lint.sh`
+
+Run its regression tests:
+
+```bash
+bash _meta/test-lint.sh          # every fixture
+bash _meta/test-lint.sh naming   # one
+```
+
+`_meta/lint-fixtures/` holds one minimal vault per check, each with a `README.md`
+saying what it pins and an `expect` file recording the exit code, every FAIL/WARN
+line, and the summary counts. A fixture is a *sparse overlay* — only the notes
+under test — and the harness builds the scaffold around it from this vault's real
+`_meta/schema.md` and `_meta/domain.md`, so a schema change that breaks lint shows
+up here too.
+
+This exists because lint is 1,700 lines of bash and the vault's only executable
+oracle, and two defects got past reading its output: a provenance parser that read
+note prose as provenance and **shipped in `v1.0.0-rc.1`**, and a `cites::` naming
+a note that does not exist linting clean at exit 0. Both are now fixtures; both
+were verified to fail the suite when the fix is reverted.
+
+`bash _meta/test-lint.sh --update` rewrites the expectations. **Read the diff
+before committing one.** An expectation captured from wrong behaviour enshrines
+the bug, which is the failure mode a harness has that a linter does not.
+
+GitHub Actions runs the suite plus `lint.sh` on every push
+(`.github/workflows/test.yml`), and a fork inherits it. Note what a green check
+does **not** mean: `.archive/` is gitignored, so section 12 SKIPs in CI and quote
+grounding is never verified there. It is a local guarantee by construction.
 
 ### Which template version is this fork on?
 

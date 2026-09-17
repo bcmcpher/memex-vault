@@ -17,10 +17,63 @@ and is the authority on what remains.
 
 ## [Unreleased]
 
-Nothing yet. The next change is trial 2 — a full run against `v1.0.0-rc.2` on a
-fresh fork. A trial that surfaces nothing new worth fixing promotes `v1.0.0`; a
-trial that surfaces something produces `rc.3`, which is the process working rather
-than failing.
+**Two roadmap items applied before trial 2**, at the user's request. Both were
+chosen on one test: does it change *what* the trial measures, or *how reliably* it
+is measured? Neither changes vault semantics, so the trial still measures `rc.2`'s
+behaviour — with a better instrument and a safer working directory. Everything else
+open was left alone, because applying a behaviour change and then trialling it is
+what `rc.1` did.
+
+### Added
+
+- **`R9` — regression fixtures and CI for `lint.sh`.** `_meta/test-lint.sh` plus
+  eight fixtures in `_meta/lint-fixtures/`, and `.github/workflows/test.yml`.
+
+  Lint is 1,700 lines of bash and the vault's only executable state oracle, and it
+  was verified by reading its output and deciding the output looked right. Two
+  defects got past that: **M20**, a provenance parser that read note prose as
+  provenance and shipped in `v1.0.0-rc.1` because the field it parses had never
+  been written; and the **7h** hole, where `cites:: [[ghost]]` linted clean at
+  exit 0 *and* suppressed the orphan warning that would have caught the atom —
+  found by reading another project's linter, not by testing this one. Both are now
+  fixtures.
+
+  Each fixture is a sparse overlay holding only the notes under test; the harness
+  builds the scaffold from this vault's real `schema.md` and `domain.md`, so a
+  fixture tests lint rather than restating the schema. Coverage: the zero-note case
+  `memex-init` runs on, dangling targets, `url:` uniqueness and credentials, the
+  M20 parser, the two FAIL checks (so `exit 1` itself is pinned), quote grounding,
+  the four topic-tree rules, and M15 independence.
+
+  **Verified the suite can fail.** Deleting section 7h fails `dangling-targets`;
+  removing the M20 parser bounds fails `provenance-prose`. A suite that cannot fail
+  is decoration.
+
+  A green CI check deliberately does not claim everything: `.archive/` is
+  gitignored, so section 12 SKIPs there and quote grounding is never verified in
+  CI. It is a local guarantee by construction, and the workflow says so.
+
+### Changed
+
+- **`R14` — skills refuse to write when `$VAULT` is not a memex vault.** The
+  invariant vault-root block in all 21 skills now carries
+  `[ -f "$VAULT/_meta/schema.md" ]`, with the instruction to stop and tell the user
+  rather than create the missing paths. A stale `MEMEX_VAULT`, or a skill invoked
+  from an unrelated repository, otherwise writes `sources/`, `atoms/` and
+  `_meta/log.md` into *that* repository, and the first sign is `git status`.
+
+- **Open roadmap rows now carry a release target**, not just a status. *Deferred*
+  said whether something was done, never whether it blocks `1.0` — different
+  questions, and the second is the one a release decision turns on. Of the fourteen
+  rows not yet done: **eleven are `1.x`** (new capability; the vault is coherent
+  without them), **one blocks `1.0` in part** (`R2`, the labelling half — the README
+  says quote-grounded and M19 showed the guarantee is narrower than it reads), **one
+  is undecided and with the user** (`R8`, a demonstrated defect whose only known fix
+  is a runtime), and `R4` is a partial whose remaining half is `1.x`.
+
+*Next: trial 2 — a full run against this tree on a fresh fork. A trial that
+surfaces nothing new worth fixing promotes `v1.0.0`; a trial that surfaces
+something produces the next RC, which is the process working rather than failing.*
 
 ## [1.0.0-rc.2] — 2026-09-17
 

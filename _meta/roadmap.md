@@ -49,6 +49,23 @@ italics, directly after its label:
 A marker is not a verdict on the finding's quality. `Closed` and `Accepted` both
 mean the row stays as a record so a later trial does not re-derive it.
 
+**"Deferred" does not say deferred to *when*, so open rows also carry a release
+target.** *(Added 2026-09-18, at the user's request — the markers answered "is it
+done?" and not "does it block 1.0?", which are different questions and the second
+is the one a release decision turns on.)*
+
+| Target | Means | Test |
+|---|---|---|
+| **Blocks 1.0** | Promised functionality does not work as promised | A trial would surface it, or already has |
+| **1.x** | A new capability. The vault is coherent without it | Nothing here is broken; something is absent |
+| **Undecided** | A defect whose only known fix is architectural | Real, and the fix is out of proportion to the release |
+
+`v1.0.0` means *what is here works*, not *everything imagined is here* — so a new
+capability never blocks it, and a defect in something already claimed always does.
+Two rows are `Undecided` rather than one of the other two, and both are with the
+user: `R8`, and multi-host support. The distinction matters most for `R2`, which
+reads like a feature and is actually a promise that reads stronger than it holds.
+
 Infrastructure doc — not a vault node. No frontmatter, and nothing should link to
 it with a wikilink.
 
@@ -245,13 +262,25 @@ them alongside other pending plans once RC-2 is finished; `R15`–`R16` are deci
 and closed. Nothing here is ranked, and none of it is in § Implementation Order,
 which stops at the phases.
 
-Status markers are defined in the header. Every row names the evidence that the
-problem is real — for the comparison rows, "claude-obsidian has it" was not
-accepted as evidence anywhere in that document.
+Status markers and release targets are defined in the header. Every row names the
+evidence that the problem is real — for the comparison rows, "claude-obsidian has
+it" was not accepted as evidence anywhere in that document.
+
+**The tally, because it is the question this file gets opened for.** Of the
+fourteen rows that are not yet done: **eleven are `1.x`** — new capability, and
+the vault is coherent without them. **One blocks 1.0 in part** (`R2`, the
+labelling half: the README says quote-grounded and M19 showed the guarantee is
+narrower than it reads). **One is undecided and with the user** (`R8`). And `R4`
+is a partial whose remaining half is `1.x`.
+
+So the shape of what is left is *scope growth, not unfinished work* — with one
+labelling defect and one architectural question as the exceptions. The two rows
+that were genuine pre-1.0 refinement, `R9` and `R14`, were applied before trial 2
+and are marked as such above.
 
 ### R1 — the one scheduled build
 
-**R1. The vault has no interchange format.** *Open — Phase 8, the only unblocked phase. Ships as `v1.1.0`, not as part of `v1.0.0`.* Wikilinks, Dataview-backed indices,
+**R1. The vault has no interchange format.** *Open — Phase 8, the only unblocked phase. Ships as `v1.1.0`, not as part of `v1.0.0`.* **Target: 1.x.** A new capability; § Release Status already says it ships as `v1.1.0`. Nothing claimed today is broken by its absence. Wikilinks, Dataview-backed indices,
 date-only timestamps, and typed relations are all load-bearing for Obsidian and
 all unreadable outside it. Nothing can consume this vault but Obsidian and the
 memex skills.
@@ -263,7 +292,7 @@ changes. Import (Phase 9) is the other half, deferred.
 
 **R2. A source has no version model, re-rendering is indistinguishable from
 revision, and no content hash exists to tell them apart.** *Deferred — needs
-trial-2 drift data to calibrate. Was `M6` + `M19` + comparison verdict 1 (`F1`).*
+trial-2 drift data to calibrate. Was `M6` + `M19` + comparison verdict 1 (`F1`).* **Target: blocks 1.0 in part.** The *labelling* half does: the README says quote-grounded, and M19 showed the guarantee silently narrows from "this sentence is in the paper" to "this byte sequence is in this file", with nothing marking the difference. Recording the archive's SHA-256 at capture is what makes that honest, and it is small. The `version:` field and the reconcile skill are **1.x** — new machinery, and they need trial-2 drift data to calibrate.
 
 **These were three rows for one problem**, which is the clearest example of what
 the old numbering could not express. `M6` said a work exists as several
@@ -353,7 +382,7 @@ slice** — record the archive's SHA-256 at capture time, which costs one `sha25
 and makes drift detectable before anything is done about it. Carry it into M6 as
 step one.
 
-**R3. Conceptual extraction from code repositories.** *Deferred — design written, not built. `rc.2` Stage 5 bounded it instead: `memex-stale` Check 4 now lists `medium: code` apart with no route, rather than recommending an operation nothing has designed.* `memex-deep-extract` assumes
+**R3. Conceptual extraction from code repositories.** *Deferred — design written, not built. `rc.2` Stage 5 bounded it instead: `memex-stale` Check 4 now lists `medium: code` apart with no route, rather than recommending an operation nothing has designed.* **Target: 1.x.** A new extraction mode. Already made honest rather than left misleading: `memex-stale` Check 4 lists `medium: code` apart with no route instead of recommending an operation nothing has designed. `memex-deep-extract` assumes
 prose. Pointing it at a repo would produce claims about control flow and I/O
 plumbing, which is not knowledge worth graphing. But the conceptual content of a
 research codebase is real; it simply does not live in the call graph:
@@ -391,7 +420,7 @@ recorded caveat that spec coverage was "judged from names not full bodies".
 extraction on it, but no run has been attempted. Recorded here rather than in
 `skill-evaluation.md` for that reason.*
 
-**R4. Zotero as the first retrieval tier, with attachment validation.** *Partially applied — the load-bearing half shipped. `_meta/validate-archive.sh` landed in `rc.2` Stage 1 and was recalibrated in Stage 3; the Zotero lookup tier did not, and no skill consults a local library. The RC-2 corpus was retrieved half by Zotero and half by `opencite` by hand.*
+**R4. Zotero as the first retrieval tier, with attachment validation.** *Partially applied — the load-bearing half shipped. `_meta/validate-archive.sh` landed in `rc.2` Stage 1 and was recalibrated in Stage 3; the Zotero lookup tier did not, and no skill consults a local library. The RC-2 corpus was retrieved half by Zotero and half by `opencite` by hand.* **Target: 1.x.** A new retrieval route. The half that was a defect — an archive that looks like a source but is a landing page — shipped as `_meta/validate-archive.sh` in `rc.2`.
 Retrieval, not extraction, is what gates the evidence layer: 12 of 14 sources
 have no `raw::`, and of the six unread papers two are hard-blocked behind
 Elsevier. The user maintains a local Zotero library with the local API enabled
@@ -465,15 +494,15 @@ Two consequences for the implementation:
   figure that looked entirely plausible. Any call that does not pass an explicit
   high limit is reporting on a sample without saying so.
 
-**R5. No temporal model on claims — now tractable.** *Deferred — became cheap once Phase 3 existed, and blocks nothing.* `supersedes::` handles atom
+**R5. No temporal model on claims — now tractable.** *Deferred — became cheap once Phase 3 existed, and blocks nothing.* **Target: 1.x.** A new capability. `supersedes::` already handles the atom-level case, so nothing is broken without it. `supersedes::` handles atom
 replacement, not time-bounded claims. Claims finally have a home: Hyper-Extract
 carries `t_start` / `t_end` / `t_obs` per fact, and extract claims can carry the
 same without imposing decay on atoms, which `memex-stale` deliberately refuses.
 
-**R6. No first-class open questions.** *Deferred — became cheap once Phase 3 existed, and blocks nothing.* `rq-*.md` is heavyweight. Extracts could
+**R6. No first-class open questions.** *Deferred — became cheap once Phase 3 existed, and blocks nothing.* **Target: 1.x.** A new capability. `topics/research/` already carries open questions, heavyweight but working. `rq-*.md` is heavyweight. Extracts could
 type an `open-question` claim, giving atom-level questions a home.
 
-**R7. No worked example.** *Deferred — by the design decision above; no worked example ships, and none is planned.*
+**R7. No worked example.** *Deferred — by the design decision above; no worked example ships, and none is planned.* **Target: 1.x.** Onboarding material, and deferred by an explicit design decision rather than by cost. `memex-init` plus § Specializing This Template cover the same ground for a reader who is doing rather than browsing.
 
 ### R8–R14 — from the claude-obsidian comparison, recorded not scheduled
 
@@ -492,7 +521,7 @@ as separate checkouts, comparison verdict 12), salvaged rather than lost.
 that document, which is why five of the fifteen are declines and not rows here.
 
 **R8. Multi-file writes are not transactional.** *Deferred — architectural. Put to
-the user 2026-09-17; no decision recorded.* One logical mutation, in their design,
+the user 2026-09-17; no decision recorded.* **Target: undecided — with the user.** A demonstrated defect (Stage 6's kill drill: 6 notes, 0 log entries, `lint.sh` exit 0) whose only known fix is a runtime, which reverses the zero-dependency decision that lets a vault be checked without an install. A defect would normally block 1.0; a fix this size would normally be 2.0. That tension is the reason this is a question rather than a row. One logical mutation, in their design,
 is one bundle: per-path precondition hashes, a vault-wide lock, a durable journal,
 atomic per-file replace, and a `recover` command. Workers return drafts; one
 orchestrator applies them. memex has the per-write half already and arrived at it
@@ -506,8 +535,13 @@ plus awk/sed/grep by decision — `jq` appears nowhere in it and no skill uses
 `python3`. Building this means accepting a second language in the tree, which is a
 call for the user and not a refactor.
 
-**R9. `lint.sh` has no test suite and no CI.** *Deferred — new scope in the stage
-before a tag. The highest-value item in this section.* They ship 534 test functions,
+**R9. `lint.sh` has no test suite and no CI.** *Applied — `rc.3`, 2026-09-18.
+`_meta/test-lint.sh` plus eight fixtures in `_meta/lint-fixtures/`, and
+`.github/workflows/test.yml`. Verified by reverting two real fixes and confirming
+the suite fails: deleting section 7h fails `dangling-targets`, and removing the
+M20 parser bounds fails `provenance-prose`. Applied before trial 2 at the user's
+request, because it makes every later trial result more trustworthy without
+changing vault semantics.* They ship 534 test functions,
 a GitHub Actions workflow, and release gates declared in `config/product-contract.json`
 and executed by code, with manual gates that stay explicitly manual. memex has 1,500
 lines of bash that is the vault's only executable state oracle, verified by
@@ -524,7 +558,7 @@ that informally — it is why Stage 6 ran three drills rather than asserting the
 was correct.
 
 **R10. Sources carry no authority.** *Deferred — pending evidence that memex has the
-problem.* They declare `authority: official | primary | secondary | community |
+problem.* **Target: 1.x.** A new field with new semantics, and *pending evidence* that this vault has the problem at all. Adding it before the evidence would be decoration, against this vault's own rule that a field with a writer needs a check. They declare `authority: official | primary | secondary | community |
 synthetic | unknown`, and an accepted claim needs fresh, active, **non-synthetic**
 support. memex derives confidence from independent units alone, so three independent
 blog posts reach `confidence: high` by the same arithmetic as three independent
@@ -537,7 +571,7 @@ cannot settle it either; this needs a mixed-medium corpus.
 The `synthetic` value is the part memex has no answer to at all. `generated:` marks
 a *note* as machine-produced; nothing marks a *source* as model output.
 
-**R11. There is no bounded session context.** *Deferred — pending evidence.* Their
+**R11. There is no bounded session context.** *Deferred — pending evidence.* **Target: 1.x.** A new capability, and one that creates a second home for a claim — the failure their own schema had to write a rule against. Their
 `wiki/hot.md` is a short, sanitized cache of recent facts, changed pages and open
 threads, explicitly "not a transcript", with a rule that it must not carry claims
 less qualified than the canonical page they came from. Hooks read it and never write
@@ -547,7 +581,7 @@ and the fix creates a second home for a claim — the failure mode their own sch
 to write a rule against. Wants a trial-2 observation that the cold start actually
 costs something.
 
-**R12. `_meta/log.md` grows without bound.** *Deferred — not binding yet.* Their
+**R12. `_meta/log.md` grows without bound.** *Deferred — not binding yet.* **Target: 1.x.** A new capability. Not binding at 46 KB, and the log is correct meanwhile, just long. Their
 `wiki-fold` builds bounded, extractive, idempotent rollups of log entries in powers
 of two: additive only, never rewriting child entries, dry-run by default. memex's log
 is **46 KB after one trial**, `memex-log-query` reads it, and nothing compacts it at
@@ -555,7 +589,7 @@ a rate of one entry per capture. Two properties of their design are the ones wor
 copying when this does bind: **no fold-of-folds, and never automatic.** Those are
 what keep a rollup from becoming a lossy rewrite of the record.
 
-**R13. Retrieval is a graph walk and a grep.** *Deferred — measure before buying.*
+**R13. Retrieval is a graph walk and a grep.** *Deferred — measure before buying.* **Target: 1.x.** A new index. The notes remain the only state without it, which is the property that makes a vault outlive its tooling.
 They build contextual chunks and a stdlib BM25 index in a disposable cache, with
 optional local reranking, and the index is invalidated before its chunk set changes
 so a partial index is never served. memex's `memex-search` walks the topic tree and
@@ -567,8 +601,10 @@ go stale, and this vault's working principle is that the notes are the only stat
 so the cost is real and the need is unmeasured.
 
 **R14. Nothing checks that `$VAULT` is a memex vault before writing to it.**
-*Deferred — one line of logic, but a 21-skill edit, and it arrived during the release
-stage.* Their `paths.py` raises `VaultSelectionError` and **writes nothing** when
+*Applied — `rc.3`, 2026-09-18. `[ -f "$VAULT/_meta/schema.md" ]` in the invariant
+vault-root block of all 21 skills, with the instruction to stop and tell the user
+rather than create the missing paths. Applied before trial 2 at the user's request:
+a trial writes a lot, and this is what stops it writing into the wrong repository.* Their `paths.py` raises `VaultSelectionError` and **writes nothing** when
 vault selection is not certain, and their skills resolve the product root from their
 own location rather than the working directory. memex resolves
 `VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"`, which is correct by
