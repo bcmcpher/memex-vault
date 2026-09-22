@@ -46,5 +46,17 @@ jobs:
       - name: lint.sh regression fixtures
         run: bash _meta/test-lint.sh
 
+      # A fork replaces _meta/domain.md wholesale. The fixtures must not notice:
+      # they carry their own copy (_meta/lint-fixtures/domain.md). Swap in a
+      # foreign vocabulary and run them again, so a regression to reading the
+      # live file fails here instead of in the first fork (trial 2, T2-1).
+      - name: lint.sh fixtures ignore the live domain.md
+        run: |
+          cp _meta/domain.md "$RUNNER_TEMP/domain.md"
+          printf '# Domain\n\n## Domain Tags\n\n```\nbotany\n```\n\n## Source Types\n\n```\nhearing\n```\n' > _meta/domain.md
+          status=0; bash _meta/test-lint.sh || status=$?
+          cp "$RUNNER_TEMP/domain.md" _meta/domain.md
+          exit $status
+
       - name: lint.sh on this vault
         run: bash _meta/lint.sh
