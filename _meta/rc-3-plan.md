@@ -143,7 +143,7 @@ checklist for judgement steps: flip `supersedes::`, add `defines::` back-links, 
 ## Part B — trial 3
 
 1. **Corpus v2** at `~/Projects/memex-seed-corpus/v2/` (v1 untouched): copy the 12 v1 archives,
-   re-normalize with rc.3 (assert only Rosas changes), `SHA256SUMS`, README.
+   re-normalize with rc.3 (assert exactly the 5 archives in the WP3 correction below change), `SHA256SUMS`, README.
 2. **+10 papers**, 2 each for parcellation, functional-connectomics, statistical-connectivity-inference,
    tractography-validation, reproducibility. Retrieve via `zquery.py` / installed `opencite` (not
    `uvx`); `pdftotext | pdf-clean.sh | normalize.sh` from rc.3; `validate-archive.sh` must pass.
@@ -180,7 +180,8 @@ checklist for judgement steps: flip `supersedes::`, add `defines::` back-links, 
 - Greps all empty: `\$\{?([0-9]|ARGUMENTS)` in `skills/*/SKILL.md`; `find skills -name vault-schema.md`;
   `references/vault-schema` in skills/README; `YYYYMMDD-HHMMSS` in skills/schema; `echo -e` in lint.
 - Corpus v1: validate-archive 12 PASS with furniture report on exactly Aydogan, Daducci, Rheault;
-  normalize twice = byte-identical; rc.3 re-normalization changes only Rosas.
+  normalize twice = byte-identical; rc.3 re-normalization changes exactly Cammoun, Runge,
+  Rosas, Cliff, Shailja (WP3 correction below), and quote lines only in Rosas.
 - **Dry run on `cp -a ~/Projects/memex-trial2 /tmp/t2-rc3`** (original untouched), rc.3 tooling
   ported: record each new WARN class count pre-migration; migrate steps 1-2 → §12 exactly 9 FAIL;
   step 3 → 460 verified, 0 FAIL; step 4 → 0 hash WARNs; supersedes flip → 0 direction WARNs;
@@ -216,3 +217,17 @@ checklist for judgement steps: flip `supersedes::`, add `defines::` back-links, 
 ## Verification results
 
 *Filled in by WP10.*
+
+---
+
+## Corrections found during implementation
+
+**WP3 — NFC touches 5 archives, not 1.** Trial 2's T2-7 sweep tested characters one
+at a time, so it saw only Rosas's 112 U+2126. NFC also composes base + combining-mark
+sequences, which a per-character test cannot see. Measured on the 12 trial-2 archives
+with rc.3 `normalize.sh`: Rosas (112 U+2126, 2 sequences), Runge (7 lines), Cliff (7),
+Cammoun (3), Shailja (1) change; the other 7 are byte-identical. Every quote line that
+touches a changed character is one of the 9 Rosas quotes, so the §12 invariants (9 FAIL
+after re-normalizing archives, 460 verified after re-normalizing quotes) and the
+importer's 9-quote-line assertion stand. The corpus-level assertions above are amended.
+
