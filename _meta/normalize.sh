@@ -28,11 +28,22 @@
 # Guarantees
 # ----------
 #   * Deterministic  — no locale, date, or randomness dependence (runs in LC_ALL=C).
+#                      Deterministic for a given version of this script: change a
+#                      step and the same input yields different bytes, so every
+#                      `archive-sha256:` (`_meta/schema.md` § Source Archive Hash)
+#                      computed under the old version stops matching. A change here
+#                      ships with a migration that re-normalizes and re-hashes.
 #   * Idempotent     — normalize(normalize(x)) == normalize(x). Safe to re-run on
 #                      an archive of unknown provenance, which is how a legacy
 #                      archive gets brought up to standard.
 #   * Lossless enough — folds presentation, never content. No text is dropped
-#                      except zero-width and soft-hyphen characters.
+#                      except zero-width and soft-hyphen characters — and the
+#                      hyphen of a compound split at a line break (step 4).
+#
+# Requires perl with Unicode::Normalize (a core module since perl 5.8). Missing
+# either is a hard stop, exit 2: an archive normalized without NFC grounds
+# differently from one normalized with it, and there is no fallback that is not
+# exactly that.
 #
 # What it does
 # ------------
@@ -43,12 +54,32 @@
 #      invisible in a model's view of the file, so a quote that looks
 #      byte-perfect fails `grep -F` for no visible reason. Found the hard way --
 #      three quotes in the Hagmann 2008 extract failed on exactly this.
+#      Form feed is one of them, and it is how pdftotext marks a page break —
+#      the only signal `_meta/pdf-clean.sh` has. So this step warns on stderr
+#      when it drops one: the input still had pages, pdf-clean has not run, and
+#      after this nothing can find the page furniture (trial 2, T2-5).
+#   0b. Unicode NFC, on every line that is valid UTF-8 (others pass through
+#      byte-for-byte). Canonically equivalent characters become one code point,
+#      so U+2126 OHM SIGN is U+03A9 GREEK CAPITAL LETTER OMEGA — the same
+#      character by Unicode's own definition, and pixel-identical. Without it a
+#      quote typed with the ordinary omega fails `grep -F` against an archive
+#      holding the ohm sign, which trial 2 hit on 9 quotes in one paper (T2-7).
+#      NFC and not NFKC: NFKC would also fold superscripts and fractions, which
+#      are content.
 #   1. CRLF → LF; strips BOM, zero-width joiners/spaces, and soft hyphens.
 #   2. Folds ligatures (ﬁ ﬂ ﬀ ﬃ ﬄ ﬅ ﬆ), smart quotes, primes, ellipsis,
 #      en/em/figure dashes and the Unicode minus, and every exotic space, to ASCII.
 #   3. Tabs → space; collapses space runs; strips trailing space; collapses
 #      blank-line runs to one.
-#   4. Rejoins words split across a line break by hyphenation.
+#   4. Rejoins words split across a line break by hyphenation. **This has a
+#      cost.** At a line break a hyphenation hyphen and a compound's own hyphen
+#      are indistinguishable, and the hyphen is always dropped: a PDF that broke
+#      "real-valued" after the hyphen archives "realvalued", and that is then
+#      the only form a quote can ground on (trial 2 found "datadriven",
+#      "illposed", "DesikanKilliany" among others, T2-8). Keeping the hyphen
+#      instead would break every genuinely hyphenated word, which is the common
+#      case; a dictionary check would add a dependency. Prefer a quote span that
+#      does not cross such a join.
 #   5. Unwraps each paragraph onto a single line. Headings, list items,
 #      blockquotes, table rows, and fenced code blocks are never joined — they
 #      carry structure, and joining them would destroy it.
@@ -65,6 +96,11 @@
 
 set -euo pipefail
 
+usage() {
+    echo "normalize.sh: usage: [--in-place] <file>   or   normalize.sh < input" >&2
+    exit 2
+}
+
 in_place=""
 if [ "${1:-}" = "--in-place" ]; then
     in_place="${2:-}"
@@ -76,7 +112,24 @@ if [ "${1:-}" = "--in-place" ]; then
         echo "normalize.sh: no such file: $in_place" >&2
         exit 2
     fi
+    [ "$#" -eq 2 ] || usage
     set -- "$in_place"
+fi
+# An unknown flag used to fall through as a filename, fail its redirect, and
+# exit 0 — so a caller checking the status could not tell a typo from a
+# normalized file (T2-3). Exit 2 is a usage error, as in validate-archive.sh.
+case "${1:-}" in
+    -*) [ -n "$in_place" ] || { echo "normalize.sh: unknown flag: $1" >&2; usage; } ;;
+esac
+[ "$#" -le 1 ] || usage
+if [ "$#" -eq 1 ] && [ -z "$in_place" ] && [ ! -f "$1" ]; then
+    echo "normalize.sh: no such file: $1" >&2
+    exit 2
+fi
+
+if ! perl -MUnicode::Normalize -e 1 2>/dev/null; then
+    echo "normalize.sh: needs perl with Unicode::Normalize (for NFC); not found" >&2
+    exit 2
 fi
 
 export LC_ALL=C
@@ -86,7 +139,18 @@ normalize() {
     # Everything below 0x20 except tab and newline, plus DEL. Nothing in a text
     # archive should carry these, and when they appear they are undetectable by
     # eye -- which makes them the worst possible grounding failure.
-    tr -d '\001-\010\013\014\016-\037\177' |
+    # Byte-oriented perl, so invalid UTF-8 survives as it did under tr. Step 0b
+    # rides along: NFC on each line that decodes, byte-identical otherwise.
+    perl -MUnicode::Normalize -ne '
+        $ff += tr/\x0c//;
+        tr/\x01-\x08\x0b\x0c\x0e-\x1f\x7f//d;
+        if (utf8::decode($_)) { $_ = NFC($_); utf8::encode($_); }
+        print;
+        END {
+            printf STDERR "normalize.sh: dropped %d form feed(s): the input still had page"
+                . " breaks, so _meta/pdf-clean.sh has not run and can no longer find page"
+                . " furniture after this\n", $ff if $ff;
+        }' |
     # ── 1–2. Character folding ───────────────────────────────────────────────
     # Byte-literal substitution, so the C locale is correct here as well as fast.
     sed -e 's/\r$//' \
