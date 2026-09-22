@@ -82,15 +82,27 @@ VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 # Pending writes from an interrupted session
 ls -t "$VAULT/_meta/candidates/" 2>/dev/null | grep -v "^\.gitkeep$" | wc -l
 
+# Scratch for this pass. A fixed /tmp name collides with a second pass (T2-6);
+# print the path, and set TEND to it in every later block of this pass.
+TEND="$(mktemp -d -t memex-tend.XXXXXX)"; echo "tend scratch: $TEND"
+
 # The state oracle. Capture once; every later step reads this file, not the vault.
-bash "$VAULT/_meta/lint.sh" > /tmp/tend-lint.out 2>&1; echo "lint exit=$?"
+bash "$VAULT/_meta/lint.sh" > "$TEND/lint.out" 2>&1; echo "lint exit=$?"
 
 # Findings attributed to their section
-awk '/^── /{s=$0; sub(/ *─+ *$/,"",s)} /WARN|FAIL/{print s "\t" $0}' /tmp/tend-lint.out
+while IFS= read -r line; do
+    case "$line" in
+        "── "*)          sect="${line%% ─*}" ;;
+        *WARN*|*FAIL*)  printf '%s\t%s\n' "$sect" "$line" ;;
+    esac
+done < "$TEND/lint.out"
 
-# When each maintenance skill last ran
-awk '/^## \[/{d=substr($2,2,10)} /^skill:: memex-/{print $2, d}' "$VAULT/_meta/log.md" \
-  | sort -k1,1 -k2,2r | awk '!seen[$1]++'
+# When each maintenance skill last ran: newest date per skill
+sed -n -e 's/^## \[\([0-9-]\{10\}\)\].*/D \1/p' \
+       -e 's/^skill:: \(memex-[a-z-]*\).*/S \1/p' "$VAULT/_meta/log.md" \
+  | while read -r kind val; do
+        if [ "$kind" = D ]; then day="$val"; else echo "$val $day"; fi
+    done | sort -k1,1 -k2,2r | sort -s -u -k1,1
 ```
 
 **Exit 2 means the linter broke**, not the vault. Stop and report it as a linter
@@ -173,8 +185,9 @@ pre-empt its confirmations or answer its questions on the user's behalf.
 After any skill that **wrote** to the vault, re-run lint and diff the finding counts:
 
 ```bash
-bash "$VAULT/_meta/lint.sh" > /tmp/tend-lint-2.out 2>&1; echo "exit=$?"
-diff <(grep -cE "WARN|FAIL" /tmp/tend-lint.out) <(grep -cE "WARN|FAIL" /tmp/tend-lint-2.out)
+TEND=<the scratch path step 1 printed>
+bash "$VAULT/_meta/lint.sh" > "$TEND/lint-2.out" 2>&1; echo "exit=$?"
+diff <(grep -cE "WARN|FAIL" "$TEND/lint.out") <(grep -cE "WARN|FAIL" "$TEND/lint-2.out")
 ```
 
 Report the delta before moving on. **A step that increased the finding count is a
