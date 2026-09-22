@@ -48,11 +48,14 @@ set -euo pipefail
 
 VAULT="${1:-$(cd "$(dirname "$0")/.." && pwd)}"
 
-RED='\033[0;31m'
-YEL='\033[1;33m'
-GRN='\033[0;32m'
-DIM='\033[0;90m'
-NC='\033[0m'
+# Real escape bytes, not backslash sequences, so no echo below needs its -e flag.
+# That flag also interpreted backslashes in the *message*: a quote containing
+# "\n" or "\t" printed as a line break or a tab in its own finding.
+RED=$'\033[0;31m'
+YEL=$'\033[1;33m'
+GRN=$'\033[0;32m'
+DIM=$'\033[0;90m'
+NC=$'\033[0m'
 
 issues=0
 fails=0
@@ -66,7 +69,8 @@ finished=false
 on_exit() {
     local code=$?
     if [ "$code" -ne 0 ] && [ "$finished" = false ]; then
-        echo -e "\n  ${RED}ERROR${NC} lint.sh exited before reaching a verdict — this is a bug in"
+        printf '\n'
+        echo    "  ${RED}ERROR${NC} lint.sh exited before reaching a verdict — this is a bug in"
         echo    "        the linter, not a finding about the vault. Do not read it as a FAIL."
         echo    "        Re-run with 'bash -x _meta/lint.sh' to find the aborting command."
         exit 2
@@ -74,9 +78,9 @@ on_exit() {
 }
 trap on_exit EXIT
 
-warn()  { echo -e "  ${YEL}WARN${NC}  $1"; ((issues++)) || true; }
-error() { echo -e "  ${RED}FAIL${NC}  $1"; ((issues++)) || true; ((fails++)) || true; }
-ok()    { echo -e "  ${GRN}OK${NC}    $1"; }
+warn()  { printf '  %sWARN%s  %s\n' "$YEL" "$NC" "$1"; ((issues++)) || true; }
+error() { printf '  %sFAIL%s  %s\n' "$RED" "$NC" "$1"; ((issues++)) || true; ((fails++)) || true; }
+ok()    { printf '  %sOK%s    %s\n' "$GRN" "$NC" "$1"; }
 
 # Folders whose wikilinks count as real graph edges. _meta/ is excluded on purpose:
 # the ingest log records `atoms:: [[Atom A]]` for every atom it touches, so counting
@@ -288,6 +292,17 @@ list_has() {
     fi
     [ -n "${LIST_MEMBER["$name"$'\x1f'"$word"]+x}" ]
 }
+
+# Retired atoms (_meta/schema.md § Retirement): an atom that some atom's
+# supersedes:: names. Derived here once, so every check that counts live concepts
+# skips exactly the same set. In trial 2 a split's retirement stub was counted,
+# graded and offered for promotion as a live concept by four consumers (T2-33).
+declare -A RETIRED=()
+while IFS= read -r t; do
+    if [ -n "$t" ]; then RETIRED[$t]=1; fi
+done < <(find "$VAULT/atoms" -name "*.md" -exec grep -hE '^supersedes::[[:space:]]*\[\[' {} + 2>/dev/null \
+         | grep -oE '\[\[[^]|#]+' | sed 's/^\[\[//' | sort -u || true)
+is_retired() { [ -n "${RETIRED[$1]+x}" ]; }
 
 # ── Source independence (finding 7, M15) ────────────────────────────────────
 # `_meta/schema.md` § Confidence Values counts *independent* sources: two are not
@@ -742,6 +757,11 @@ echo "── 4. Orphan Atoms (no cites::, no inbound links) ──────�
 # links to it. Defined normatively in _meta/schema.md; _meta/index.md's Dataview
 # query must stay in step with this. Does not test topic membership: that is
 # derived from the atom's own part-of::, which is not an inbound link.
+#
+# Cost: one grep -r per curated folder per atom, so O(atoms x vault). Measured
+# 0.22 s on the 22-atom trial-1 fork and 1.65 s at 5x; mildly superlinear and not
+# the dominant section. A reverse-link table built once, like the lookup tables
+# above, is the fix if it ever dominates — revisit near 200 sources.
 
 while IFS= read -r -d '' f; do
     label="atoms/$(basename "$f")"
@@ -778,7 +798,7 @@ echo "── 5. Archive Mismatches (raw:: links) ──────────�
 # mismatch and FAILs. Without that split every clone would fail lint on the first
 # raw:: it met — the same trap section 12 avoids, and the same reasoning.
 if [ ! -d "$VAULT/.archive" ]; then
-    echo -e "  ${DIM}SKIP${NC}  no .archive/ directory — raw:: targets unverifiable (expected on a fresh clone)"
+    echo "  ${DIM}SKIP${NC}  no .archive/ directory — raw:: targets unverifiable (expected on a fresh clone)"
 else
     while IFS= read -r -d '' f; do
         while IFS= read -r line; do
@@ -845,7 +865,7 @@ mapfile -t atom_sizes < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -p
     | while IFS= read -r -d '' f; do body_chars "$f"; done | sort -n)
 atom_n=${#atom_sizes[@]}
 if [ "$atom_n" -lt "$BLOAT_MIN_ATOMS" ]; then
-    echo -e "  ${DIM}SKIP${NC}  6c bloated atoms — $atom_n atoms, need $BLOAT_MIN_ATOMS for a meaningful median"
+    echo "  ${DIM}SKIP${NC}  6c bloated atoms — $atom_n atoms, need $BLOAT_MIN_ATOMS for a meaningful median"
 else
     if (( atom_n % 2 )); then
         bloat_median=${atom_sizes[atom_n / 2]}
@@ -1211,7 +1231,7 @@ valid_tags=$(awk '
 ' "$domain_file" 2>/dev/null | sed 's/[[:space:]]*$//' | grep -v "^$" | grep -v "^#" || true)
 
 if [ -z "$valid_tags" ]; then
-    echo -e "  ${DIM}SKIP${NC}  no tag sections found in _meta/domain.md — define vocabulary to enable this check"
+    echo "  ${DIM}SKIP${NC}  no tag sections found in _meta/domain.md — define vocabulary to enable this check"
 else
     while IFS= read -r -d '' f; do
         label=${f#"$VAULT"/}
@@ -1291,7 +1311,7 @@ stage_section_for() {
 }
 
 if [ -z "$okf_types" ]; then
-    echo -e "  ${DIM}SKIP${NC}  no OKF Types table in _meta/domain.md — cannot validate type:"
+    echo "  ${DIM}SKIP${NC}  no OKF Types table in _meta/domain.md — cannot validate type:"
 else
     while IFS= read -r -d '' f; do
         rel=${f#"$VAULT"/}
@@ -1373,7 +1393,7 @@ if [ -d "$extracts_dir" ]; then
 fi
 
 if [ -z "$have_extracts" ]; then
-    echo -e "  ${DIM}SKIP${NC}  no extracts/ — run memex-deep-extract to build the evidence layer"
+    echo "  ${DIM}SKIP${NC}  no extracts/ — run memex-deep-extract to build the evidence layer"
 else
     grounded=0
     unverifiable=0
@@ -1493,7 +1513,7 @@ else
     done < <(find "$extracts_dir" -name "*.md" ! -name ".gitkeep" -print0)
 
     if [ "$unverifiable" -gt 0 ]; then
-        echo -e "  ${DIM}SKIP${NC}  $unverifiable quote(s) unverifiable — no archive on disk (expected on a fresh clone)"
+        echo "  ${DIM}SKIP${NC}  $unverifiable quote(s) unverifiable — no archive on disk (expected on a fresh clone)"
     fi
     ok "grounding check complete ($grounded quote(s) verified)"
 fi
@@ -1669,7 +1689,7 @@ done < <(find "$VAULT/atoms" "$VAULT/sources" "$VAULT/topics" "$VAULT/glossary" 
              -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null)
 
 if [ "$prov_checked" -eq 0 ]; then
-    echo -e "  ${DIM}SKIP${NC}  no generated: or verified: blocks yet"
+    echo "  ${DIM}SKIP${NC}  no generated: or verified: blocks yet"
 fi
 ok "provenance block check complete"
 
@@ -1698,11 +1718,11 @@ printf "  %-22s %s\n" "Research notes:"    "$(count_md "$VAULT/topics/research")
 
 echo ""
 if [ "$issues" -eq 0 ]; then
-    echo -e "  ${GRN}All checks passed.${NC}"
+    echo "  ${GRN}All checks passed.${NC}"
 elif [ "$fails" -eq 0 ]; then
-    echo -e "  ${YEL}${issues} warning(s).${NC} Review above."
+    echo "  ${YEL}${issues} warning(s).${NC} Review above."
 else
-    echo -e "  ${RED}${fails} failure(s)${NC}, $((issues - fails)) warning(s). Review above."
+    echo "  ${RED}${fails} failure(s)${NC}, $((issues - fails)) warning(s). Review above."
 fi
 echo ""
 
