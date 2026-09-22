@@ -1,5 +1,6 @@
 .archive/
 _exports/
-_meta/candidates/
+_meta/candidates/*
+!_meta/candidates/.gitkeep
 .obsidian/workspace.json
 .obsidian/plugins/
