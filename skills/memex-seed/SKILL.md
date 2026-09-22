@@ -49,7 +49,7 @@ For the relationship taxonomy and full field definitions, read: `references/vaul
 
 ```bash
 VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
-grep -c "skill:: memex-seed" "$VAULT/_meta/log.md" 2>/dev/null || echo 0
+n=$(grep -c "skill:: memex-seed" "$VAULT/_meta/log.md" 2>/dev/null); echo "${n:-0}"
 ```
 
 **Zero** — run the full workflow.
@@ -114,6 +114,12 @@ All three tiers emit the same TSV, so exactly one loop is written downstream. Li
 fields join on `|`, because an author entry contains commas and spaces but never a
 pipe.
 
+Both functions read `$MANIFEST` and take no argument. Nothing in this file uses a
+positional parameter: the skill loader substitutes those with the invocation's
+arguments before any shell sees the text, so a first positional parameter here
+arrives as the operator's first word (trial 2, T2-2). Set `MANIFEST=<path>` at the top of every
+block that uses it — shell variables do not survive between tool calls.
+
 ```bash
 # Tier 1 — jq.
 manifest_tsv() {
@@ -121,14 +127,14 @@ manifest_tsv() {
       (.slug // ""), .archive, .title, (.doi // ""), (.year // ""), (.venue // ""),
       ((.authors // []) | join("|")), ((.surnames // []) | join("|")),
       (.branch // ""), (.version // ""), (.route // ""), (.retrieval_note // "")
-    ] | @tsv' "$1"
+    ] | @tsv' "$MANIFEST"
 }
 ```
 
 ```bash
 # Tier 2 — python3. Same columns, same order.
 manifest_tsv() {
-  python3 - "$1" <<'PY'
+  python3 - "$MANIFEST" <<'PY'
 import json, sys
 cols = ["slug","archive","title","doi","year","venue",
         "authors","surnames","branch","version","route","retrieval_note"]
@@ -166,7 +172,7 @@ has no batch mode, and rejects a directory — so loop:
 VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 BASE="$(cd "$(dirname "$MANIFEST")" && pwd)"
 
-manifest_tsv "$MANIFEST" | while IFS=$'\t' read -r slug archive title rest; do
+manifest_tsv | while IFS=$'\t' read -r slug archive title rest; do
     f="$archive"; [ "${f#/}" = "$f" ] && f="$BASE/$archive"
     if bash "$VAULT/_meta/validate-archive.sh" --quiet "$f"; then
         printf '  PASS    %s\n' "$slug"
@@ -176,7 +182,7 @@ manifest_tsv "$MANIFEST" | while IFS=$'\t' read -r slug archive title rest; do
 done
 ```
 
-`--quiet` must be `$1`; it is only checked there. Exit **0** passes, **1** rejects,
+`--quiet` must be the first argument; it is only checked there. Exit **0** passes, **1** rejects,
 and **2 is a usage error or a bad path — never a verdict about the document**.
 Report exit 2 separately and stop; it means this skill or the path is wrong, not
 that the paper is.
@@ -572,7 +578,7 @@ workers are doing `memex-save`'s job, worse.
   validator built the manifest. Re-run `_meta/validate-archive.sh` on every archive
   at seed time.
 - **Don't pass a directory to `_meta/validate-archive.sh`**, and don't put `--quiet`
-  anywhere but `$1`. Both exit 2.
+  anywhere but first. Both exit 2.
 - **Don't read exit 2 as a rejection.** It is a usage error or a bad path and says
   nothing about the document — stop and fix the call.
 - **Don't test independence pairwise.** Dependence is transitive, so an A–B–C author
