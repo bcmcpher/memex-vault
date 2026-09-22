@@ -121,16 +121,26 @@ Relationships are grouped by **epistemic role**: affirmative (source builds on t
 |-------|---------|
 | `extends::` | Builds on / specializes another concept (A is a subtype or elaboration of B) |
 | `uses::` | Applies or depends on another concept (A requires B to function) |
-| `part-of::` | On an atom: membership of a topic — exactly one leaf concept map, plus any projects or research questions. On a concept map: its one parent. See § Topic Hierarchy |
+
+`part-of::` is not in this table: its target is always a topic (§ Atom/Topic →
+Topic). That an atom is a component of another concept is `extends::` or `uses::`
+— § Choosing Between Structural Relations. Until rc.3 this table listed
+`part-of::` too, while lint read every atom-targeted `part-of::` as a topic that
+does not exist, and warned (trial 2, T2-25).
+
+### Atom/Topic → Topic
+| Field | Meaning |
+|-------|---------|
+| `part-of::` | On an atom: membership of a topic — exactly one leaf concept map, plus any projects or research questions. On a concept map: its one parent. **The target is always a topic, never an atom.** See § Topic Hierarchy |
 
 ### Atom → Atom — Epistemic
 | Field | Meaning |
 |-------|---------|
 | `contradicts::` | Direct logical conflict with another concept or claim; document the tension in both atoms |
 | `challenges::` | A weakens or questions B without direct contradiction; softer than `contradicts::` |
-| `supersedes::` | A replaces or obsoletes B in modern understanding; B remains for historical context |
+| `supersedes::` | A replaces or obsoletes B in modern understanding; B remains for historical context. **Written on the successor A**, naming the retired B — `A supersedes:: [[B]]`. B is then retired (§ Retirement) |
 | `limits::` | A defines the boundary conditions or failure modes where B breaks down or only partially applies |
-| `contrasts-with::` | A is an alternative approach to the same problem as B; not contradictory, just different |
+| `contrasts-with::` | A is an alternative approach to the same problem as B; not contradictory, just different. **Symmetric:** A contrasts with B exactly when B contrasts with A, so the pair may be written on either note or both, and a reciprocal pair is one relation, not two |
 
 ### Any Note → Source
 | Field | Meaning |
@@ -255,6 +265,28 @@ grep -lE "^part-of::.*\[\[<topic-slug>\]\]" topics/concepts/*.md
 
 ---
 
+### Choosing Between Structural Relations
+
+```
+Atom A depends on, or builds on, concept B?
+  └─ Is B a topic — a concept map, project or research question?
+       ├─ Yes → A part-of:: B          (membership; § Topic Hierarchy)
+       └─ No  → Is A a kind of B, or a refinement of it — does what holds
+                of B hold of A?
+                  ├─ Yes → A extends:: B
+                  └─ No  → Does A need B to work, or to be stated at all?
+                             ├─ Yes → A uses:: B
+                             └─ No  → not structural: the skeptical tree
+                                      below, or related:: as a fallback
+```
+
+Two tests keep the first two apart. *Substitution:* anywhere B is claimed to
+work, could A be put in its place? Then A `extends::` B — flash attention
+extends attention. *Removal:* take B away and A stops making sense, though A is
+not a kind of B? Then A `uses::` B — a transformer uses attention, and is not a
+kind of it. A component of a larger concept is one
+of these two, never `part-of::`.
+
 ### Choosing Between Skeptical Relations
 
 ```
@@ -274,6 +306,31 @@ Atom A questions atom B?
 ```
 
 When using `challenges::`, `refutes::`, or `contradicts::`, always write a sentence in the note body explaining the specific tension. Bare link with no context is not useful.
+
+### Retirement
+
+**An atom is retired when some other atom's `supersedes::` names it.** That is
+the whole rule, and it is derived: there is no `retired:` field to keep in step.
+
+The file stays, because links into it must keep resolving and because B "remains
+for historical context". Its body says, in a sentence, what replaced it. A
+retirement stub left by a split or merge (`memex-refactor`) carries no relation
+fields of its own — no `cites::`, no `part-of::` — since each would claim
+membership or evidence for a concept that no longer exists.
+
+Every consumer that counts live concepts skips retired atoms: `_meta/lint.sh`
+(orphans, topic breadth, freshness, confidence, under-grounding),
+`memex-reconcile`'s backlog, `memex-trust-audit`, `memex-stale`, and
+`memex-topic-emerge`'s clusters. `memex-compose` lists them under their own
+heading, never among the claims. In trial 2 a split's stub was graded, counted
+toward its topic's breadth, and offered for relation promotion — a tombstone
+with three `cites::` and a `part-of::` is indistinguishable from a concept
+(T2-33).
+
+Direction is the one way to get this wrong. `B supersedes:: [[A]]` retires A.
+Written the other way round it retires the successor and leaves the stub live,
+which is what rc.2's `memex-refactor` did; lint section 7 warns on the shapes
+that give it away.
 
 ---
 
@@ -426,7 +483,10 @@ through `_meta/normalize.sh` — by every skill that writes one, not just by
 A **missing** archive is a SKIP, not a FAIL. `.archive/` is gitignored, so it is
 absent on every fresh clone, and *unverifiable* is not *fabricated*. The
 guarantee is therefore local-only — worth stating plainly rather than pretending
-it runs in CI.
+it runs in CI. A clone gets it back only by obtaining the archives themselves
+(a backup, a colleague, a re-fetch through the same pipeline), and the source
+note's `archive-sha256:` is how it knows the restored file is the text the quotes
+were checked against (§ Archive, Source Archive Hash).
 
 ---
 
@@ -545,7 +605,7 @@ atoms/attention-neuroscience.md
 ```
 
 The bare `attention.md` is left permanently unused. A note that exists at the
-ambiguous name is worse than none, because every future `part-of:: [[attention]]`
+ambiguous name is worse than none, because every future `uses:: [[attention]]`
 will silently resolve to whichever sense was written first.
 
 **Polysemous senses** — one concept read differently in two contexts. Keep one
@@ -689,6 +749,31 @@ provenance is always safe.
 altogether, both section 5 and the grounding check SKIP: that is what a fresh
 clone looks like, and a clone must not fail lint.
 
+### Source Archive Hash
+
+A source note with `raw::` carries `archive-sha256:` in its frontmatter: the
+SHA-256 of the archive file's bytes, lowercase hex, as `sha256sum` prints it.
+It is present exactly when `raw::` is. The skill that writes the archive writes
+the hash, from the normalized file, after the write: `memex-seed`, `memex-ingest`,
+and `memex-deep-extract` mode A when it creates an archive. `memex-save` writes no
+archive and so no hash.
+
+```yaml
+archive-sha256: 3f1c…e9a0   # 64 hex digits
+```
+
+`.archive/` is gitignored, so a clone has the notes and their quotes but not the
+text they ground against. Whoever restores archives from elsewhere needs to know
+they got the same bytes the quotes were checked against; the hash is how.
+`_meta/lint.sh` section 5 WARNs when a note with `raw::` has no hash, and when an
+archive that is present does not match. A mismatch means the text changed after
+the quotes were checked — re-fetched, edited, or re-normalized by a newer
+`normalize.sh` — and section 12's verdict is about different bytes.
+
+The hash is over normalized bytes, so it moves whenever `_meta/normalize.sh`'s
+output does. A release that changes normalization ships a migration that
+re-normalizes and re-hashes; `_meta/migrate-rc2-rc3.sh` is the first.
+
 ---
 
 ## Workflow Stages
@@ -730,6 +815,13 @@ so two runs promoting into one atom each read the other's half-written state and
 `confidence:` comes out silently wrong. A skill that fans out takes candidate
 session ids from the worker, never from the wall clock, so parallel runs cannot
 collide in `_meta/candidates/`.
+
+**"Keyed" covers scratch files too.** A worker's temporary files come from
+`mktemp -d`, or carry the source slug in their name — never a fixed
+`/tmp/<name>`. In trial 2 parallel mode A workers shared one fixed scratch path
+for the extract body, and a worker could write another source's claims under its
+own slug (T2-6). It is the same collision the rule prevents for vault files, one
+directory over.
 
 ---
 
@@ -792,11 +884,44 @@ part-of:: [[tractography-methods]]
 A create candidate's body is a whole note with its own frontmatter, so its file holds
 two `---` blocks; `memex-candidates` step 4 says how to split them.
 
-**Lifecycle:** Candidate written → user confirms interactively → vault file written → candidate deleted. If session ends before confirmation, candidate persists. `memex-candidates` resurfaces pending candidates for approval or rejection.
+**Gate the whole write set.** A skill that writes candidates writes one for
+**every** file it is about to change, in one session, before it changes any —
+the create, and each edit that wires it in. A candidate layer that covers the
+create but not the wiring makes recovery partial by construction: in trial 2 an
+interrupted `memex-glossary` session was recovered through `memex-candidates` as
+glossary entries nothing pointed at, because the `defines::` back-links were
+never gated (T2-42). The same holds for a skill that edits many existing files
+(`memex-refactor`, `memex-reconcile`): each edit is a modify or replace
+candidate, so the per-write half of recovery is universal (T2-20).
 
-**File naming:** `YYYY-MM-DD-HHMMSS-{action}-{target-slug}.md`
+**Write protocol.** Every gated write runs these steps, in order:
 
-`_meta/candidates/` is gitignored — candidates are ephemeral working state, not vault history.
+1. **Candidate** — written to `_meta/candidates/`.
+2. **Confirm** — the user approves it interactively.
+3. **Write** — the vault file is created or edited.
+4. **Assert** — re-read the target and check the change is there: a create's
+   file exists and equals the candidate body; an append's lines are under the
+   named section; a replace's new line is present and its `replaces:` line is
+   gone. On a miss, stop: keep the candidate, report the target, and do not log.
+5. **Delete** — the candidate, only after the assert passes.
+6. **Log** — the `_meta/log.md` entry, last, describing only writes that passed.
+
+Step 4 exists because an edit tool can report success on a write that did not
+happen. In trial 1 two anchored insertions into one file matched nothing, left
+it unchanged, and reported success; the loss was found only by a later `grep`
+(finding 13). Reading back the one thing just written is cheap, and it is the
+only check that runs at the moment the loss is still recoverable.
+
+If the session ends before step 2, the candidate persists and `memex-candidates`
+resurfaces it for approval or rejection.
+
+**File naming:** `YYYY-MM-DD-HHMMSS-{action}-{target-slug}.md`, in every skill.
+Nothing parses the name — `memex-candidates` groups by `session:` — but one form
+keeps `ls` order chronological.
+
+The contents of `_meta/candidates/` are gitignored — ephemeral working state, not
+vault history. The directory itself is kept by a committed `.gitkeep`, so the first
+candidate write on a fresh clone has somewhere to go (trial 2, T2-18).
 
 ---
 
