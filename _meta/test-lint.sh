@@ -11,8 +11,15 @@
 #
 # Each fixture is a *sparse overlay*, not a whole vault: it holds only the notes
 # under test. The harness builds a scaffold around it from this repo's real
-# `_meta/schema.md` and `_meta/domain.md`, so a fixture tests lint rather than
-# re-stating the schema — and a schema change that breaks lint shows up here.
+# `_meta/schema.md`, so a fixture tests lint rather than re-stating the schema —
+# and a schema change that breaks lint shows up here.
+#
+# `_meta/domain.md` is the opposite case: it is the file a fork edits, so the
+# expectations cannot depend on it. The scaffold uses the fixture-owned copy at
+# `_meta/lint-fixtures/domain.md` and builds `sources/*` from that copy's
+# § Source Types. Until rc.3 it copied the live file, and a fork that replaced
+# its tag vocabulary failed fixtures it had not touched (trial 2, T2-1). CI runs
+# this harness with a foreign `domain.md` in place to keep it that way.
 #
 # Expectations record the exit code, every FAIL/WARN line sorted, and the summary
 # counts. Sorted because `find` order is not guaranteed; counts because they are
@@ -44,18 +51,31 @@ for arg in "$@"; do
 done
 
 [ -d "$FIXTURES" ] || { echo "no fixtures at $FIXTURES" >&2; exit 2; }
+FIXTURE_DOMAIN="$FIXTURES/domain.md"
+[ -f "$FIXTURE_DOMAIN" ] || { echo "no fixture domain.md at $FIXTURE_DOMAIN" >&2; exit 2; }
 
 RED=$'\033[0;31m'; GREEN=$'\033[0;32m'; YELLOW=$'\033[1;33m'; DIM=$'\033[0;90m'; NC=$'\033[0m'
 
 # Build a minimal but real vault in $1, then overlay fixture $2.
 scaffold() {
     local root="$1" fixture="$2"
+    local medium
     mkdir -p "$root/_meta" "$root/atoms" "$root/extracts" "$root/glossary" \
              "$root/topics/concepts" "$root/topics/projects" "$root/topics/research" \
-             "$root/sources/web" "$root/sources/video" "$root/sources/paper" \
-             "$root/sources/docs" "$root/sources/meeting" "$root/.archive"
-    # lint reads exactly these two from _meta (plus candidates/, which may be absent)
-    cp "$VAULT/_meta/schema.md" "$VAULT/_meta/domain.md" "$root/_meta/"
+             "$root/.archive"
+    # lint reads exactly these two from _meta (plus candidates/, which may be
+    # absent). domain.md is the fixtures' own, never the live one — see header.
+    cp "$VAULT/_meta/schema.md" "$root/_meta/"
+    cp "$FIXTURE_DOMAIN" "$root/_meta/domain.md"
+    # one folder per declared medium, parsed the way lint.sh parses it
+    for medium in $(awk '
+        /^## Source Types/ {f=1; b=0; next}
+        f && /^## /        {f=0; b=0}
+        f && /^```/        {b=!b; next}
+        f && b && !/^[[:space:]]*(#|$)/ {print $1}
+    ' "$FIXTURE_DOMAIN"); do
+        mkdir -p "$root/sources/$medium"
+    done
     find "$root" -type d -exec touch {}/.gitkeep \;
     # notes under test
     if [ -d "$fixture/vault" ]; then
