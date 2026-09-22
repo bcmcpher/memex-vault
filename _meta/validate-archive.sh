@@ -78,6 +78,13 @@
 # Cammoun 2012, because an Elsevier PDF prints "All rights reserved" on page 1.
 # Chrome is a contaminant to trim, not evidence about what the document is.
 #
+# Page furniture is reported the same way, never decisive: a count of bare
+# `Page N of M` lines, the one furniture shape that survives into a normalized
+# archive whole. It appears when `pdf-clean.sh` ran after `normalize.sh`, or not
+# at all, and splits every sentence that crosses a page break (trial 2, T2-5:
+# three corpus archives, which this script passed without comment). Rejecting on
+# it would abort a seed on papers whose body is intact, so it warns.
+#
 # Known limits, stated so nobody trusts this further than it goes
 # ---------------------------------------------------------------
 #   * A landing page showing body snippets AND a full reference list would pass
@@ -96,6 +103,10 @@
 #     it returned 41 KB where the PDF holds 72 KB -- so extract from the PDF via
 #     `pdftotext | _meta/pdf-clean.sh`, never from the CLI's fulltext.
 #   * It cannot detect the wrong paper, a supplement, or a corrigendum.
+#   * Furniture detection is one pattern. Running heads, journal footers and
+#     welded page numbers left in by a skipped `pdf-clean.sh` are not seen here;
+#     only `pdf-clean.sh --report` on the raw pdftotext output, before
+#     normalizing, can find those.
 #   * A REJECT on a document you have read and know to be complete is a finding
 #     about this script, not an override to apply silently. Record it.
 
@@ -161,6 +172,14 @@ if [ -n "$chrome_line" ]; then
     say "warn  chrome: publisher boilerplate at line ${chrome_line} — trim if it is not the paper's own copyright line"
 else
     say "ok    chrome: none found"
+fi
+
+# ── page furniture — reported, never decisive ───────────────────────────────
+furniture=$(grep -cE '^[[:space:]]*Page [0-9]+ of [0-9]+[[:space:]]*$' "$f" || true)
+if [ "${furniture:-0}" -gt 0 ]; then
+    say "warn  furniture: ${furniture} 'Page N of M' line(s) — pdf-clean.sh did not run before normalize.sh; quotes cannot span those page breaks"
+else
+    say "ok    furniture: no 'Page N of M' lines"
 fi
 
 if [ "$long" -eq 1 ]; then
