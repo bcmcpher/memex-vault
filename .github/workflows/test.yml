@@ -58,5 +58,8 @@ jobs:
           cp "$RUNNER_TEMP/domain.md" _meta/domain.md
           exit $status
 
+      - name: Skill bodies survive the skill loader
+        run: bash _meta/check-skills.sh
+
       - name: lint.sh on this vault
         run: bash _meta/lint.sh
