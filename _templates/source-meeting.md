@@ -31,5 +31,6 @@ stage: unprocessed
 supports:: 
 introduces:: 
 challenges:: 
+defines:: 
 related:: 
 cites:: 
