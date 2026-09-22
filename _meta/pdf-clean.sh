@@ -6,6 +6,9 @@
 #   bash _meta/pdf-clean.sh raw.txt
 #   bash _meta/pdf-clean.sh --report raw.txt      # what it would strip, and why
 #
+# Exit 0 = cleaned (or, in filter mode, passed through). Exit 2 = usage error.
+# Exit 3 = --report cannot analyze the input: it has no form feeds (below).
+#
 # Why this exists
 # ---------------
 # `_meta/normalize.sh` folds presentation and unwraps paragraphs so that
@@ -51,6 +54,16 @@
 #      in the report -- guessing here would corrupt real data such as "Figure 3".
 #   5. Removes form feeds.
 #
+# **Run it before `normalize.sh`, never after.** Every step keys on form feeds,
+# and `normalize.sh` deletes them with the other C0 control bytes. On its output
+# this script sees one page, can never reach its three-page minimum, and used to
+# report "0 furniture lines" on archives full of `Page 2 of 4` (trial 2, T2-5).
+# A document with no form feed gives it no signal, so it now says so instead of
+# certifying the input clean: `--report` prints "cannot analyze" and exits 3;
+# filter mode warns on stderr and passes the text through, because a one-page
+# PDF is legitimate and a pipeline should not fail on it. `normalize.sh` warns
+# from its side when it drops a form feed.
+#
 # Deliberately NOT done
 # ---------------------
 # Reference lists, figure captions and table bodies are kept. They are content,
@@ -71,10 +84,18 @@
 set -euo pipefail
 export LC_ALL=C
 
+usage() { echo "pdf-clean.sh: usage: [--report] [file]   (stdin if no file)" >&2; exit 2; }
+
 report=0
 if [ "${1:-}" = "--report" ]; then report=1; shift; fi
+case "${1:-}" in -?*) echo "pdf-clean.sh: unknown flag: $1" >&2; usage ;; esac
+[ "$#" -le 1 ] || usage
 
 infile="${1:--}"
+if [ "$infile" != "-" ] && [ ! -f "$infile" ]; then
+    echo "pdf-clean.sh: no such file: $infile" >&2
+    exit 2
+fi
 
 awk -v REPORT="$report" '
     # Mask digit runs so page-varying furniture compares equal across pages.
@@ -169,6 +190,12 @@ awk -v REPORT="$report" '
                 }
                 print s
             }
+        }
+        if (np == 1) {
+            printf("pdf-clean: no form feeds, cannot analyze -- the input is one page, or" \
+                   " normalize.sh already ran on it. Nothing was checked; this is not a" \
+                   " clean result.\n") > "/dev/stderr"
+            exit (REPORT ? 3 : 0)
         }
         printf("pdf-clean: %d pages, %d furniture lines, %d page numbers, %d welded numbers\n",
                np, stripped, pagenum, welded) > "/dev/stderr"
