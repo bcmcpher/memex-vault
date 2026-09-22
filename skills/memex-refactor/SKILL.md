@@ -20,7 +20,7 @@ Triggers for when to run:
 - **split**: lint Section 6 flags a bloated atom, or the atom clearly covers two independent concepts
 - **merge**: two atoms describe the same concept from different angles, or one has been rendered redundant by the other
 
-For the full relationship taxonomy, read: `references/vault-schema.md`
+For the relationship taxonomy and field definitions, read `$VAULT/_meta/schema.md` § Relationship Types.
 
 ---
 

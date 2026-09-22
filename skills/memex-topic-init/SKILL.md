@@ -15,7 +15,7 @@ and the first sign is `git status` (roadmap R14).
 
 This skill creates a new topic node — a concept map, research note, or project workspace — and immediately wires it into the existing graph. The goal is to give a freshly named topic a meaningful starting structure rather than an empty shell: atoms already in the vault get linked, relevant sources get cited, and adjacent topics get connected.
 
-For the relationship taxonomy, read: `references/vault-schema.md`
+For the topic hierarchy rules and the relationship taxonomy, read `$VAULT/_meta/schema.md` § Topic Hierarchy and § Relationship Types.
 
 ---
 

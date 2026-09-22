@@ -17,7 +17,7 @@ This vault uses a layered structure: raw sources feed concept atoms, which feed 
 
 For quick saves without graph wiring, use `memex-save`. To process accumulated inbox notes, use `memex-connect`.
 
-For the relationship taxonomy and full field definitions, read: `references/vault-schema.md`
+For the relationship taxonomy and field definitions, read `$VAULT/_meta/schema.md` § Relationship Types.
 
 ---
 
@@ -125,7 +125,7 @@ related:: [[Adjacent Concept]]
 
 Write candidate file before writing to the source note (see Candidate Gating below). Then write the Dataview inline fields under `## Connections`.
 
-Use `challenges::` when the source questions a claim without fully refuting it. Use `refutes::` when it provides direct counter-evidence. Use `related::` only as a fallback: type the relation now, while the source is open — no later pass is scheduled to type it, and an untyped link is usually permanent. See `references/vault-schema.md` for the full decision tree.
+Use `challenges::` when the source questions a claim without fully refuting it. Use `refutes::` when it provides direct counter-evidence. Use `related::` only as a fallback: type the relation now, while the source is open — no later pass is scheduled to type it, and an untyped link is usually permanent. See `$VAULT/_meta/schema.md` § Choosing Between Skeptical Relations for the full decision tree.
 
 ### 5b. Back-wire existing atoms
 For every **existing** atom step 5 linked with `supports::`, `introduces::` or `demonstrates::`, add the source to that atom's `## Sources`:

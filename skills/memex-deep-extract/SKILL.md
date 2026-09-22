@@ -19,7 +19,7 @@ nothing records what a source said *sentence by sentence*. An extract does: one
 file per source, holding propositions, each carrying a verbatim quote checkable
 against the archived text.
 
-For the relationship taxonomy and field definitions, read: `references/vault-schema.md`
+For the relationship taxonomy and field definitions, read `$VAULT/_meta/schema.md` § Relationship Types.
 Full design rationale: `_meta/deep-extract-design.md`
 
 **Two modes.** Mode A writes exactly one file and mutates nothing else. Mode B

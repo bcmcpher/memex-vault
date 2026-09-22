@@ -17,7 +17,7 @@ This skill reads a vault note and surfaces the technical terms in it that deserv
 
 The goal is **operational definitions**: specific enough that two people would agree on whether a given thing fits the term. Vague glosses ("X is a type of Y") don't qualify. Definitions should be grounded in how the term is actually used in this note, not generic Wikipedia-level descriptions.
 
-For the full relationship taxonomy, read: `references/vault-schema.md`
+For the relationship taxonomy and field definitions, read `$VAULT/_meta/schema.md` § Relationship Types.
 
 ---
 

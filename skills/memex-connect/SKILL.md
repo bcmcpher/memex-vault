@@ -15,7 +15,7 @@ and the first sign is `git status` (roadmap R14).
 
 This skill takes inbox-only captures and integrates them into the knowledge graph. It enriches metadata by fetching URLs, wires Dataview connection fields, promotes atoms, updates topic maps, and marks sources as processed. One note at a time, with user confirmation before any write.
 
-For the relationship taxonomy and full field definitions, read: `references/vault-schema.md`
+For the relationship taxonomy and field definitions, read `$VAULT/_meta/schema.md` § Relationship Types.
 
 ---
 
@@ -180,7 +180,7 @@ cites:: [[source-filename]]
 
 Then add `defines:: [[term-name]]` to the source note's `## Connections` section. Ask before creating each stub.
 
-**Choosing the relation type** (excerpt — see `references/vault-schema.md` for the full decision tree including atom→atom epistemic relations)**:**
+**Choosing the relation type** (excerpt — see `$VAULT/_meta/schema.md` § Choosing Between Structural Relations and § Choosing Between Skeptical Relations for the full trees, including atom→atom relations)**:**
 
 | Use | When |
 |-----|------|

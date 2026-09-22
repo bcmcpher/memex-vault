@@ -17,7 +17,7 @@ This skill synthesizes vault knowledge into a structured export document. Every 
 
 Output files go to `_exports/` (gitignored). Vault notes are never modified.
 
-For the full relationship taxonomy, read: `references/vault-schema.md`
+For the relationship taxonomy and field definitions, read `$VAULT/_meta/schema.md` § Relationship Types.
 
 ---
 

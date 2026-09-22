@@ -30,7 +30,7 @@ It fetches nothing. For a URL, use `memex-save` or `memex-ingest`. To read a see
 paper claim by claim, use `memex-deep-extract` mode A. To wire seeded notes into
 atoms, use `memex-connect`.
 
-For the relationship taxonomy and full field definitions, read: `references/vault-schema.md`
+For the relationship taxonomy and field definitions, read `$VAULT/_meta/schema.md` § Relationship Types.
 
 ---
 

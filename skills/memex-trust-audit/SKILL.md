@@ -24,7 +24,7 @@ This skill answers two separate questions about an atom, and keeps them separate
 It does not judge whether atom bodies are factually correct. Run it after bulk
 ingest, after new sources challenge existing claims, or monthly as vault hygiene.
 
-For the full relationship taxonomy, read: `references/vault-schema.md`
+For the relationship taxonomy and field definitions, read `$VAULT/_meta/schema.md` § Relationship Types.
 
 ---
 

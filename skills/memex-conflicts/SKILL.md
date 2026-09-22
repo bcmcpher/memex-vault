@@ -17,7 +17,7 @@ This skill follows explicit conflict relation fields already in the graph — it
 
 Run it before `memex-compose` to ensure tensions are surfaced in exports, and after major rounds of ingest when new sources likely challenged existing claims.
 
-For the conflict relation taxonomy, read: `references/vault-schema.md`
+For the conflict relation taxonomy, read `$VAULT/_meta/schema.md` § Relationship Types and § Choosing Between Skeptical Relations.
 
 ---
 

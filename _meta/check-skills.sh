@@ -11,6 +11,11 @@
 #
 # Checks:
 #   1. No positional parameter anywhere in a SKILL.md.
+#   2. No bundled schema digest, and no pointer to one. rc.2 shipped fifteen
+#      `skills/*/references/vault-schema.md` copies that had drifted from
+#      `_meta/schema.md` and lacked the decision tree three skills sent readers
+#      to (T2-24, T2-35). Skills read `$VAULT/_meta/schema.md`; a copy is a
+#      second truth that goes stale silently.
 #
 # Usage:
 #   bash _meta/check-skills.sh
@@ -43,6 +48,11 @@ report() {  # name, grep output
 #    the loader and stay legal.
 hits=$(grep -nE '\$\{?([0-9]|ARGUMENTS)' "$VAULT"/skills/*/SKILL.md || true)
 report "no positional parameters in skills/*/SKILL.md" "$hits"
+
+# 2. Schema digests.
+hits=$( { find "$VAULT/skills" -name vault-schema.md
+          grep -rn 'references/vault-schema' "$VAULT/skills" "$VAULT/README.md" 2>/dev/null; } || true)
+report "no bundled schema digests in skills/" "$hits"
 
 echo ""
 if [ "$fail" -gt 0 ]; then

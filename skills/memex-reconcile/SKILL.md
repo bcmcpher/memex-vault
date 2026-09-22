@@ -21,7 +21,7 @@ This skill runs three repair passes over the graph:
 3. **Untyped `related::`** — a fallback link, worked as a backlog and resolved
    into a precise relation where one genuinely fits.
 
-For the full relationship taxonomy, read: `references/vault-schema.md`
+For the relationship taxonomy and field definitions, read `$VAULT/_meta/schema.md` § Relationship Types.
 
 > **Topic membership is derived.** Atoms declare `part-of::`; topics discover
 > their atoms by Dataview query. There is no `covers::` field and no bidirectional
@@ -206,7 +206,8 @@ rather than presenting all of it.
 ### 2. Present with a proposed type
 
 For each link, read both notes and propose a specific relation using the
-decision tree in `references/vault-schema.md`. Show the reasoning:
+decision trees in `$VAULT/_meta/schema.md` (§ Choosing Between Structural Relations,
+§ Choosing Between Skeptical Relations). Show the reasoning:
 
 ```
 UNTYPED RELATED: atoms/flash-attention.md

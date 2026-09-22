@@ -20,7 +20,7 @@ topics/concepts/  ──►  atoms/  ──►  sources/
   (broad domain)        (concept)     (specific reference)
 ```
 
-For the full relationship taxonomy, read: `references/vault-schema.md`
+For the relationship taxonomy and field definitions, read `$VAULT/_meta/schema.md` § Relationship Types.
 
 ---
 

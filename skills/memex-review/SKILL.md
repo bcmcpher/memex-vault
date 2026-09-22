@@ -17,7 +17,7 @@ This skill performs a semantic audit of topic-level nodes. It reads a topic map 
 
 This is an LLM-assisted synthesis task, not a mechanical check. Run it occasionally — after accumulating new sources, before writing a research synthesis, or when a topic feels muddled.
 
-For the relationship taxonomy, read: `references/vault-schema.md`
+For the relationship taxonomy and field definitions, read `$VAULT/_meta/schema.md` § Relationship Types.
 
 ---
 
@@ -153,5 +153,5 @@ This is not a routine maintenance task like lint — it's a reflective pass that
 ## Common Mistakes to Avoid
 - Don't propose splitting every topic with > 10 atoms — breadth at the topic level is expected; only flag if the atoms genuinely span unrelated domains
 - Don't flag `related::` as wrong just because a more specific type could technically fit — only propose replacements where the precise type is clearly correct, not marginal
-- Don't confuse `contradicts::` with `contrasts-with::` — use the decision tree in `references/vault-schema.md`
+- Don't confuse `contradicts::` with `contrasts-with::` — use § Choosing Between Skeptical Relations in `$VAULT/_meta/schema.md`
 - Don't create more than 5 atom stubs in a single review session — quality over quantity
