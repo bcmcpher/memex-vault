@@ -1,0 +1,22 @@
+exit=0
+WARN  sources/meeting/2026-09-17-reading-one.md — unread with no Connections wired (inbox-only; run memex-connect)
+WARN  sources/meeting/2026-09-17-reading-two.md — unread with no Connections wired (inbox-only; run memex-connect)
+WARN  sources/paper/2026-09-17-block-last-first.md — unread with no Connections wired (inbox-only; run memex-connect)
+WARN  sources/paper/2026-09-17-last-first.md — unread with no Connections wired (inbox-only; run memex-connect)
+WARN  sources/paper/2026-09-17-scalar-last-first.md — unread with no Connections wired (inbox-only; run memex-connect)
+WARN  sources/paper/2026-09-17-scalar-plain.md — unread with no Connections wired (inbox-only; run memex-connect)
+WARN  sources/paper/2026-09-17-wrapped.md — unread with no Connections wired (inbox-only; run memex-connect)
+--- summary ---
+Sources (web): 0
+Sources (video): 0
+Sources (paper): 5
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 2
+Independent units: 3 of 7 sources
+Extracts: 0
+Atoms: 0
+Glossary terms: 0
+Concept maps: 0
+Projects: 0
+Research notes: 0

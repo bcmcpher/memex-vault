@@ -307,7 +307,7 @@ is_retired() { [ -n "${RETIRED[$1]+x}" ]; }
 # ── Source independence (finding 7, M15) ────────────────────────────────────
 # `_meta/schema.md` § Confidence Values counts *independent* sources: two are not
 # independent when one cites the other, directly or through a chain in the vault,
-# or they share an author (`authors:`, `channel:`, `tool:`). Counting sources
+# or they share an author (`authors:`, `attendees:`, `channel:`, `tool:`). Counting sources
 # instead made 8b call seven correctly-hedged atoms upgrade candidates in trial 1;
 # Hagmann and Cammoun share six authors and are one unit. The schema's third test,
 # "one restates the other", is a judgement and stays with memex-trust-audit.
@@ -319,6 +319,14 @@ is_retired() { [ -n "${RETIRED[$1]+x}" ]; }
 # `channel:` and `tool:` compare as whole values, case-insensitively. Non-ASCII
 # letters are dropped on both sides, so one name spelled with and without
 # diacritics in different notes will not match.
+#
+# People come from `authors:` and, on meeting notes, `attendees:` — until rc.3 a
+# meeting was always its own unit, so three sessions of one reading group counted
+# as three independent sources (T2-23). Each field may be a scalar, a flow list
+# (`[A, B]`, which may wrap across lines), or a block list (`- A`). An entry
+# containing a comma is "Last, First": in a flow list it must be quoted, as YAML
+# itself requires, and a scalar is read that way when the part before its one
+# comma is a single word. Anything else splits on commas into separate names.
 #
 # A source carrying none of those fields cannot be checked. It counts as its own
 # unit and is reported as unchecked, so the number never reads as a verdict.
@@ -350,11 +358,13 @@ compute_independence() {
         esac
     done < <(printf '%s' "$input" | LC_ALL=C awk -F'\t' '
         function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
-        function person(s,   n, part, first, last) {
+        function person(s,   n, part, first, last, c) {
             gsub(QUOTES, "", s); s = trim(s)
             if (s == "" || tolower(s) ~ /^et al\.?$/) return ""
+            # "Last, First" -> "First Last", so both forms key the same.
+            if ((c = index(s, ",")) > 0) s = trim(substr(s, c + 1)) " " trim(substr(s, 1, c - 1))
             gsub(/-/, " ", s)
-            n = split(s, part, /[ \t]+/)
+            n = split(trim(s), part, /[ \t]+/)
             last = tolower(part[n]); gsub(/[^a-z]/, "", last)
             if (last == "") return ""
             first = tolower(part[1]); gsub(/[^a-z]/, "", first)
@@ -365,20 +375,49 @@ compute_independence() {
             else { k = person(s); if (k == "") return }
             if (!((p, k) in has)) { has[p, k] = 1; nk[p]++; keys[p] = keys[p] SUBSEP k; holders[k] = holders[k] SUBSEP p }
         }
-        function read_source(p,   line, lineno, fm, inlist, s, n, arr, i, t) {
-            lineno = 0; fm = 0; inlist = ""
+        # Add each entry in the body of a flow list, splitting on commas outside quotes.
+        function addflow(p, kind, s,   i, c, q, cur) {
+            q = ""; cur = ""
+            for (i = 1; i <= length(s); i++) {
+                c = substr(s, i, 1)
+                if (q != "") { if (c == q) q = ""; else cur = cur c; continue }
+                if (c == "\"" || c == "\047") { q = c; continue }
+                if (c == ",") { addkey(p, kind, cur); cur = ""; continue }
+                cur = cur c
+            }
+            addkey(p, kind, cur)
+        }
+        # A scalar: one "Last, First" when the part before its only comma is one
+        # word, otherwise a comma-separated run of names.
+        function addscalar(p, kind, s,   t) {
+            gsub(QUOTES, "", s); t = s
+            if (gsub(/,/, ",", t) == 1 && trim(substr(s, 1, index(s, ",") - 1)) !~ /[ \t]/) addkey(p, kind, s)
+            else addflow(p, kind, s)
+        }
+        function read_source(p,   line, lineno, fm, inlist, inflow, flow, s, t) {
+            lineno = 0; fm = 0; inlist = ""; inflow = ""
             while ((getline line < p) > 0) {
                 lineno++
                 if (lineno == 1 && line ~ /^---[ \t]*$/) { fm = 1; continue }
                 if (fm && line ~ /^---[ \t]*$/) { fm = 0; continue }
                 if (fm) {
-                    if (inlist != "" && line ~ /^[ \t]*-/) { s = line; sub(/^[ \t]*-[ \t]*/, "", s); addkey(p, inlist, s); continue }
+                    # A flow list wrapped across lines: gather it up to its "]".
+                    if (inflow != "") {
+                        flow = flow " " line
+                        if (line ~ /\][ \t]*$/) { sub(/\][ \t]*$/, "", flow); addflow(p, inflow, flow); inflow = "" }
+                        continue
+                    }
+                    if (inlist != "" && line ~ /^[ \t]*-/) { s = line; sub(/^[ \t]*-[ \t]*/, "", s); addscalar(p, inlist, s); continue }
                     inlist = ""
-                    if (line ~ /^authors:/) {
-                        s = trim(substr(line, 9))
-                        if (s ~ /^\[/) { sub(/^\[/, "", s); sub(/\][ \t]*$/, "", s); n = split(s, arr, ","); for (i = 1; i <= n; i++) addkey(p, "person", arr[i]) }
+                    if (line ~ /^(authors|attendees):/) {
+                        s = line; sub(/^(authors|attendees):/, "", s); s = trim(s)
+                        if (s ~ /^\[/) {
+                            sub(/^\[/, "", s)
+                            if (s ~ /\][ \t]*$/) { sub(/\][ \t]*$/, "", s); addflow(p, "person", s) }
+                            else { inflow = "person"; flow = s }
+                        }
                         else if (s == "") inlist = "person"
-                        else addkey(p, "person", s)
+                        else addscalar(p, "person", s)
                     } else if (line ~ /^(channel|tool):/) {
                         s = line; sub(/^(channel|tool):/, "", s); addkey(p, "named", s)
                     }
@@ -481,7 +520,7 @@ read_closely() {
 # " — independence unchecked for K source(s) …" when K > 0, else nothing.
 unchecked_note() {
     if [ "${1:-0}" -gt 0 ]; then
-        printf ' — independence unchecked for %s source(s) with no authors:/channel:/tool:' "$1"
+        printf ' — independence unchecked for %s source(s) with no authors:/attendees:/channel:/tool:' "$1"
     fi
 }
 
@@ -1707,7 +1746,7 @@ printf "  %-22s %s\n" "Sources (docs):"    "$(count_md "$VAULT/sources/docs")"
 printf "  %-22s %s\n" "Sources (code):"    "$(count_md "$VAULT/sources/code")"
 printf "  %-22s %s\n" "Sources (meeting):" "$(count_md "$VAULT/sources/meeting")"
 units_line="$VAULT_UNITS of $VAULT_SOURCES sources"
-[ "$VAULT_UNCHECKED" -gt 0 ] && units_line+=" ($VAULT_UNCHECKED with no authors:/channel:/tool:, unchecked)"
+[ "$VAULT_UNCHECKED" -gt 0 ] && units_line+=" ($VAULT_UNCHECKED with no authors:/attendees:/channel:/tool:, unchecked)"
 printf "  %-22s %s\n" "Independent units:" "$units_line"
 printf "  %-22s %s\n" "Extracts:"          "$(count_md "$VAULT/extracts")"
 printf "  %-22s %s\n" "Atoms:"             "$(count_md "$VAULT/atoms")"
