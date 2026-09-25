@@ -84,6 +84,7 @@ skill uses; anything else is ignored.
 | `surnames` | no | strengthens step 2's independence report |
 | `slug` | no | the archive's filename; derived from `title` when absent |
 | `branch` | no | step 3 and 4 topic routing **only** |
+| `archive_sha256` | no | cross-checks the hash step 5 computes — see step 5 |
 | `version`, `route`, `retrieval_note` | no | the provenance comment |
 | `validate_pass`, `validate_detail` | — | **ignored**, deliberately. See step 1 |
 | `pdf`, `zotero_key`, `overlap_with_trial1`, `archive_bytes` | — | ignored: local-machine state, not vault content |
@@ -126,7 +127,8 @@ manifest_tsv() {
   jq -r '.[] | [
       (.slug // ""), .archive, .title, (.doi // ""), (.year // ""), (.venue // ""),
       ((.authors // []) | join("|")), ((.surnames // []) | join("|")),
-      (.branch // ""), (.version // ""), (.route // ""), (.retrieval_note // "")
+      (.branch // ""), (.version // ""), (.route // ""), (.retrieval_note // ""),
+      (.archive_sha256 // "")
     ] | @tsv' "$MANIFEST"
 }
 ```
@@ -137,7 +139,8 @@ manifest_tsv() {
   python3 - "$MANIFEST" <<'PY'
 import json, sys
 cols = ["slug","archive","title","doi","year","venue",
-        "authors","surnames","branch","version","route","retrieval_note"]
+        "authors","surnames","branch","version","route","retrieval_note",
+        "archive_sha256"]
 for r in json.load(open(sys.argv[1])):
     out = []
     for c in cols:
@@ -342,12 +345,26 @@ order and no other:
    writer skips it, whether a quote grounds depends on which skill happened to save
    the file. The script is deterministic and idempotent, so running it on an
    already-normalized corpus costs nothing and is always safe.
-3. **Write the source-note candidate**, show it, apply on confirmation, delete the
-   candidate.
+3. **Hash the normalized archive** — the bytes as they now sit in `.archive/`,
+   never the corpus copy:
+   ```bash
+   A="$VAULT/.archive/<corpus-slug>.md"
+   H=$( (sha256sum "$A" 2>/dev/null || shasum -a 256 "$A") | cut -d' ' -f1)
+   ```
+   If the row has `archive_sha256` and it differs from `$H`, the corpus was not
+   normalized with this vault's `normalize.sh`, or the file changed after the
+   manifest was written. Stop that row and report both values; quotes checked
+   against the corpus copy would not ground here.
+4. **Write the source-note candidate** with `archive-sha256: $H`, show it, apply on
+   confirmation, **assert** it landed (the note exists and equals the candidate
+   body), then delete the candidate. On a miss keep the candidate and stop — see
+   § Candidate Gating.
 
 **The order is not stylistic.** `_meta/lint.sh` section 5 FAILs — not warns — on a
 `raw::` naming a file that does not exist while `.archive/` is present. A note
-written before its archive is a hard lint failure.
+written before its archive is a hard lint failure. The hash comes after the
+normalize for the same reason: a hash of the pre-normalize bytes is a section 5
+mismatch warning on every note (`_meta/schema.md` § Source Archive Hash).
 
 **Archives are not candidate-gated.** `.archive/` is gitignored working state, not a
 vault note, and `memex-ingest` does not gate its archive either. The consequence is
@@ -377,6 +394,7 @@ stage: unread
 authors: [Leila Cammoun, Xavier Gigandet, Djalel Meskaldji, Jean Philippe Thiran, Olaf Sporns, Kim Q. Do, Philippe Maeder, Reto Meuli, Patric Hagmann]
 published: 2012
 venue: Journal of Neuroscience Methods
+archive-sha256: <$H from step 3, 64 lowercase hex digits>
 generated:
   by: memex-seed/<model>
   at: 2026-09-17
@@ -418,6 +436,8 @@ raw:: .archive/2012-cammoun-mapping-the-human-connectome-at.md
 - **`published:`** takes the most precise value reliably known — usually just the
   manifest's year. Never pad it to a month or a day
   (`_meta/schema.md` § Publication Dates).
+- **`archive-sha256:` is present exactly when `raw::` is.** Every seeded note has
+  both; lint section 5 warns on one without the other.
 - **`status:` never appears.** It is `stage:`, and lint FAILs on `status:`.
 - **The provenance comment uses single colons.** `_meta/lint.sh` section 7 scans
   body lines matching `^[a-z][a-z-]*::` against the relation taxonomy, so a
@@ -473,7 +493,9 @@ notes: manifest ~/Projects/memex-seed-corpus/manifest.json; 12 rows, 12 validate
 > `Independent units: M of N sources`.
 
 Give the operator the expected lint result, not just an instruction to run it. A
-number they can check is the only way they find out the seed went wrong.
+number they can check is the only way they find out the seed went wrong. The
+prediction is pinned by the lint fixture `_meta/lint-fixtures/seed-shape`; a lint
+change that alters that fixture's expectation must update this paragraph too.
 
 ---
 
@@ -506,6 +528,14 @@ stage: pending
 
 A create candidate's body is a whole note, which starts with its own frontmatter, so
 the file holds **two `---` blocks**; `memex-candidates` step 4 splits them.
+
+**Write protocol.** Each note runs candidate → confirm → write → **assert** →
+delete, and the log comes last (`_meta/schema.md` § Candidate Lifecycle). The
+assert is a re-read of the note just written: it exists and equals the candidate
+body. An edit tool can report success on a write that did not happen (trial 1,
+finding 13); on a miss, keep the candidate, stop the batch, and report the
+target — the rest of the batch is still on disk as candidates, and
+`memex-candidates` resumes it.
 
 **A batched confirmation is allowed; skipping candidates is not.** Step 4 asks its
 questions once and takes one yes for the whole batch — that is the design. But a
