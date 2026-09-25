@@ -1,0 +1,21 @@
+exit=0
+WARN  atoms/boundary.md — no cited source has been read claim by claim (no block-anchored cites::, and no cited source has an extract)
+WARN  atoms/mixed.md — confidence: low but 2 processed sources in 2 independent units support it (upgrade candidate)
+WARN  atoms/mixed.md — no cited source has been read claim by claim (no block-anchored cites::, and no cited source has an extract)
+WARN  atoms/old-only.md — newest cited source published 2019 (more than 5 years ago); may be stale
+WARN  atoms/old-only.md — no cited source has been read claim by claim (no block-anchored cites::, and no cited source has an extract)
+WARN  atoms/undated-only.md — no cited source has been read claim by claim (no block-anchored cites::, and no cited source has an extract)
+--- summary ---
+Sources (web): 0
+Sources (video): 0
+Sources (paper): 4
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 0
+Independent units: 4 of 4 sources
+Extracts: 0
+Atoms: 4
+Glossary terms: 0
+Concept maps: 0
+Projects: 0
+Research notes: 0

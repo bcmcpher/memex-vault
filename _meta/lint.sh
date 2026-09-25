@@ -193,7 +193,7 @@ backing_sources() {
 # once per file and is GNU-only. Every path here comes from a find rooted at
 # "$VAULT/...", so stripping that prefix gives the same answer.
 declare -A BACKING=() EXT_SOURCE=() SRC_PATH=() NOTE_PATH=() TOPIC_PATH=() \
-           SRC_STAGE=() SRC_SAVED=() ANCHOR_FOUND=() STAGE_VOCAB=() \
+           SRC_STAGE=() ANCHOR_FOUND=() STAGE_VOCAB=() \
            LIST_MEMBER=() LIST_INDEXED=()
 
 while IFS= read -r -d '' p; do
@@ -250,19 +250,13 @@ for b in "${!CM_PARENTS[@]}"; do
     done <<< "${CM_PARENTS[$b]}"
 done
 
-# A note's frontmatter stage: / saved:, via fm_value — once per file instead of
+# A note's frontmatter stage:, via fm_value — once per file instead of
 # once per citation per section. Sets REPLY.
 note_stage() {
     if [ -z "${SRC_STAGE[$1]+x}" ]; then
         fm_value "$1" stage; SRC_STAGE[$1]=$REPLY
     fi
     REPLY=${SRC_STAGE[$1]}
-}
-note_saved() {
-    if [ -z "${SRC_SAVED[$1]+x}" ]; then
-        fm_value "$1" saved; SRC_SAVED[$1]=$REPLY
-    fi
-    REPLY=${SRC_SAVED[$1]}
 }
 
 # Does <file> contain <anchor> anywhere (grep -F)? Memoized per pair for 12e.
@@ -1094,26 +1088,38 @@ while IFS= read -r -d '' f; do
     fi
 done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
-# 7c. Atom freshness: newest cited source saved > 18 months ago
-if cutoff18=$(date -d "18 months ago" +%Y-%m-%d 2>/dev/null) || cutoff18=$(date -v-18m +%Y-%m-%d 2>/dev/null); then
-    while IFS= read -r -d '' f; do
-        atom_name="$(basename "$f" .md)"
-        is_retired "$atom_name" && continue
-        newest_saved=""
-        backing_sources "$f"
-        while IFS= read -r src_file; do
-            [ -z "$src_file" ] && continue
-            note_saved "$src_file"; saved=$REPLY
-            [ -z "$saved" ] && continue
-            if [ -z "$newest_saved" ] || [[ "$saved" > "$newest_saved" ]]; then
-                newest_saved="$saved"
-            fi
-        done <<< "$REPLY"
-        if [ -n "$newest_saved" ] && [[ "$newest_saved" < "$cutoff18" ]]; then
-            warn "atoms/${atom_name}.md — newest cited source saved $newest_saved (>18 months ago); may be stale"
-        fi
-    done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
-fi
+# 7c. Atom freshness: the newest source the atom cites was published more than
+# fresh_years ago.
+#
+# Keyed on published:, not saved:. Until rc.3 this compared saved: against 18
+# months, which measures when this vault acquired a source rather than how old
+# the evidence is — a vault younger than 18 months could not fire it at all, and
+# a 1998 paper saved yesterday read as fresh (trial-1 Not-in-RC-2 row, M11(a)'s
+# class). published: is year, year-month or a full date (_meta/schema.md
+# § Publication Dates), so compare years only. Sources with no published: are
+# ignored; an atom none of whose sources has one gets no finding.
+#
+# MEMEX_LINT_YEAR overrides the current year, so test fixtures do not drift as
+# the calendar does.
+fresh_years=5
+this_year=${MEMEX_LINT_YEAR:-$(date +%Y)}
+stale_before=$((this_year - fresh_years))
+while IFS= read -r -d '' f; do
+    atom_name="$(basename "$f" .md)"
+    is_retired "$atom_name" && continue
+    newest_year=""
+    backing_sources "$f"
+    while IFS= read -r src_file; do
+        [ -z "$src_file" ] && continue
+        fm_value "$src_file" published
+        [[ $REPLY =~ ^([0-9]{4}) ]] || continue
+        y=${BASH_REMATCH[1]}
+        if [ -z "$newest_year" ] || [ "$y" -gt "$newest_year" ]; then newest_year=$y; fi
+    done <<< "$REPLY"
+    if [ -n "$newest_year" ] && [ "$newest_year" -lt "$stale_before" ]; then
+        warn "atoms/${atom_name}.md — newest cited source published $newest_year (more than $fresh_years years ago); may be stale"
+    fi
+done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
 # 7e. Unknown relation field: body field not in schema taxonomy
 schema_file="$VAULT/_meta/schema.md"

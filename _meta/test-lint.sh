@@ -112,7 +112,8 @@ for dir in "$FIXTURES"/*/; do
     tmp="$(mktemp -d)"
     trap 'rm -rf "$tmp"' EXIT
     scaffold "$tmp" "$dir"
-    raw="$(bash "$VAULT/_meta/lint.sh" "$tmp" 2>&1)"; code=$?
+    # Pin lint's clock: 7c's freshness window is relative to the current year.
+    raw="$(MEMEX_LINT_YEAR=2026 bash "$VAULT/_meta/lint.sh" "$tmp" 2>&1)"; code=$?
     got="$(printf '%s\n' "$raw" | normalize "$tmp" "$code")"
     rm -rf "$tmp"; trap - EXIT
 

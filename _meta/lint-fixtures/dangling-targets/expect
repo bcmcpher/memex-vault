@@ -3,10 +3,12 @@ WARN  atoms/dangling-cites.md — cites:: [[ghost-bare]] but no such note
 WARN  atoms/dangling-cites.md — cites:: [[ghost-block#^c07]] but no such note
 WARN  atoms/dangling-cites.md — cites:: [[ghost-section]] but no such note
 WARN  atoms/dangling-cites.md — confidence: medium but no cited source has been read claim by claim
+WARN  atoms/dangling-cites.md — newest cited source published 2020 (more than 5 years ago); may be stale
 WARN  atoms/dangling-cites.md — no cited source has been read claim by claim (no block-anchored cites::, and no cited source has an extract)
 WARN  atoms/dangling-cites.md — related:: [[also-missing]] but no such note
 WARN  atoms/missing-anchor.md — cites:: [[2026-09-17-real-source#^c99]] but 2026-09-17-real-source has no block ^c99
 WARN  atoms/missing-anchor.md — confidence: medium but no cited source has been read claim by claim
+WARN  atoms/missing-anchor.md — newest cited source published 2020 (more than 5 years ago); may be stale
 WARN  atoms/missing-anchor.md — no cited source has been read claim by claim (no block-anchored cites::, and no cited source has an extract)
 WARN  sources/paper/2026-09-17-real-source.md — supports:: [[no-such-atom]] but no such note
 --- summary ---

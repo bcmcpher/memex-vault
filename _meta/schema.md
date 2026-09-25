@@ -952,6 +952,7 @@ These thresholds are soft signals surfaced as WARNings, not hard failures. They 
 | Source: unread + no Connections | Source | any | Inbox-only; run `memex-connect` |
 | Atom: no populated relations | Atom | any | Fully isolated atom; check for orphan or missing wiring |
 | Atom: bloated | Atom | `cites::` targets > 5 AND `related::` targets > 4 AND body characters (`cites::` line excluded) > 2× the vault median; skipped below 10 atoms | May cover multiple concepts; consider splitting |
+| Atom: stale evidence | Atom | newest cited source `published:` more than 5 years before the current year (years compared; sources without `published:` ignored); retired atoms skipped | The field may have moved on; check for newer sources. `saved:` is not evidence age |
 | Topic map: too many atoms | Concept map (leaf) | ≥ 8 live atoms with `part-of::` pointing at it AND ≥ 50% of all live atoms, or > 25 regardless; retired atoms not counted | May span multiple domains; split into sub-topics, and move every direct member to a child |
 | Topic map: empty | Concept map (leaf) | 0 live member atoms; skipped below 10 live atoms vault-wide | Created and never filled; wire atoms with `memex-connect` or remove the map |
 | Atom: untyped `related::` only | Atom | ≥ 1 `related::` naming an existing atom AND no typed atom→atom relation; retired atoms skipped | Promotion backlog; run `memex-reconcile` |
