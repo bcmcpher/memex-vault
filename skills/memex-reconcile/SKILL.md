@@ -1,6 +1,6 @@
 ---
 name: memex-reconcile
-description: Repair dangling link targets — a part-of:: naming no topic, or any relation field naming a note that does not exist — and work the backlog of untyped related:: links, promoting each to a typed relation where one genuinely fits. Use when running a vault health check, after bulk ingest, or when lint Section 7a or 7h surfaces dangling-link warnings. Triggers on: "reconcile my vault", "check graph integrity", "fix dangling links", "part-of points nowhere", "cites points nowhere", "promote related links", "retype my related links".
+description: Repair dangling link targets — a part-of:: naming no topic, or any relation field naming a note that does not exist — and work the backlog of untyped related:: links, promoting each to a typed relation where one genuinely fits. Use when running a vault health check, after bulk ingest, or when lint Section 7a or 7h surfaces dangling-link warnings or Section 7j surfaces untyped related:: links. Triggers on: "reconcile my vault", "check graph integrity", "fix dangling links", "part-of points nowhere", "cites points nowhere", "promote related links", "retype my related links".
 ---
 
 # Karpathy Wiki Reconcile
@@ -15,7 +15,8 @@ and the first sign is `git status` (roadmap R14).
 
 This skill runs three repair passes over the graph:
 
-1. **Dangling `part-of::`** — an atom names a topic file that does not exist.
+1. **Dangling `part-of::`** — an atom names a topic file that does not exist, or
+   names an atom (`part-of::` is topic-only).
 2. **Dangling everything else** — any other relation field naming a note that
    does not exist.
 3. **Untyped `related::`** — a fallback link, worked as a backlog and resolved
@@ -34,10 +35,12 @@ For the relationship taxonomy and field definitions, read `$VAULT/_meta/schema.m
 ## When to Run
 
 - After bulk ingest of multiple sources
-- When `_meta/lint.sh` Section 7a surfaces orphan `part-of::` WARNs, or Section 7h
+- When `_meta/lint.sh` Section 7a surfaces `part-of::` WARNs, or Section 7h
   surfaces `but no such note` WARNs
-- When the user asks to work the `related::` backlog — Pass 3 has no schedule and
-  no lint signal, so it runs only when invoked
+- When Section 7j warns `untyped related:: link(s) and no typed atom relation` —
+  Pass 3's backlog. 7j names only atoms with no typed relation at all, so the
+  backlog Pass 3 finds is larger; 7j is the signal that it is worth running
+- When the user asks to work the `related::` backlog
 - Before running `memex-compose` (composition depends on correct membership)
 
 ---
@@ -48,22 +51,28 @@ For the relationship taxonomy and field definitions, read `$VAULT/_meta/schema.m
 
 ```bash
 VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
-grep -rn "^part-of::" "$VAULT/atoms/" "$VAULT/topics/"
+bash "$VAULT/_meta/lint.sh" 2>/dev/null | grep -E "part-of:: \[\[.*(but no matching topic file found|names an atom)"
 ```
 
-Both sides carry `part-of::`: an atom names its topics, and a concept map names its
+Read the findings from Section 7a, as Pass 2 reads 7h, rather than grepping
+`part-of::` lines: lint skips fenced code, aliases and frontmatter. rc.2's grep
+here matched a documentation example inside a fence in `getting-started.md`, and
+it resolved only because that example happened to name a real topic; the lines
+beside it did not (T2-27).
+
+Both sides carry `part-of::`: an atom names its topic, and a concept map names its
 parent. A dangling parent is worse than a dangling atom — it detaches the whole
-sub-tree from its root (`_meta/schema.md` § Topic Hierarchy).
+sub-tree from its root (`$VAULT/_meta/schema.md` § Topic Hierarchy).
 
-Extract wikilink targets by stripping `[[` and `]]`; ignore display-text aliases
-(anything after `|`). For each target, check whether a matching topic file exists:
+7a reports two kinds:
 
-```bash
-find "$VAULT/topics" -name "<target>.md"
-```
-
-Every target with no matching file is a dangling link. The atom believes it
-belongs to a topic; no topic will ever surface it.
+- **`but no matching topic file found`** — the target is nothing. The atom believes
+  it belongs to a topic; no topic will ever surface it.
+- **`names an atom`** — the target exists but is an atom. `part-of::` is
+  membership in a topic, never composition: an atom that is a component of
+  another is `extends::` or `uses::` (§ Choosing Between Structural Relations).
+  rc.2's Pass 3 could propose this form and Pass 1 then offered to delete it
+  (T2-25).
 
 ### 2. Present
 
@@ -77,7 +86,9 @@ DANGLING: atoms/transformer-architecture.md
 
 Always offer the nearest existing topic names — most dangling links are typos or
 renamed topics, not missing ones. Compute nearest by simple slug similarity; do
-not guess silently.
+not guess silently. For a `names an atom` finding, propose the structural type
+the tree gives instead, and say whether the atom has another `part-of::` naming a
+real topic.
 
 If there are none, report "No dangling part-of:: links found." and move to Pass 2.
 
@@ -86,6 +97,8 @@ If there are none, report "No dangling part-of:: links found." and move to Pass 
 Present one at a time. The user can:
 
 - **Retarget** — point `part-of::` at an existing topic
+- **Retype** — `names an atom` only: the line becomes `extends::` or `uses::`
+  naming the same atom
 - **Create** — the topic genuinely does not exist yet; hand off to
   `memex-topic-init` rather than writing a stub here
 - **Remove** — drop the `part-of::` entirely; the atom belongs to no topic
@@ -95,8 +108,12 @@ Never batch-apply. Never auto-repair without confirmation.
 
 ### 4. Apply
 
-- Edit `part-of::` in the atom's `## Connections` section
-- Update `updated:` in the atom's frontmatter to today
+Through candidates (§ Candidate Gating):
+
+- A replace of the exact `part-of::` line — its new form, or the bare
+  `part-of:: ` for **Remove**. A **Retype** is that replace plus filling the
+  typed field's line
+- A replace of the note's `updated:` line with today's date, where it carries one
 
 ---
 
@@ -164,9 +181,9 @@ only record that the atom ever claimed grounding.
 
 ### 4. Apply
 
-- Edit the field in place, in the note's own `## Sources` or `## Connections`
-  section
-- Update `updated:` in the frontmatter to today, for any layer that carries it
+- A replace candidate of the exact line holding the field, in the note's own
+  `## Sources` or `## Connections` section (§ Candidate Gating)
+- A replace of `updated:` with today, for any layer that carries it
 - Re-run `bash "$VAULT/_meta/lint.sh"` at the end of the pass and confirm the
   `but no such note` lines are gone
 
@@ -181,24 +198,72 @@ Without a pass that actually refines it, every hard call silently becomes
 ### 1. Discover
 
 ```bash
-grep -rn "^related::.*\[\[" "$VAULT/atoms/" "$VAULT/topics/" "$VAULT/sources/"
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
+tmp=$(mktemp -d)
+
+# Retired atoms: named by some atom's supersedes:: (schema.md § Retirement)
+grep -h '^supersedes::' "$VAULT"/atoms/*.md 2>/dev/null \
+    | grep -oE '\[\[[^]|#]+' | sed 's/^\[\[//' | sort -u > "$tmp/retired"
+
+# One row per populated related:: target (note path, target), outside
+# frontmatter and code fences
+for f in "$VAULT"/atoms/*.md "$VAULT"/topics/*/*.md "$VAULT"/sources/*/*.md; do
+    [ -f "$f" ] || continue
+    grep -qxF "$(basename "$f" .md)" "$tmp/retired" && continue
+    awk '
+        FNR == 1 && /^---$/ { fm = 1; next }
+        fm && /^---$/       { fm = 0; next }
+        fm                  { next }
+        /^```/              { fence = !fence; next }
+        !fence && /^related::/ { print }' "$f" \
+      | grep -oE '\[\[[^]|#]+' \
+      | while read -r t; do printf '%s\t%s\n' "${f#"$VAULT"/}" "${t#??}"; done
+done > "$tmp/backlog"
+
+# Drop Keeps
+grep -h '^kept::' "$VAULT/_meta/log.md" 2>/dev/null \
+    | sed -E 's/^kept::[[:space:]]*(.*[^[:space:]])[[:space:]]*->[[:space:]]*\[\[([^]|#]+).*/\1\t\2/' > "$tmp/kept"
+grep -vxFf "$tmp/kept" "$tmp/backlog" > "$tmp/open"
+
+# Mark reciprocal pairs and retired targets
+while IFS=$'\t' read -r path t; do
+    printf '%s\t%s\n' "$(basename "$path" .md)" "$t"
+done < "$tmp/open" > "$tmp/edges"
+while IFS=$'\t' read -r path t; do
+    kind=single; grep -qxF "$t"$'\t'"$(basename "$path" .md)" "$tmp/edges" && kind=pair
+    flag=-;      grep -qxF "$t" "$tmp/retired" && flag=retired-target
+    printf '%s\t%s\t%s\t%s\n' "$kind" "$flag" "$path" "$t"
+done < "$tmp/open"
+rm -rf "$tmp"
 ```
 
-Every populated `related::` is in the backlog; there is no age threshold. The
-30-day rule this pass used to apply excluded every link in a young vault and said
-nothing about the link itself (roadmap M11). Typing now happens at write time, in
-`memex-connect` and `memex-ingest`, so this pass handles what they left.
+Each row is `pair|single`, a `retired-target` flag, the holding note, and the
+target. Every populated `related::` is in the backlog; there is no age threshold.
+The 30-day rule this pass used to apply excluded every link in a young vault and
+said nothing about the link itself (roadmap M11). Typing now happens at write
+time, in `memex-connect` and `memex-ingest`, so this pass handles what they left.
 
-Before presenting anything, drop every link the user has already chosen to
-**Keep**. Keeps change no note; they are recorded only as `kept::` lines in earlier
-reconcile entries in `_meta/log.md`:
+Three things this discovery does that rc.2's one-line grep did not:
 
-```bash
-grep -h "^kept::" "$VAULT/_meta/log.md"
-```
+- **Fences and frontmatter are skipped**, with the same toggle lint uses. Pass 2
+  reads lint for exactly this reason; Pass 3 has no lint section that lists every
+  link, so it carries the filter itself (T2-27).
+- **Retired atoms are skipped as holders.** A retirement stub carries no relations
+  by design; an older-shaped one that still holds `related::` describes a concept
+  that no longer exists, and promoting its links types a tombstone (T2-26). A row
+  whose *target* is retired is kept and flagged: the useful fix is usually to
+  retarget it to the successor, the atom whose `supersedes::` names the target.
+- **Reciprocal links are marked `pair`.** When A holds `related:: [[B]]` and B holds
+  `related:: [[A]]`, the two rows are one item with one decision (step 3). In trial
+  2, 21 of 44 linked pairs were reciprocal; presented separately, promoting both
+  writes two directional edges asserting inverse things, and promoting one leaves
+  the other re-offered forever.
 
-Each line reads `kept:: <note path> -> [[target]]`. A kept link is a decision, not
-a backlog item, and re-offering it is exactly the churn this record prevents.
+**Keeps are dropped before anything is shown.** Keeps change no note; they are
+recorded only as `kept:: <note path> -> [[target]]` lines in earlier reconcile
+entries in `_meta/log.md`, which the `grep -vxFf` above reads. A kept link is a
+decision, not a backlog item, and re-offering it is exactly the churn this record
+prevents.
 
 If the backlog is large, ask the user for a scope (a topic, a note, or a count)
 rather than presenting all of it.
@@ -217,34 +282,103 @@ UNTYPED RELATED: atoms/flash-attention.md
   → Proposed: extends:: [[attention-mechanism]]
 ```
 
-Propose exactly one type. If no typed relation genuinely fits, say so and
+Propose exactly one type **and the note it belongs on**. The relation that fits
+often runs the other way: of 19 links kept in trial 2, every one had a typed
+relation that fit from the target, not from the note holding the `related::` —
+`atoms/tractography.md related:: [[false-positive-streamlines]]` is
+`false-positive-streamlines limits:: [[tractography]]` (T2-26). Test both
+directions before recommending **Keep**.
+
+```
+UNTYPED RELATED (pair): atoms/diffusion-mri.md <-> atoms/tractography.md
+  Tractography reconstructs pathways from diffusion MRI; it cannot be
+  stated without it.
+  → Proposed: tractography uses:: [[diffusion-mri]]  (on the target: Reverse)
+  Both related:: lines are removed.
+```
+
+Never propose `part-of::` here: it is topic-only, and an atom target makes it a
+7a warning (T2-25). `contrasts-with::` is the one symmetric field — a reciprocal
+pair is one relation, written on either note or both (`$VAULT/_meta/schema.md`
+§ Relationship Types).
+
+If no typed relation genuinely fits in either direction, say so and
 recommend **Keep** — `related::` is a legitimate terminal state for a link that
 is real but untypeable. Do not force a type to clear the queue.
 
 ### 3. Confirm each individually
 
-- **Accept** — replace `related::` with the proposed typed relation
+- **Accept** — write the proposed typed relation, on the note proposed
 - **Choose** — user names a different type from the vocabulary
+- **Reverse** — write the typed relation on the *target*, naming the holder, and
+  remove the `related::` from the holder
 - **Keep** — genuinely navigational; leave the note untouched and record a
   `kept::` line in the session log, so the link is never offered again
 - **Drop** — the link is not meaningful; remove it
 
+For a `pair`, one answer covers both rows: Accept, Choose or Reverse writes the one
+typed relation and removes **both** `related::` targets; Keep records two `kept::`
+lines; Drop removes both.
+
 ### 4. Apply
 
-- Remove the target from the `related::` line; add it to the typed field's line
-  in the same `## Connections` section, creating the line if absent
+Every line below is a candidate (§ Candidate Gating):
+
+- The holder's `related::` line, with the target removed — a replace of the exact
+  line. For a `pair`, the target's `related::` line too
+- The typed field's line on whichever note takes the relation — a replace of that
+  line (the shipped-empty `uses:: ` included) with the target added, or an append
+  to `## Connections` when the note has no such line
 - If `related::` ends up with no targets, leave the bare `related:: ` field —
   templates ship it empty and Dataview reads an empty field as absent
-- Update `updated:` in frontmatter to today — not for **Keep**, which changes no note
+- Update `updated:` to today on each note changed, as a replace of its current
+  `updated:` line — not for **Keep**, which changes no note
 - For `challenges::`, `refutes::`, `contradicts::`, `limits::`: the schema
-  requires a sentence in the body explaining the tension. Write it, or the
-  promotion is not complete
+  requires a sentence in the body explaining the tension. Write it, as an append
+  candidate on the note taking the relation, or the promotion is not complete
+
+---
+
+## Candidate Gating
+
+Every edit this skill makes is a candidate in `_meta/candidates/` before it
+changes anything (`$VAULT/_meta/schema.md` § Candidate Lifecycle). rc.2 wrote
+reconcile's edits directly, with no candidate at all (T2-20). Use one session ID,
+`YYYY-MM-DD-HHMM`, from the start of the invocation.
+
+Nearly every edit here is a **replace**: a relation line re-pointed, a target
+removed, a shipped-empty field filled, `updated:` moved. The replace form matches
+the exact line, so an edit made since discovery stops the write instead of
+being guessed at:
+```yaml
+---
+proposed: YYYY-MM-DD HH:MM
+skill: memex-reconcile
+action: modify
+target: atoms/tractography.md
+section: "## Connections"
+change: replace
+replaces: "uses:: "
+session: YYYY-MM-DD-HHMM
+stage: pending
+---
+
+uses:: [[diffusion-mri]]
+```
+Adding a line a note does not carry, or the body sentence an epistemic relation
+needs, is an append (`change: append`, `section:`).
+
+Write the candidates for one item, confirm, then write → **assert** → delete
+candidate, item by item. The assert re-reads the target: the new line is present
+and the `replaces:` line is gone; an append's lines are under their section. On a
+miss, stop, keep the candidate, and leave that item out of the log — an edit tool
+can report success on a write that did not happen (trial 1, finding 13).
 
 ---
 
 ## Log the session
 
-Append to `_meta/log.md`:
+Last, after every assert has passed, append to `_meta/log.md`:
 
 ```markdown
 ## [YYYY-MM-DD] reconcile | vault
@@ -280,6 +414,10 @@ not log a session where nothing was applied or kept.
   a valid outcome and a forced type is worse than an honest `related::`
 - Don't treat a dangling `part-of::` as always a typo; a topic may have been
   deliberately deleted, in which case **Remove** is right
+- Don't recommend **Keep** until the relation has been tested in both directions
+  — **Reverse** exists because the fitting type often sits on the target
+- Don't present a reciprocal pair as two items, or promote a `related::` held by
+  a retired atom
 - Don't re-surface a link the user chose to **Keep** — read the `kept::` lines
   first, and never skip writing one for a new Keep
 - Don't promote a `related::` on a source note into an atom→atom relation; check
