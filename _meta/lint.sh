@@ -138,12 +138,12 @@ fm_value() {
 #
 # Phase 3 made the second shape the *preferred* one — `high` confidence requires
 # it — so a check that only understands the first silently skips the best-cited
-# atoms in the vault. Four checks were written that way (7c, 7d, 8b, 8c) and each
-# was quietly wrong on any atom citing an extract: 7d and 8c reported "all cited
+# atoms in the vault. Four checks were written that way (7c, 8f, 8b, 8c) and each
+# was quietly wrong on any atom citing an extract: 8f and 8c reported "all cited
 # sources unread" because they resolved nothing at all.
 #
 # Sets REPLY to the resolved paths, one per line, deduplicated — empty when an atom
-# has no resolvable citations. Memoized per atom: 7c, 7d and 8a-8c all ask.
+# has no resolvable citations. Memoized per atom: 7c and 8a-8c, 8f all ask.
 backing_sources() {
     local f="$1" target note paths=""
     if [ -n "${BACKING[$f]+x}" ]; then
@@ -179,7 +179,7 @@ backing_sources() {
 
 # ── Lookup tables ────────────────────────────────────────────────────────────
 # Built once, so no check pays per citation (roadmap M16). backing_sources() used
-# to run a find over sources/ for every citation, and 7c, 7d, 8a, 8b and 8c each
+# to run a find over sources/ for every citation, and 7c, 8a, 8b, 8c and 8f each
 # re-resolved every atom: ~1,360 find/grep pairs on a 22-atom vault, extrapolating
 # to ~26,000 at 200 sources. 7a, 12a and 12e ran the same per-item find.
 #
@@ -507,7 +507,7 @@ done < <(grep -rh -m1 --include='*.md' "^extracted-from::" "$VAULT/extracts" 2>/
 
 # read_closely <atom> <resolved sources>: has anything this atom rests on been
 # read claim by claim? Yes when it carries a block-anchored citation into an
-# extract, or when any cited source has an extract. Memoized; used by 7d and 8c.
+# extract, or when any cited source has an extract. Memoized; used by 8c and 8f.
 read_closely() {
     local f="$1" src
     if [ -z "${CLOSE_READ[$f]+x}" ]; then
@@ -1114,28 +1114,6 @@ if cutoff18=$(date -d "18 months ago" +%Y-%m-%d 2>/dev/null) || cutoff18=$(date 
     done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 fi
 
-# 7d. Unchecked evidence: nothing the atom cites has been read claim by claim.
-#
-# This used to test for every cited source being `stage: unread`. But `read` is
-# the one stage value no skill can verify — "a human read this" is self-reported,
-# and reported aspirationally — so the check fired on papers just read 37 claims
-# deep, whose stage: lagged because deep-extract mode A may not touch the source
-# note, and stayed silent on sources marked read that nobody had read (trial-1
-# finding 11). It now keys on evidence the vault can check: a block-anchored
-# cites:: [[ext-...#^cNN]], or a cited source that has an extract. stage: read
-# survives as an annotation that nothing here depends on.
-while IFS= read -r -d '' f; do
-    atom_name="$(basename "$f" .md)"
-    is_retired "$atom_name" && continue
-    backing_sources "$f"; resolved=$REPLY
-    # No resolvable source is a dangling-link problem, not an evidence one — do
-    # not report it here.
-    [ -z "$resolved" ] && continue
-    if ! read_closely "$f" "$resolved"; then
-        warn "atoms/${atom_name}.md — no cited source has been read claim by claim (no block-anchored cites::, and no cited source has an extract)"
-    fi
-done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
-
 # 7e. Unknown relation field: body field not in schema taxonomy
 schema_file="$VAULT/_meta/schema.md"
 if [ -f "$schema_file" ]; then
@@ -1317,9 +1295,9 @@ while IFS= read -r -d '' f; do
 done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
 # 8c. Unchecked confidence: confidence: medium or high resting on the same
-# unchecked evidence 7d reports. 7d says it of any atom; this says it only where a
+# unchecked evidence 8f reports. 8f says it of any atom; this says it only where a
 # confidence above low claims more than anyone has checked, so a low atom is not
-# warned twice. Same verifiable test as 7d, for the same reason (finding 11).
+# warned twice. Same verifiable test as 8f, for the same reason (finding 11).
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
     is_retired "$atom_name" && continue
@@ -1332,18 +1310,36 @@ while IFS= read -r -d '' f; do
     fi
 done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
-# 8d. Under-extracted source: stage: processed, body > 100 lines, atom connections < 2
+# 8d. Under-extracted source: a long archived document that nobody read claim by
+# claim and that feeds almost no atoms.
+#
+# Measures the document, not the note. Until rc.3 this counted the source note's
+# lines against 100, and a source note is a template-shaped summary of 34-65
+# lines, so the check could not fire on any real vault — trial 2 had eleven
+# processed sources with no introduces::/supports:: and it said nothing (T2-28,
+# and trial 1's Not-in-RC-2 row). The document is the raw:: archive; its size
+# is what "dense" means. No raw::, or no .archive/ (a fresh clone), and there is
+# nothing to measure, so no finding.
+#
+# stage: read counts as well as processed: read with no extract is the state this
+# describes, and the clearest cases in trial 2 were both `read`. A source with an
+# extract has been read claim by claim — promoting those claims is mode B's job,
+# not a sign the source was skimmed.
+extract_min_bytes=15000
 while IFS= read -r -d '' f; do
     label=${f#"$VAULT"/}
     note_stage "$f"; src_stage=$REPLY
-    if [ "$src_stage" = "processed" ]; then
-        line_count=$(wc -l < "$f")
-        if [ "$line_count" -gt 100 ]; then
-            atom_connections=$(count_links "$f" 'introduces|supports')
-            if [ "$atom_connections" -lt 2 ]; then
-                warn "$label — stage: processed, $line_count lines, but only $atom_connections atom connections (introduces+supports); may be under-extracted"
-            fi
-        fi
+    case "$src_stage" in read|processed) ;; *) continue ;; esac
+    [ -n "${EXTRACTED[$f]+x}" ] && continue
+    raw_path=$(grep -m1 "^raw::" "$f" 2>/dev/null | sed 's/^raw::[[:space:]]*//; s/[[:space:]]*$//' || true)
+    [ -n "$raw_path" ] || continue
+    [[ $raw_path == /* ]] || raw_path="$VAULT/$raw_path"
+    [ -f "$raw_path" ] || continue
+    bytes=$(wc -c < "$raw_path" | tr -d ' ')
+    [ "$bytes" -ge "$extract_min_bytes" ] || continue
+    atom_connections=$(count_links "$f" 'introduces|supports')
+    if [ "$atom_connections" -lt 2 ]; then
+        warn "$label — stage: $src_stage, archive $((bytes / 1000)) KB, no extract and $atom_connections atom connections (introduces+supports); may be under-extracted (memex-deep-extract)"
     fi
 done < <(find "$VAULT/sources" -name "*.md" ! -name ".gitkeep" -print0)
 
@@ -1366,6 +1362,31 @@ while IFS= read -r -d '' f; do
     total=$((outgoing + incoming))
     if [ "$total" -gt 0 ]; then
         warn "atoms/${atom_name}.md — confidence: high with $total live contradicts::/refutes:: relation(s) (high requires none unaddressed)"
+    fi
+done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
+
+# 8f. Unchecked evidence: nothing the atom cites has been read claim by claim.
+#
+# Was 7d until rc.3. It is an evidence check, and memex-tend routes by section,
+# so filed under section 7 it had no route at all (T2-43).
+#
+# This used to test for every cited source being `stage: unread`. But `read` is
+# the one stage value no skill can verify — "a human read this" is self-reported,
+# and reported aspirationally — so the check fired on papers just read 37 claims
+# deep, whose stage: lagged because deep-extract mode A may not touch the source
+# note, and stayed silent on sources marked read that nobody had read (trial-1
+# finding 11). It now keys on evidence the vault can check: a block-anchored
+# cites:: [[ext-...#^cNN]], or a cited source that has an extract. stage: read
+# survives as an annotation that nothing here depends on.
+while IFS= read -r -d '' f; do
+    atom_name="$(basename "$f" .md)"
+    is_retired "$atom_name" && continue
+    backing_sources "$f"; resolved=$REPLY
+    # No resolvable source is a dangling-link problem, not an evidence one — do
+    # not report it here.
+    [ -z "$resolved" ] && continue
+    if ! read_closely "$f" "$resolved"; then
+        warn "atoms/${atom_name}.md — no cited source has been read claim by claim (no block-anchored cites::, and no cited source has an extract)"
     fi
 done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 

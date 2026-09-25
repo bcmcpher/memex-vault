@@ -172,7 +172,7 @@ than its evidence:
 | UNGROUNDED | declared `high`, zero block-anchored citations — the cap, named |
 | CONTRADICTED | declared `high` with a populated `contradicts::` / `refutes::` and no prose addressing it |
 | STALE | incoming `challenges::` / `refutes::` dated after the atom's `updated:` |
-| UNVALIDATED | nothing cited has been read claim by claim: no block-anchored `cites:: [[ext-...#^cNN]]`, and no cited source has an extract. Not `stage: unread` — `read` is self-reported and nothing can verify it (lint 7d/8c use the same test) |
+| UNVALIDATED | nothing cited has been read claim by claim: no block-anchored `cites:: [[ext-...#^cNN]]`, and no cited source has an extract. Not `stage: unread` — `read` is self-reported and nothing can verify it (lint 8c/8f use the same test) |
 | STALE SOURCES | newest cited source `saved:` more than 18 months ago |
 | NEVER VERIFIED | no `verified:` key — feeds step 7, never a confidence change |
 | STALE SIGN-OFF | newest `verified.at` earlier than `updated:` — someone signed off on a version that no longer exists |

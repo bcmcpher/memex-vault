@@ -1,0 +1,20 @@
+exit=0
+WARN  atoms/wired-one.md — no cited source has been read claim by claim (no block-anchored cites::, and no cited source has an extract)
+WARN  atoms/wired-two.md — no cited source has been read claim by claim (no block-anchored cites::, and no cited source has an extract)
+WARN  sources/paper/2026-09-17-long-processed.md — stage: processed, archive 16 KB, no extract and 0 atom connections (introduces+supports); may be under-extracted (memex-deep-extract)
+WARN  sources/paper/2026-09-17-long-read.md — stage: read, archive 16 KB, no extract and 0 atom connections (introduces+supports); may be under-extracted (memex-deep-extract)
+WARN  sources/paper/2026-09-17-long-unread.md — unread with no Connections wired (inbox-only; run memex-connect)
+--- summary ---
+Sources (web): 0
+Sources (video): 0
+Sources (paper): 7
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 0
+Independent units: 7 of 7 sources
+Extracts: 1
+Atoms: 2
+Glossary terms: 0
+Concept maps: 0
+Projects: 0
+Research notes: 0
