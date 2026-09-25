@@ -13,7 +13,7 @@ user — a stale `MEMEX_VAULT`, or this skill invoked from an unrelated reposito
 otherwise writes `sources/`, `atoms/` and `_meta/log.md` into *that* repository,
 and the first sign is `git status` (roadmap R14).
 
-This skill takes inbox-only captures and integrates them into the knowledge graph. It enriches metadata by fetching URLs, wires Dataview connection fields, promotes atoms, updates topic maps, and marks sources as processed. One note at a time, with user confirmation before any write.
+This skill takes inbox-only captures and integrates them into the knowledge graph. It enriches metadata by fetching URLs, wires Dataview connection fields, promotes atoms, updates topic maps, and marks sources as processed. Analysis may cover a batch; confirmation and writes go one note at a time (§ Processing Mode).
 
 For the relationship taxonomy and field definitions, read `$VAULT/_meta/schema.md` § Relationship Types.
 
@@ -22,7 +22,7 @@ For the relationship taxonomy and field definitions, read `$VAULT/_meta/schema.m
 ## Workflow
 
 ### 1. Discovery
-A source needs wiring when nothing connects it to the knowledge graph in either direction: none of its own relation fields names a target, **and** no atom or extract links to it. Stage is not part of the test. `stage:` records reading and links record wiring, so a source can be read and unwired — the normal state after `memex-save` with "I've read this".
+A source needs wiring when nothing connects it to the knowledge graph in either direction: none of its own relation fields names a target, **and** no atom links to it or to its extract. Stage is not part of the test. `stage:` records reading and links record wiring, so a source can be read and unwired — the normal state after `memex-save` with "I've read this".
 
 ```bash
 VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
@@ -32,17 +32,26 @@ for f in "$VAULT"/sources/*/*.md; do
     slug=$(basename "$f" .md)
     # outbound: a relation field with a real target, not the empty field the template ships
     grep -qE '^(supports|introduces|demonstrates|challenges|refutes|cites|rebuts|related|defines)::[[:space:]]*\[\[' "$f" && continue
-    # inbound: an atom citing it, or an extract drawn from it
-    grep -rqE "\[\[$slug([]#|])" "$VAULT/atoms" "$VAULT/extracts" --include='*.md' 2>/dev/null && continue
     stage=$(awk '/^---$/ { n++; next } n == 1 && /^stage:/ { sub(/^stage:[[:space:]]*/, ""); print; exit }' "$f")
+    # inbound: an atom citing the source, or a claim block of its extract
+    if grep -rqE "\[\[(ext-)?$slug([]#|])" "$VAULT/atoms" --include='*.md' 2>/dev/null; then
+        # lint 6a reads outbound fields only, so it still warns on an unread one
+        case "$stage" in
+            unread|unprocessed) echo "$stage	${f#"$VAULT"/}	atom-cited" ;;
+        esac
+        continue
+    fi
     echo "${stage:-?}	${f#"$VAULT"/}"
 done
 ```
 
-Two tests this deliberately avoids, both of which failed on the first real vault:
+Three tests this deliberately avoids, each of which failed on a real vault:
 
 - **The bare field name.** `grep -L "supports::"` finds nothing, because the template ships every relation field empty on every source — the name is always present, so the query returned only `.gitkeep` files and reported "nothing to process" on a vault with work waiting. Match a field followed by `[[`.
-- **Outbound fields alone.** `memex-deep-extract` writes `cites::` into atoms and never back onto the source, so a paper eight atoms cite can have an empty `## Connections`. Count inbound links from `atoms/` and `extracts/` too.
+- **Outbound fields alone.** `memex-deep-extract` writes `cites::` into atoms and never back onto the source, so a paper eight atoms cite can have an empty `## Connections`. Count inbound links from `atoms/` too — to the source, or to a block of `ext-<slug>`.
+- **Any link from `extracts/`.** The only link an extract holds to its source is its own `extracted-from::` line, written by mode A, which wires nothing. Counting it removed every extracted source from this queue for good: in trial 2 discovery returned 0 of 12 while lint 6a sent all 12 here (T2-9). `extracts/` is not searched.
+
+A row marked `atom-cited` is wired in, but its own `## Connections` is empty and it is still `unread`, which is exactly what lint 6a warns on. Either wire its outbound fields (steps 5–6) or, if it has been read, move its stage (step 9); both clear the warning. Listing it keeps this skill and lint from contradicting each other.
 
 Links from `topics/` do not count: a project or research note citing a source is navigation, not atom wiring. Say when a listed source is cited by a topic, so the user can skip it knowingly.
 
@@ -106,14 +115,14 @@ Ask for the required fields interactively, then proceed with user-provided conte
 #### Paywalled / fetch-failed URLs
 If the fetch returns an error or a login page, note it and ask the user to paste the title, authors (if paper), and a brief summary directly. Do not block processing — proceed with whatever the user provides.
 
-**After enrichment:** Show a brief summary of what was extracted and what remains blank. Ask for approval before writing to the file.
+**After enrichment:** Show a brief summary of what was extracted and what remains blank, and ask for approval. Hold the approved changes as drafts: they are written with the rest of this note's changes, through candidates, from step 5 on — so enriching a batch writes nothing until each note's turn.
 
 ---
 
 ### 3. Read the enriched note and identify concepts
 With metadata now filled, read the full note. Extract the key concepts, claims, and contributions from `## Summary` and `## Key Points`.
 
-Process notes **one at a time** — complete all steps for one note before moving to the next.
+With several notes selected, this and steps 2 and 4 may run across the batch; from step 5 on, finish one note before starting the next (§ Processing Mode).
 
 ---
 
@@ -264,13 +273,24 @@ After all selected notes are processed, report:
 
 ## Processing Mode
 
-One note at a time. Complete Steps 2–10 for one note before moving to the next.
+**Analyse in a batch, confirm and write one note at a time.** With several notes
+selected, steps 2–4 may run across all of them first — enrichment and atom
+matching are reads, and seeing the batch together is how a concept three sources
+share gets one atom instead of three near-duplicates. Steps 5–10 then run per
+note: that note's candidates, its confirmation, its writes and asserts, its log
+entry, before the next note's first candidate is shown. The user never confirms
+a batch of writes spanning notes, and a session that drops mid-batch leaves every
+finished note complete and every unfinished one with its candidates on disk.
+
+A recorded rc.2 deviation ran connect this way against the old "one note at a
+time" wording, kept per-note candidates and writes, and nothing broke; this is
+that practice written down.
 
 ---
 
 ## Candidate Gating
 
-Before writing any vault change (source note connections, atom back-wires, atom stubs, glossary stubs), write a candidate file to `_meta/candidates/`. Use the session ID `YYYY-MM-DD-HHMM` from the start of this skill invocation.
+Before writing any vault change (step 2's enrichment, source note connections, atom back-wires, atom stubs, glossary stubs, stage), write a candidate file to `_meta/candidates/`. Use the session ID `YYYY-MM-DD-HHMM` from the start of this skill invocation.
 
 **Create candidate** (new atom or glossary stub):
 ```yaml
@@ -300,7 +320,37 @@ stage: pending
 ```
 Body: exact text to append.
 
-Write candidate → confirm with user → write to vault → delete candidate. If session ends early, candidates persist for `memex-candidates`.
+**Replace candidate** (filling a field the template ships empty, moving `stage:`,
+bumping `updated:` or `confidence:`):
+```yaml
+---
+proposed: YYYY-MM-DD HH:MM
+skill: memex-connect
+action: modify
+target: sources/paper/2026-04-27-attention-is-all-you-need.md
+change: replace
+replaces: "supports:: "
+session: YYYY-MM-DD-HHMM
+stage: pending
+---
+```
+Body: the one line that replaces it — here `supports:: [[attention-mechanism#Summary]]`.
+
+The source templates ship each relation field as an empty line (`supports:: `,
+with its trailing space), so step 5 fills that line rather than appending a
+second `supports::` under it; a field the note does not carry (older notes lack
+`defines::`) is an append to `## Connections`. Frontmatter has no section to append to: step 6's
+`updated:` and `confidence:` and step 9's `stage:` are each a replace of the
+current line.
+
+Write candidate → confirm with user → write to vault → **assert** → delete candidate
+(`_meta/schema.md` § Candidate Lifecycle). The assert re-reads the target: a create's
+file equals the candidate body; an append's lines sit under the named section; a
+replace's new line is present and its `replaces:` line is gone. On a miss, stop, keep
+the candidate, and leave that change out of the note's log entry — an edit tool can
+report success on a write that did not happen (trial 1, finding 13). Step 10's log
+entry is written last and names only asserted writes. If the session ends early,
+candidates persist for `memex-candidates`.
 
 ---
 
