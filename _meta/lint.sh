@@ -929,11 +929,14 @@ ok "archive mismatch check complete"
 echo ""
 echo "── 6. Graph Health ────────────────────────────────────────────────────────"
 
-# 6a. Inbox-only sources: unread/unprocessed with no populated Connections
+# 6a. Inbox-only sources: unread/unprocessed with no populated Connections.
+# All nine source fields, the same set memex-connect step 1 reads: with five,
+# a source wired only by challenges:: or defines:: was sent to a skill that
+# then skipped it.
 while IFS= read -r -d '' f; do
     note_stage "$f"
     if [[ $REPLY == *unread* || $REPLY == *unprocessed* ]]; then
-        has_connections=$(grep -cE "^(supports|introduces|demonstrates|cites|related)::[[:space:]]*\[\[" "$f" 2>/dev/null || true)
+        has_connections=$(grep -cE "^(supports|introduces|demonstrates|challenges|refutes|cites|rebuts|related|defines)::[[:space:]]*\[\[" "$f" 2>/dev/null || true)
         if [ "$has_connections" -eq 0 ]; then
             label=${f#"$VAULT"/}
             warn "$label — unread with no Connections wired (inbox-only; run memex-connect)"

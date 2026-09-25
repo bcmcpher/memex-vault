@@ -1,0 +1,17 @@
+exit=0
+WARN  atoms/disputed-atom.md — atom has no populated relation fields (fully isolated)
+WARN  sources/paper/2026-09-17-unwired-paper.md — unread with no Connections wired (inbox-only; run memex-connect)
+--- summary ---
+Sources (web): 0
+Sources (video): 0
+Sources (paper): 3
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 0
+Independent units: 1 of 3 sources
+Extracts: 0
+Atoms: 1
+Glossary terms: 1
+Concept maps: 0
+Projects: 0
+Research notes: 0
