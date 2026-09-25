@@ -28,9 +28,16 @@ The four fields this skill tracks:
 | Field | Strength | Notes |
 |-------|----------|-------|
 | `contradicts::` | Direct logical incompatibility | Strongest, and symmetric — the only field that needs a reciprocal link to count as acknowledged |
-| `refutes::` | One atom or source directly counter-evidences another | Asymmetric is acceptable — one side may not yet be updated |
-| `challenges::` | Weakens or questions without full contradiction | Common; softer than contradicts. Asymmetric is acceptable |
+| `refutes::` | A source directly counter-evidences an atom, or one atom another | Asymmetric is acceptable — one side may not yet be updated |
+| `challenges::` | A source or atom weakens or questions an atom without full contradiction | Common; softer than contradicts. Asymmetric is acceptable |
 | `limits::` | Defines boundary conditions where the target breaks down | Directional by construction — `B limits:: A` asserts something different, and usually false. Never needs a reciprocal |
+
+`challenges::` and `refutes::` are **Source → Atom** fields first and Atom → Atom
+second (`$VAULT/_meta/schema.md` § Relationship Types). A dispute between two
+sources over one concept can only be written on a source — there is no second atom
+to point at — so the scan reads `sources/` as well as `atoms/`. In trial 2 the
+corpus's central dispute was a source-held `challenges::`, and the atoms-only
+scan saw 3 of the vault's 5 conflict links (T2-17).
 
 ---
 
@@ -40,17 +47,24 @@ The four fields this skill tracks:
 
 ```bash
 VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
-grep -rn "^contradicts::\|^refutes::\|^challenges::\|^limits::" "$VAULT/atoms/"
+grep -rnE "^(contradicts|refutes|challenges|limits)::[[:space:]]*\[\[" \
+    "$VAULT/atoms/" "$VAULT/sources/" --include='*.md'
 ```
 
-Collect every (source-atom, relation-type, target-atom) triple. This is the raw conflict graph.
+Match a field followed by `[[`: every template ships these fields empty, so the
+bare field name matches every note. This is the same field set and the same two
+roots as lint section 9a, which warns on a note holding one of them with no prose
+in its body; this skill does the reading 9a cannot.
+
+Collect every (holder, relation-type, target-atom) triple, and note whether the
+holder is an atom or a source. This is the raw conflict graph.
 
 ### 2. Classify each conflict
 
 For each conflict pair (A → B via relation R):
 
 **Acknowledged** — meets both conditions:
-1. At least one of A or B has prose text in its body describing the tension (not just field lines)
+1. At least one of A or B has prose text in its body describing the tension (not just field lines). For a source-held link, prose in the source's `## Why Saved`, `## Summary` or `## Key Points` that says what it disputes counts
 2. **For `contradicts::` only:** B has a reciprocal `contradicts::` pointing back to A
 
 Reciprocity is required only where the relation is symmetric. `limits::` means "A defines boundary conditions where B breaks down" — directional by construction, so demanding `B limits:: A` is a category error. `challenges::` and `refutes::` are accepted asymmetric: one side may not yet be updated, and that is not a failure to acknowledge. The old rule required a reciprocal on all four fields and classified 13 of 13 pairs on the first real vault as unacknowledged, 11 of them `limits::` (roadmap M14).
@@ -67,7 +81,7 @@ there, not listed on the topic:
 ```bash
 grep -h "^part-of::" "$VAULT/atoms/<atom-name>.md"
 ```
-Flag pairs where the two atoms belong to different topics — these cross-topic conflicts are especially worth documenting since they won't appear in a single-topic review.
+A source has no `part-of::`, so a source-held link is never cross-topic; group those by the atom they challenge instead, since two sources disagreeing about one atom is the dispute worth reading together. Flag atom pairs where the two atoms belong to different topics — these cross-topic conflicts are especially worth documenting since they won't appear in a single-topic review.
 
 ### 4. Present findings
 
@@ -87,6 +101,11 @@ Group by severity, most actionable first:
 ## Challenges (challenges::)
   [UNACKNOWLEDGED — bare] atoms/atom-e.md → atoms/atom-f.md
     ...
+
+## Source disputes (challenges::, refutes:: held by a source)
+  [UNACKNOWLEDGED — bare] sources/paper/source-g.md → atoms/atom-h.md
+    Nothing in the source's body says what it disputes in atom-h.
+    Also challenging atom-h: sources/paper/source-k.md
 ```
 
 Show acknowledged conflicts in a summary count only — they require no action.
@@ -110,10 +129,13 @@ Only add the missing side — never modify or remove existing links.
 
 ### 6. Apply accepted changes
 
-Write only what the user accepted:
-- Prose additions go into the atom body — either in the `## Detail` section or as a new `## Tensions` section if one doesn't exist
-- Reciprocal links go into the appropriate atom's `## Connections` section
-- Update `updated:` in frontmatter for any modified atom
+Write only what the user accepted, each through a candidate in `_meta/candidates/`
+(`$VAULT/_meta/schema.md` § Candidate Lifecycle), one session ID for the run:
+- Prose additions go into the note body — an append candidate on the atom's `## Detail` or a source's `## Key Points`, or on a new `## Tensions` section if the user prefers one (`memex-candidates` asks before appending a section the note lacks)
+- A reciprocal `contradicts::` fills the atom's shipped-empty `contradicts:: ` line — a replace candidate with `replaces: "contradicts:: "` — or, if that line already names a target, a replace of it with the new target added
+- `updated:` moves to today through a replace of the current line, for any modified atom
+
+Write candidate → confirm → write → **assert** → delete candidate. The assert re-reads the note: an append's lines sit under their section; a replace's new line is present and its `replaces:` line gone. On a miss, stop, keep the candidate, and leave that note out of the log — an edit tool can report success on a write that did not happen (trial 1, finding 13).
 
 ### 7. Session summary
 
@@ -123,7 +145,7 @@ Report:
 - K unacknowledged (P documented this session, Q skipped)
 - R cross-topic tensions (note how many were addressed)
 
-No log entry unless at least one atom was modified; if so, append to `_meta/log.md`:
+No log entry unless at least one note was modified; if so, append to `_meta/log.md` last, naming only notes whose writes asserted:
 ```markdown
 ## [YYYY-MM-DD] conflicts | vault
 url:: n/a
@@ -139,6 +161,7 @@ notes: N conflict pairs found; M documented this session
 - Does not infer conflicts from atom content — only follows explicit relation fields already in the graph
 - Does not modify existing relation fields — only adds missing reciprocal links and prose
 - Does not create new atoms or modify topic maps
+- Does not move a source-held link onto an atom, or the reverse — where a link sits is `memex-reconcile`'s and `memex-deep-extract`'s call
 - Does not evaluate whether a conflict is real or significant — only documents what is already asserted
 
 ---
