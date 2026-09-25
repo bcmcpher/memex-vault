@@ -954,6 +954,8 @@ These thresholds are soft signals surfaced as WARNings, not hard failures. They 
 | Atom: bloated | Atom | `cites::` targets > 5 AND `related::` targets > 4 AND body characters (`cites::` line excluded) > 2× the vault median; skipped below 10 atoms | May cover multiple concepts; consider splitting |
 | Topic map: too many atoms | Concept map (leaf) | ≥ 8 live atoms with `part-of::` pointing at it AND ≥ 50% of all live atoms, or > 25 regardless; retired atoms not counted | May span multiple domains; split into sub-topics, and move every direct member to a child |
 | Topic map: empty | Concept map (leaf) | 0 live member atoms; skipped below 10 live atoms vault-wide | Created and never filled; wire atoms with `memex-connect` or remove the map |
+| Atom: untyped `related::` only | Atom | ≥ 1 `related::` naming an existing atom AND no typed atom→atom relation; retired atoms skipped | Promotion backlog; run `memex-reconcile` |
+| Glossary: unreachable | Glossary | no note carries `defines:: [[term]]` | The note that uses the term should point at it; compose and search read only these links |
 | Source: under-extracted | Source | `stage: processed` AND body > 100 lines AND `introduces::`+`supports::` targets < 2 | A long source that yielded almost no atoms; run `memex-deep-extract`. A dense source is *expected* to feed many atoms |
 | Extract: `claims:` count wrong | Extract | frontmatter ≠ `^cNN` block ids in body | Hand edit drifted from the frontmatter; recount |
 | Atom: `high` without grounding | Atom | `confidence: high` and no `cites:: [[…#^…]]` | Confidence rests on filenames, not sentences; run `memex-deep-extract` |

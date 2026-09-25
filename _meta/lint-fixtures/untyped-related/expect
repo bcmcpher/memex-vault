@@ -1,0 +1,19 @@
+exit=0
+WARN  atoms/only-related.md — 2 untyped related:: link(s) and no typed atom relation; promote with memex-reconcile
+WARN  atoms/plain.md — atom has no populated relation fields (fully isolated)
+WARN  atoms/points-away.md — no cites:: and no inbound links from sources atoms topics glossary
+WARN  atoms/points-away.md — related:: [[nowhere]] but no such note
+--- summary ---
+Sources (web): 0
+Sources (video): 0
+Sources (paper): 0
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 0
+Independent units: 0 of 0 sources
+Extracts: 0
+Atoms: 4
+Glossary terms: 0
+Concept maps: 1
+Projects: 0
+Research notes: 0

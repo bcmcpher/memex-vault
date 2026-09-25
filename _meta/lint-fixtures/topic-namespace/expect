@@ -1,0 +1,22 @@
+exit=1
+FAIL  topics/concepts/reeb-graph.md — glossary/reeb-graph.md has the same filename; [[reeb-graph]] is ambiguous (schema.md § Disambiguation Policy)
+FAIL  topics/concepts/tractography.md — atoms/tractography.md has the same filename; [[tractography]] is ambiguous (schema.md § Disambiguation Policy)
+FAIL  topics/projects/clean-map.md — topics/concepts/clean-map.md has the same filename; [[clean-map]] is ambiguous (schema.md § Disambiguation Policy)
+WARN  atoms/tractography.md — atom has no populated relation fields (fully isolated)
+WARN  atoms/tractography.md — no cites:: and no inbound links from sources atoms topics glossary
+WARN  glossary/reeb-graph.md — no note carries defines:: [[reeb-graph]]; add it to the source or atom that uses the term
+WARN  topics/projects/clean-map.md — missing field: stage
+--- summary ---
+Sources (web): 0
+Sources (video): 0
+Sources (paper): 0
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 0
+Independent units: 0 of 0 sources
+Extracts: 0
+Atoms: 1
+Glossary terms: 1
+Concept maps: 3
+Projects: 1
+Research notes: 0

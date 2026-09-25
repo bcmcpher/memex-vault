@@ -1,0 +1,18 @@
+exit=0
+WARN  atoms/user-atom.md — atom has no populated relation fields (fully isolated)
+WARN  atoms/user-atom.md — no cites:: and no inbound links from sources atoms topics glossary
+WARN  glossary/unwired-term.md — no note carries defines:: [[unwired-term]]; add it to the source or atom that uses the term
+--- summary ---
+Sources (web): 0
+Sources (video): 0
+Sources (paper): 0
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 0
+Independent units: 0 of 0 sources
+Extracts: 0
+Atoms: 1
+Glossary terms: 2
+Concept maps: 0
+Projects: 0
+Research notes: 0

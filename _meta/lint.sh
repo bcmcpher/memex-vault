@@ -626,6 +626,28 @@ if [ -d "$VAULT/glossary" ]; then
     done < <(find "$VAULT/glossary" -name "*.md" ! -name ".gitkeep" -print0)
 fi
 
+# Topics share the namespace too. The guard above covers one pair, and
+# memex-topic-emerge names a cluster after its dominant tag — which in trial 2
+# was an atom's filename for three clusters of five. part-of:: [[tag]] then
+# resolves to whichever file Obsidian meets first, and lint's own lookup tables
+# do the same, so the collision was silent twice over (T2-37).
+#   FAIL — a topic filename also present in atoms/, glossary/, or another topic folder
+declare -A TOPIC_SEEN=()
+while IFS= read -r -d '' t; do
+    rel=${t#"$VAULT"/}
+    slug="$(basename "$t" .md)"
+    for other in atoms glossary; do
+        if [ -f "$VAULT/$other/${slug}.md" ]; then
+            error "$rel — $other/${slug}.md has the same filename; [[${slug}]] is ambiguous (schema.md § Disambiguation Policy)"
+        fi
+    done
+    if [ -n "${TOPIC_SEEN[$slug]+x}" ]; then
+        error "$rel — ${TOPIC_SEEN[$slug]} has the same filename; [[${slug}]] is ambiguous (schema.md § Disambiguation Policy)"
+    else
+        TOPIC_SEEN[$slug]=$rel
+    fi
+done < <(find "$VAULT/topics" -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null | sort -z)
+
 ok "naming check complete"
 
 # ── 2. Required frontmatter fields ──────────────────────────────────────────
@@ -969,6 +991,26 @@ while IFS= read -r -d '' f; do
     fi
 done < <(find "$VAULT/topics/concepts" -name "*.md" ! -name ".gitkeep" -print0)
 
+# 6e. Unreachable glossary entry: no note names it in defines::. The note that
+# uses a term points at its entry (_meta/schema.md, defines::); memex-compose
+# builds its terminology section and memex-search its "where is T defined"
+# answer from those links alone. Trial 2 wrote 12 entries through a path that
+# never wired the back-link, and an unwired glossary linted exactly like a wired
+# one (T2-21).
+declare -A DEFINED=()
+while IFS= read -r -d '' f; do
+    while IFS= read -r t; do
+        if [ -n "$t" ]; then DEFINED[$t]=1; fi
+    done < <(field_targets "$f" defines)
+done < <(find "$VAULT/sources" "$VAULT/atoms" "$VAULT/topics" "$VAULT/extracts" \
+              -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null)
+while IFS= read -r -d '' g; do
+    term="$(basename "$g" .md)"
+    if [ -z "${DEFINED[$term]+x}" ]; then
+        warn "glossary/${term}.md — no note carries defines:: [[${term}]]; add it to the source or atom that uses the term"
+    fi
+done < <(find "$VAULT/glossary" -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null)
+
 ok "graph health check complete"
 
 # ── 7. Structural Integrity ──────────────────────────────────────────────────
@@ -1182,6 +1224,29 @@ while IFS= read -r -d '' f; do
                 warn "atoms/${atom_name}.md — retired (superseded by [[${RETIRED[$atom_name]}]]) but still has ${field}::; a retirement stub keeps only its body"
             fi
         done
+    fi
+done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
+
+# 7j. Untyped related::. An atom whose only atom-to-atom links are related::
+# has a backlog memex-reconcile's promotion pass exists to work, and until rc.3
+# nothing here said so — memex-tend could only offer that pass, never schedule
+# it (T2-12). Flat, not age-gated: M12 retired reconcile's 30-day rule for
+# being backwards. An atom that also holds any typed atom-to-atom relation is
+# not reported; one kept deliberately untyped will keep warning, which is the
+# cost of having a signal at all.
+while IFS= read -r -d '' f; do
+    atom_name="$(basename "$f" .md)"
+    is_retired "$atom_name" && continue
+    # Only links to existing atoms: typed relations are atom-to-atom, and a
+    # dangling target is 7h's to report.
+    n_related=0
+    while IFS= read -r t; do
+        if [ -n "$t" ] && [ -f "$VAULT/atoms/${t}.md" ]; then n_related=$((n_related + 1)); fi
+    done < <(field_targets "$f" related)
+    [ "$n_related" -gt 0 ] || continue
+    n_typed=$(count_links "$f" 'extends|uses|contradicts|challenges|supersedes|limits|contrasts-with')
+    if [ "$n_typed" -eq 0 ]; then
+        warn "atoms/${atom_name}.md — $n_related untyped related:: link(s) and no typed atom relation; promote with memex-reconcile"
     fi
 done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 
