@@ -506,8 +506,7 @@ candidate in the batch shares it, which is what lets `memex-candidates` group th
 whole seed as one session.
 
 **File name** is `_meta/candidates/YYYY-MM-DD-HHMMSS-{action}-{target-slug}.md`
-(`_meta/schema.md` § Candidate Lifecycle, which is authoritative where
-`memex-ingest` shows a `YYYYMMDD-` variant). One file per write, `HHMMSS`; one
+(`_meta/schema.md` § Candidate Lifecycle). One file per write, `HHMMSS`; one
 session per run, `HHMM`.
 
 Every candidate this skill writes is a **create** candidate — it modifies nothing,

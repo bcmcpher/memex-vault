@@ -255,9 +255,11 @@ Before writing any vault file (source note, atom stub, glossary stub), write a c
 
 **Session ID**: use `YYYY-MM-DD-HHMM` from the start of this skill invocation. All candidates from one session share the same ID.
 
+**File name**: `YYYY-MM-DD-HHMMSS-{action}-{target-slug}.md`, the form every skill uses (`_meta/schema.md` § Candidate Lifecycle) — one file per write, so `HHMMSS`, where the session ID stops at `HHMM`.
+
 **For create actions** (new source note, atom stub, glossary stub):
 ```
-_meta/candidates/YYYYMMDD-HHMMSS-create-{target-slug}.md
+_meta/candidates/YYYY-MM-DD-HHMMSS-create-{target-slug}.md
 ```
 Frontmatter:
 ```yaml
@@ -274,7 +276,7 @@ Body: full proposed file content.
 
 **For modify actions** (back-wiring an existing atom's `cites::`, adding `defines::` to the source note):
 ```
-_meta/candidates/YYYYMMDD-HHMMSS-modify-{target-slug}.md
+_meta/candidates/YYYY-MM-DD-HHMMSS-modify-{target-slug}.md
 ```
 Frontmatter:
 ```yaml
@@ -291,12 +293,17 @@ stage: pending
 ```
 Body: the exact text to append.
 
-**Lifecycle per candidate:**
+**Lifecycle per candidate** (the write protocol in `_meta/schema.md` § Candidate Lifecycle):
 1. Write candidate file
 2. Show proposed content to user
-3. User confirms → write to vault, delete candidate
-4. User skips → delete candidate without writing
-5. Session ends → candidate persists for `memex-candidates`
+3. User confirms → write to vault
+4. **Assert** → re-read the target: a create's file exists and equals the candidate body; an append's lines sit under the named section. Only then delete the candidate
+5. User skips → delete candidate without writing
+6. Session ends → candidate persists for `memex-candidates`
+
+On a failed assert, stop: keep the candidate, name the target, and leave it out of the log entry. An edit tool can report success on a write that did not happen — two anchored inserts in trial 1 matched nothing and said they succeeded (finding 13) — and deleting the candidate then loses the change for good.
+
+The log entry (step 8) is written last and lists only writes whose assert passed.
 
 ---
 
@@ -308,7 +315,22 @@ VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
 <fetch the full text> | bash "$VAULT/_meta/normalize.sh" > "$VAULT/.archive/YYYY-MM-DD-slug.md"
 ```
 
-Then add to the source note: `raw:: .archive/YYYY-MM-DD-slug.md`
+Then hash the archive **as written** — the normalized bytes:
+
+```bash
+A="$VAULT/.archive/YYYY-MM-DD-slug.md"
+( sha256sum "$A" 2>/dev/null || shasum -a 256 "$A" ) | cut -d' ' -f1
+```
+
+The source note gets both lines, always together — `raw:: .archive/YYYY-MM-DD-slug.md`
+at the end of `## Connections` and `archive-sha256: <hash>` in frontmatter
+(`_meta/schema.md` § Source Archive Hash). `_meta/lint.sh` section 5 warns on either
+one without the other, and on a hash that does not match the file.
+
+**Decide on the archive before step 4's candidate is written**, and write the
+archive first: then both lines go into the create candidate, and the note never
+exists with a `raw::` naming a missing file — a section 5 FAIL. If the user asks to
+archive after the note is written, the two lines are one modify candidate.
 
 The `.archive/` folder is gitignored and excluded from Obsidian's indexer — it won't appear in the graph.
 
@@ -326,5 +348,5 @@ bash "$VAULT/_meta/normalize.sh" --in-place "$VAULT/.archive/YYYY-MM-DD-slug.md"
 - Don't ingest a source that's already in `sources/` under a different filename — `grep -rl "<url>" "$VAULT/sources/"` first. One source note per URL (`_meta/schema.md` § Source URLs); `lint.sh` section 2b catches what this misses
 - Don't write a URL carrying a credential into `url:` — strip the token first; `sources/` is tracked, so section 2c warns after the fact
 - Don't create an atom for a term that already exists in `glossary/` or vice versa
-- Don't leave `related::` as the only connection on every note — push for `supports::` or `introduces::` when the relationship is clear
+- Don't leave `related::` as the only connection on every note — push for `supports::` or `introduces::` when the relationship is clear. On an atom, `related::` to other atoms with no typed atom→atom relation is a `_meta/lint.sh` section 7j warning
 - Meetings don't have `url` fields; don't add one
