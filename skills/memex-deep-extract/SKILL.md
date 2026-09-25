@@ -319,6 +319,49 @@ standing source of evidence, not a one-shot import.
 Start by reading the extract's `## Promotion Log` so already-promoted claims are
 not offered twice.
 
+### 0. Reconcile concept slugs across extracts
+
+Run this first whenever the vault holds extracts nobody has reconciled — always
+after a batch of mode A, and on the first mode B a vault ever runs. Skip it only
+for a single extract promoted into a vault whose other extracts were reconciled
+before.
+
+Mode A pass 4 cannot see sibling extracts, so one concept arrives under several
+slugs — trial 2's twelve extracts filed tractography under fourteen, among them
+`fiber-tractography`, `streamline-tractography` and `diffusion-mri-tractography`
+(T2-11). Steps 4 and 5 compare `about:` slugs literally, so until those are
+merged every count below is split across the variants: a concept that clears the
+threshold in fact misses it on paper, and two claims about one concept never meet
+in step 5 (T2-16).
+
+Take the union, with how many claims and how many extracts use each slug:
+
+```bash
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
+grep -h '^ *- about:' "$VAULT"/extracts/ext-*.md | grep -oE '`[^`]+`' | tr -d '`' \
+  | sort | uniq -c | sort -rn                                   # claims per slug
+for f in "$VAULT"/extracts/ext-*.md; do
+  grep '^ *- about:' "$f" | grep -oE '`[^`]+`' | tr -d '`' | sort -u
+done | sort | uniq -c | sort -rn                                # extracts per slug
+```
+
+Cluster by reading: plural and singular, abbreviation and expansion, a modifier
+dropped or reordered, and any slug that names an existing atom or glossary entry
+under another form. For each cluster propose one canonical slug — the existing
+atom's or glossary entry's where there is one — and show the clusters to the
+operator before any rewrite. A merge the operator rejects stays two concepts.
+
+Then **rewrite the extracts, not a side table**: the `about:` lines and the
+`## Concepts` rows that carry a non-canonical slug. Each changed line is a modify
+candidate, `change: replace`, with the old line in `replaces:`. Claim text,
+`quote:` lines and `^cNN` ids are never touched — the rewrite changes what a claim
+is filed under, not what it says, and lint section 12 grounds quotes, not slugs. A
+Concepts row whose resolution was `new` and whose canonical slug is an existing
+atom becomes `matched`.
+
+Say how many slugs went in and how many came out. Every count in steps 3–5 is over
+the reconciled set.
+
 ### 1. Enrich matched atoms
 
 For each claim whose `about:` resolves to an existing atom, propose adding its
@@ -343,11 +386,41 @@ as dependent — overstating independence is how `high` stops meaning anything.
 `high` additionally requires at least one block-anchored `cites::`, which is
 exactly what step 1 produces. This is the only path to `high` in the vault.
 
-### 3. Propose glossary stubs
+### 3. Propose glossary stubs — threshold-gated
 
-For `type: definition` claims whose term is not already in `glossary/`. Same
-stub shape as `memex-connect` writes, with the claim's quote as the drafting
+**Only for a term with a `type: definition` claim that ≥ 2 claims in the reconciled
+set name** — the definition, and at least one use. Say the bar when you apply it,
+as step 4 does, so the operator can override it for a run. Unlike step 4 this bar
+does not ask for independent sources: a definition needs a definer, not
+corroboration. Without a bar the pass is unbounded — trial 2's twelve extracts
+proposed 98 entries (T2-14).
+
+Then skip any term whose slug already exists in **either** folder:
+
+```bash
+ls "$VAULT/glossary/<term-slug>.md" "$VAULT/atoms/<term-slug>.md" 2>/dev/null
+```
+
+Obsidian resolves wikilinks by filename across the whole vault, so a glossary
+entry named like an atom makes every link to either one ambiguous, and
+`_meta/lint.sh` section 1 FAILs it — the same reasoning as mode A's `ext-` prefix.
+Trial 1 found the collision (finding 10) and lint gained the check; the writer kept
+proposing the stubs lint rejects (T2-15). List the skipped terms and why. Where the
+concept really needs both an atom and a short definition, that is
+`_meta/schema.md` § Disambiguation Policy and the operator's call — surface it,
+do not drop it silently.
+
+Same stub shape as `memex-connect` writes, with the claim's quote as the drafting
 cue and `cites:: [[ext-<slug>#^cNN]]` as the source.
+
+**Every entry needs its back-link.** Add `defines:: [[<term-slug>]]` to the source
+note's `## Connections` — the note whose claim defines the term, following
+`memex-glossary`'s rule that the note using a term points at its entry. It is a
+modify candidate on the source note: `change: replace` of its `defines::` line
+(empty in the template, or holding earlier terms) with the extended list. Without
+it the entry is unreachable from the graph: none of the 12 entries trial 2's mode B
+wrote had an inbound `defines::`, so `memex-compose`, which finds terms through
+that field, would have omitted the layer (T2-21). `_meta/lint.sh` section 6e now warns on it.
 
 ### 4. Propose atom stubs — threshold-gated
 
@@ -356,6 +429,19 @@ explosion that makes bulk extraction unusable, while still surfacing load-bearin
 concepts the vault has not atomized. Under-threshold concepts stay in the extract
 as unpromoted evidence, which is a perfectly good place for them — that is what
 `_meta/index.md`'s "extracts with unpromoted claims" query is for.
+
+**When the run promotes more than one extract, add a second gate: the claims come
+from ≥ 2 independent sources.** Independence is step 2's test — no shared author,
+neither cites nor restates the other. The ≥ 3 bar was written for one extract
+promoted into a mature vault, where clearing it means something against existing
+coverage. Applied to twelve extracts promoted into an empty vault it proposed 134
+atoms (T2-10): with nothing atomized yet, every concept a single paper discusses
+three times clears it. A single-extract run keeps the plain ≥ 3 rule.
+
+Count after step 0 — over reconciled slugs — and state the result before
+proposing anything: *"N concepts clear ≥ 3 claims from ≥ 2 independent sources."*
+If N is past § Scope guards' limit, that guard applies here: batch it, confirm
+each.
 
 The threshold is a starting value, not a law. Say what it is when you apply it,
 so the user can override for a specific run.
@@ -476,7 +562,9 @@ Stop and ask if any of these hold:
 - The source has no reachable full text → refuse, per mode A step 1.
 - The extract would exceed ~80 claims → propose splitting by section instead;
   past that nobody reviews it, and an unreviewed extract is a liability.
-- Mode B would touch more than 10 atoms in one run → batch it, confirm each.
+- Mode B would create or edit more than 10 curated notes — atoms **and glossary
+  entries** — in one run → batch it, confirm each. The unit was atoms until trial
+  2, where a 98-entry glossary pass reported no guard violation at all (T2-14).
 - A `mentions::` target does not exist → do not create it in mode A. Record it
   as `new (N claims)` in the Concepts table and let mode B decide.
 
