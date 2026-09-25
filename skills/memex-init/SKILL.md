@@ -162,6 +162,17 @@ ls -d "$VAULT/extracts" && ls "$VAULT/_templates/extract.md"
 If either is missing, create the folder with a `.gitkeep` and stop to say the
 template copy is incomplete rather than inventing a template.
 
+Then make sure the candidate layer exists. Every gated skill writes its candidate
+with `cat > "$VAULT/_meta/candidates/…"`, which fails outright when the directory
+is missing — and before rc.3 the template's `.gitignore` ignored the directory
+itself, so a clone had none until `memex-seed` created it (trial 2, T2-18). A vault
+that goes `memex-init` → `memex-save` must not depend on seed having run:
+
+```bash
+mkdir -p "$VAULT/_meta/candidates"
+touch "$VAULT/_meta/candidates/.gitkeep"
+```
+
 **Tell the user the `ext-` rule.** Extracts are named `ext-<source-slug>.md`.
 The prefix is not decoration: Obsidian resolves wikilinks by filename across the
 whole vault, so an extract named after its source collides with that source and
