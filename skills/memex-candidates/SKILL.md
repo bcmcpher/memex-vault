@@ -32,8 +32,12 @@ This skill resurfaces proposed vault writes from sessions that ended before the 
 
 ```bash
 VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
-ls -t "$VAULT/_meta/candidates/" | grep -v "^\.gitkeep$"
+ls -t "$VAULT/_meta/candidates/" 2>/dev/null | grep -v "^\.gitkeep$"
 ```
+
+A missing directory prints nothing, the same as an empty one — `memex-tend` runs
+this line the same way. Report it as empty, and suggest `mkdir -p
+"$VAULT/_meta/candidates"` so the next gated write has somewhere to go.
 
 If empty, report: "No pending candidates. All proposed writes have been resolved." Stop.
 
@@ -67,7 +71,7 @@ Process one session at a time. For each candidate in a session:
 ```
 
 **Ask:** `Approve / Reject / Defer / Show full content`
-- **Approve** — apply the change (see Step 4), delete the candidate file
+- **Approve** — apply the change (see Step 4), assert it landed, then delete the candidate file
 - **Reject** — delete the candidate file without writing
 - **Defer** — leave the candidate in place, move to the next one
 - **Show full content** — display the full body if it was truncated
@@ -112,6 +116,24 @@ matches, stop and show the file's current line instead: the target changed after
 the candidate was written, and replacing a guessed line is how a link silently
 disappears.
 
+**Assert before deleting.** Re-read the target after every write, before touching
+the candidate (`_meta/schema.md` § Candidate Lifecycle, write protocol step 4):
+
+- **create** — the file exists and equals the candidate body;
+- **append** — every body line is present under the named section;
+- **replace** — the body line is present and the `replaces:` line is gone.
+
+```bash
+grep -nF -- '<one body line>' "$VAULT/<target>"   # must print
+grep -nF -- '<replaces: value>' "$VAULT/<target>" # replace only: must print nothing
+```
+
+On a miss, stop: keep the candidate, report the target as **Failed** in the
+summary, and move on. An edit tool can report success on a write that did not
+happen — in trial 1 two anchored inserts into one file matched nothing and
+reported success (finding 13). Deleting the candidate on that report destroys
+the only copy of the change.
+
 ### 5. Session summary
 
 After processing all sessions:
@@ -121,11 +143,12 @@ Candidates resolved:
   Applied:   3  (atoms/flash-attention.md, glossary/kv-cache.md, atoms/attention-mechanism.md)
   Rejected:  1  (atoms/transformer-architecture.md)
   Deferred:  0
+  Failed:    0  (write did not assert; candidate kept)
 
 _meta/candidates/ is now clean.
 ```
 
-If any candidates were deferred, list them explicitly and remind the user to run `memex-candidates` again to resolve them.
+If any candidates were deferred or failed, list them explicitly and remind the user to run `memex-candidates` again to resolve them.
 
 ---
 
