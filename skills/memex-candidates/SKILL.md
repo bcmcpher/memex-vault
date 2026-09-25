@@ -59,6 +59,8 @@ Pending candidates: 4 files across 2 sessions
     MODIFY atoms/transformer-architecture.md → append to ## Sources
 ```
 
+Name the change for each modify: `append to <section>`, `replace <line>`, or `rewrite`.
+
 ### 3. Review each session
 
 Process one session at a time. For each candidate in a session:
@@ -86,8 +88,8 @@ a note starts with its own `---` frontmatter, so that file holds two blocks one 
 the other. Split on the **first two** `---` lines only: the candidate's fields sit
 between them, and everything after the second — leading blank lines trimmed — is the
 body, written verbatim. Splitting on every fence, or taking the last pair, returns
-the note without its frontmatter. Before writing a create, check the body's first
-line is `---`; a modify candidate's body has no frontmatter.
+the note without its frontmatter. Before writing a create or a rewrite, check the body's
+first line is `---`; an append or replace body has no frontmatter.
 
 **Create action** — write the candidate body to `target`:
 ```bash
@@ -116,12 +118,25 @@ matches, stop and show the file's current line instead: the target changed after
 the candidate was written, and replacing a guessed line is how a link silently
 disappears.
 
+**Modify action with `change: rewrite`** — the body is the whole new file, frontmatter
+included, split as above. It replaces the target only if the target is still the file
+the candidate was written against:
+```bash
+now=$( ( sha256sum "$VAULT/<target>" 2>/dev/null || shasum -a 256 "$VAULT/<target>" ) | cut -d' ' -f1)
+[ "$now" = "<was-sha256: value>" ] || echo "CHANGED since proposed — show the diff, do not write"
+```
+On a mismatch, stop and show `diff` between the target and the body. A rewrite
+carries every line of the file, so applying it over a later edit reverts that edit
+without a trace; the hash is the rewrite's equivalent of a replace's exact line.
+`memex-refactor` uses it for a retirement stub and a revised body.
+
 **Assert before deleting.** Re-read the target after every write, before touching
 the candidate (`_meta/schema.md` § Candidate Lifecycle, write protocol step 4):
 
 - **create** — the file exists and equals the candidate body;
 - **append** — every body line is present under the named section;
 - **replace** — the body line is present and the `replaces:` line is gone.
+- **rewrite** — the file equals the body.
 
 ```bash
 grep -nF -- '<one body line>' "$VAULT/<target>"   # must print

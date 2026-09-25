@@ -881,8 +881,30 @@ part-of:: [[tractography-methods]]
 ```
 `memex-candidates` applies it only if a line equal to `replaces:` is still in the file.
 
-A create candidate's body is a whole note with its own frontmatter, so its file holds
-two `---` blocks; `memex-candidates` step 4 says how to split them.
+*Rewrite candidate* — a modify candidate whose body is the whole new file, for an
+edit no single line or section holds (`memex-refactor` turning an atom into a
+retirement stub, or revising its body). `was-sha256:` is the target's hash when the
+candidate was written:
+```markdown
+---
+proposed: YYYY-MM-DD HH:MM
+skill: memex-refactor
+action: modify
+target: atoms/quality-control.md
+change: rewrite
+was-sha256: 3f9a…
+session: YYYY-MM-DD-HHMM
+stage: pending
+---
+
+[full file content to write]
+```
+`memex-candidates` applies it only if the target still hashes to `was-sha256:`. A
+rewrite restates every line, so applied over a later edit it would revert that edit
+silently; the hash stands in for a replace's exact line.
+
+A create or rewrite candidate's body is a whole note with its own frontmatter, so its
+file holds two `---` blocks; `memex-candidates` step 4 says how to split them.
 
 **Gate the whole write set.** A skill that writes candidates writes one for
 **every** file it is about to change, in one session, before it changes any —
@@ -902,7 +924,7 @@ candidate, so the per-write half of recovery is universal (T2-20).
 4. **Assert** — re-read the target and check the change is there: a create's
    file exists and equals the candidate body; an append's lines are under the
    named section; a replace's new line is present and its `replaces:` line is
-   gone. On a miss, stop: keep the candidate, report the target, and do not log.
+   gone; a rewrite's file equals the candidate body. On a miss, stop: keep the candidate, report the target, and do not log.
 5. **Delete** — the candidate, only after the assert passes.
 6. **Log** — the `_meta/log.md` entry, last, describing only writes that passed.
 
