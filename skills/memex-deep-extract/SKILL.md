@@ -449,9 +449,33 @@ so the user can override for a specific run.
 ### 5. Propose conflict links
 
 Where two claims about the same concept, **from different sources**, assert
-incompatible things, propose `contradicts::` or `challenges::` — with the
-sentence explaining the tension, because `_meta/lint.sh` section 9 fails a bare
-conflict link and a bare one is unusable anyway.
+incompatible things, propose a conflict link — with the sentence explaining the
+tension, because `_meta/lint.sh` section 9 warns on a bare conflict link and a bare
+one is unusable anyway.
+
+**Say which placement you mean; the schema has two** (`_meta/schema.md`
+§ Relationship Types):
+
+- **Source → atom** — `challenges::` or `refutes::` on the *source note* whose
+  claim disputes an atom. This is the usual case here: one concept, one atom,
+  two sources disagreeing about it. The source that agrees already `supports::`
+  the atom (step 1); the one that disagrees gets the skeptical link, and the
+  tension sentence goes in the atom body.
+- **Atom → atom** — `contradicts::` or `challenges::` between two *atoms*, when
+  the promoted claims landed in different atoms that cannot both hold. Document
+  the tension in both.
+
+Both placements are real and both are now audited: lint section 9 and
+`memex-conflicts` scan `sources/` as well as `atoms/`, and match `challenges::`
+and `limits::` beside `contradicts::` and `refutes::`. Until rc.3 both read
+`atoms/` only and skipped `challenges::`, so the source-level form this step
+most often produces had no oracle (T2-17).
+
+**Matching `about:` slugs is a lower bound on shared concepts, not the set.**
+Step 0 merges the variants it can see; two claims filed under slugs nobody
+clustered still describe one concept sometimes. When a claim reads like it
+disputes something, check the neighbouring slugs by reading before concluding
+there is no counterpart (T2-16).
 
 This is where claim-comparison inference lives, and it lives here on purpose.
 `memex-conflicts` declares three times over that it "does not infer conflicts
@@ -463,8 +487,8 @@ invariant intact. **Never edit `memex-conflicts` to do this.**
 ### 6. Append to the Promotion Log
 
 One line per promoted claim, so a re-run does not re-offer it. Write each row as
-soon as that claim's atom edit lands, not in one batch at the end — a run
-interrupted between the two leaves a citation with no row:
+soon as that claim's atom edit lands — after its assert passes — not in one batch
+at the end: a run interrupted between the two leaves a citation with no row:
 
 ```
 - ^c07 -> atoms/rag-token.md (cites, 2026-08-25)
@@ -509,9 +533,16 @@ Mode A logs the same way with `deep-extract/extract` and `notes: N claims, M con
 ### Candidate gating in mode B
 
 Every write in mode B — an atom's `## Detail` and `cites::`, a glossary or atom
-stub, a conflict link, a Promotion Log row, a source-note section — gets a candidate
-first, with the same lifecycle as mode A's one file: write candidate → confirm →
-write to vault → delete candidate. Edits to existing files are modify candidates:
+stub, a conflict link, a Promotion Log row, a source-note section or `defines::`
+line, a step 0 slug rewrite — gets a candidate first, with the same lifecycle as
+mode A's one file: write candidate → confirm → write to vault → **assert** → delete
+candidate, and the log last (`_meta/schema.md` § Candidate Lifecycle). The assert
+re-reads the target: a create equals its candidate body, an append's lines sit under
+the named section, a replace's new line is present and its `replaces:` line is gone.
+On a miss, keep the candidate, stop, and report the target; the log entry lists
+only writes that passed. Mode B's long write sequences are where an edit that
+reports success without happening does the most damage (trial 1, finding 13). Edits
+to existing files are modify candidates:
 
 ```yaml
 ---
@@ -547,7 +578,11 @@ A `confidence:` change stays its own question even inside a batch (step 1).
 - **It does not replace `memex-ingest` or `memex-connect`.** Ingest summarizes,
   connect wires whole sources to atoms, extract reads claim by claim. Ingest
   first, then extract.
-- **It never deletes an atom.** Retirement stays `supersedes::` plus a stub.
+- **It never deletes or retires an atom.** Retirement is `memex-refactor`'s: the
+  *successor* carries `supersedes:: [[retired-atom]]` and the retired file stays
+  as a body-only stub (`_meta/schema.md` § Retirement). The direction matters —
+  trial 2's only writer had it backwards (T2-33), and lint section 7i now warns
+  on it.
 - **It never edits `memex-conflicts`.** See mode B step 5.
 - **It never runs automatically or vault-wide.** This is the most expensive skill
   in the vault. It is user-invoked and selective, always.
