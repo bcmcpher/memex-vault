@@ -23,7 +23,7 @@ For meeting notes with no URL, use `memex-meeting` instead.
 
 | Pattern | Medium | Folder |
 |---------|--------|--------|
-| `arxiv.org`, `biorxiv.org`, `medrxiv.org`, `doi.org`, `semanticscholar.org`, `openreview.net`, `pubmed.ncbi.nlm.nih.gov`, `ncbi.nlm.nih.gov/pmc`; publisher article pages — `nature.com`, `science.org`, `cell.com`, `pnas.org`, `sciencedirect.com`, `link.springer.com`, `onlinelibrary.wiley.com`, `ieeexplore.ieee.org`, `dl.acm.org`, `frontiersin.org`, `journals.plos.org`, `academic.oup.com`, `tandfonline.com`, `journals.sagepub.com`, `elifesciences.org`, `direct.mit.edu`; **any URL whose path contains a DOI** (`/10.NNNN/…`) | `paper` | `sources/paper/` |
+| `arxiv.org`, `biorxiv.org`, `medrxiv.org`, `doi.org`, `semanticscholar.org`, `openreview.net`, `pubmed.ncbi.nlm.nih.gov`, `pmc.ncbi.nlm.nih.gov`, `ncbi.nlm.nih.gov/pmc`; publisher article pages — `nature.com`, `science.org`, `cell.com`, `pnas.org`, `sciencedirect.com`, `link.springer.com`, `onlinelibrary.wiley.com`, `ieeexplore.ieee.org`, `dl.acm.org`, `frontiersin.org`, `journals.plos.org`, `academic.oup.com`, `tandfonline.com`, `journals.sagepub.com`, `elifesciences.org`, `direct.mit.edu`; **any URL whose path contains a DOI** (`/10.NNNN/…`) **or a PMC id** (`PMC` + digits, e.g. `/articles/PMC12182987/`) | `paper` | `sources/paper/` |
 | `youtube.com`, `youtu.be`, `vimeo.com` | `video` | `sources/video/` |
 | `docs.*`, `*.readthedocs.io`, `*.dev/docs*`, `*.io/docs*`, official library reference pages | `docs` | `sources/docs/` |
 | `github.com`, `gitlab.com`, `codeberg.org`, package registries, analysis/toolbox repos | `code` | `sources/code/` |
@@ -40,6 +40,16 @@ rule catches publishers the domain list misses (`frontiersin.org/…/10.3389/…
 publisher path with no DOI in it (`nature.com/articles/…`) needs the domain entry.
 If the step 2 fetch shows `citation_doi` or `citation_title` metadata on a page
 routed to `web`, it is a paper: re-route it and say so.
+
+**Route on the URL; a failed fetch is no evidence.** PMC moved to its own host,
+`pmc.ncbi.nlm.nih.gov/articles/PMC…`, which the old `ncbi.nlm.nih.gov/pmc` entry
+does not match — and PMC serves a reCAPTCHA page and PubMed a cookie wall, so the
+metadata recovery above could not run on exactly the hosts that needed it (trial 2,
+T2-22). The note was filed as `web`, `memex-connect` then took the web enrichment
+path, and `authors:` stayed empty: a routing slip became a permanent hole in the
+independence count. So when the fetch fails on a URL that reached `web` only by
+falling through every other row, do not treat the failure as confirming `web` — ask
+the medium question below before writing.
 
 **Only write a declared medium.** The heuristic can name one this vault does not
 declare — the template declares no `code`. Then ask which declared medium to use,
@@ -80,12 +90,16 @@ Fetch the URL immediately. Extract only what's needed for a useful stub:
 
 - **All sources**: real title from `<title>` or `<h1>`; one-sentence summary draft from lead paragraph, abstract first sentence, or page description
 - **Paper**: `authors` array and `published` from the abstract page — the year alone is fine here if that is all the page states plainly; `memex-connect` refines it
-- **Video**: `channel` name. For YouTube, read it from the oEmbed endpoint — `https://www.youtube.com/oembed?url=<url>&format=json` returns JSON whose `author_name` is the channel and `title` the video title, with no API key. A plain fetch of the watch page does not reliably expose the channel; on the first real vault it left `channel:` empty. For other hosts, take it from the page, and leave `channel:` empty rather than guess
+- **Video**: `channel` name, from the host's oEmbed endpoint — JSON whose `author_name` is the channel and `title` the video title, with no API key:
+  - YouTube: `https://www.youtube.com/oembed?url=<url>&format=json`
+  - Vimeo: `https://vimeo.com/api/oembed.json?url=<url>` (verified 2026-09-25: 200 with `author_name` on public videos; 404 on a private or removed one, which is a failed fetch, not an empty channel)
+
+  A plain fetch of the watch page does not reliably expose the channel; on the first real vault it left `channel:` empty. For other hosts, take it from the page, and leave `channel:` empty rather than guess
 - **Docs**: `tool` name from subdomain or page title
 
 This is a lightweight fetch — stop at the minimum. Full metadata enrichment (full author arrays, venue, version, structured Key Points) is `memex-connect`'s job.
 
-**If the URL is a PDF or paywalled:** note the limitation clearly and ask the user for title and a brief summary. Do not block on this.
+**If the URL is a PDF, paywalled, or behind a bot wall** (reCAPTCHA, cookie notice): note the limitation clearly and ask the user for the title, a brief summary, and — for a paper, or for anything that reached `web` by fall-through — the authors. Do not block on this. The authors question is not optional for a paper: an empty `authors:` leaves the note unchecked for independence until someone types it in.
 
 ### 3. Derive filename
 Use the real fetched title: `YYYY-MM-DD-kebab-title.md`. Drop articles, max ~6 words in the slug. **Always use today's date — never the publication date.**
@@ -95,7 +109,7 @@ Confirm with the user only if the slug would be ambiguous or too generic.
 ### 4. Ask two questions together
 In a single prompt, ask:
 1. **"Why are you saving this?"** — one sentence; this is the only context that won't be recoverable from the URL later
-2. **"Have you read this?"** — Yes / Not yet
+2. **"Have you read this?"** — Yes / Yes, with reactions / Not yet
 
 ### 5. Branch on read stage
 
@@ -104,8 +118,8 @@ Write the source note (Step 6). No reactions, no summary session.
 
 #### If "Yes" → `stage: read`
 
-**5a. First-read reactions (optional)**
-Ask: "Any quick reactions or highlights?" Accept 1–3 bullets, or skip entirely. Do not prompt again if the user passes.
+**5a. First-read reactions (opt-in)**
+Only if the user answered "Yes, with reactions", or offers reactions unprompted: take 1–3 bullets. Otherwise do not ask. A separate reactions prompt on every read save was a recorded rc.2 deviation — dropped after two saves as a round-trip that returned nothing; the opt-in lives in question 2, which is asked anyway.
 
 **5b. Collaborative summary mode (optional)**
 Ask: "Want to build a fuller summary together?" (Yes / Skip)
@@ -209,7 +223,7 @@ stage: pending
 ```
 Body: the full note, as step 6 would write it.
 
-Write candidate → show the user → write to vault → delete candidate. If the session ends first, the candidate persists for `memex-candidates`. This skill writes one file, so this is one candidate — but it is the most-invoked capture skill, and the collaborative summary in step 5b is user work that a dropped session would otherwise lose.
+Write candidate → show the user → write to vault → **assert** → delete candidate → log (`_meta/schema.md` § Candidate Lifecycle). The assert re-reads the note and checks it equals the candidate body; an edit tool can report success on a write that did not happen (trial 1, finding 13). On a miss, keep the candidate, report the path, and write no log entry. If the session ends first, the candidate persists for `memex-candidates`. This skill writes one file, so this is one candidate — but it is the most-invoked capture skill, and the collaborative summary in step 5b is user work that a dropped session would otherwise lose.
 
 ---
 
