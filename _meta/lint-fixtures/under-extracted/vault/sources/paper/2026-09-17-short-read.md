@@ -10,6 +10,7 @@ stage: read
 authors: [Flo Fixture]
 published: 2021
 venue: Journal of Fixtures
+archive-sha256: 6304ff856a103b9ec53c213b89ad2534e832bcf0be24c455d948e42a66e3878f
 ---
 
 ## Why Saved

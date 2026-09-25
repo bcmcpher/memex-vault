@@ -1,16 +1,16 @@
 ---
 type: Source
-title: 2026-09-17-long-unread
-description: under-extracted fixture source
-url: https://doi.org/10.1000/2026-09-17-long-unread
+title: 2026-09-17-mismatched
+description: archive-hash fixture source
+url: https://doi.org/10.1000/2026-09-17-mismatched
 medium: paper
 saved: 2026-09-17
 tags: [statistics]
 stage: unread
-authors: [Ed Fixture]
+authors: [Di Fixture]
 published: 2021
 venue: Journal of Fixtures
-archive-sha256: e317b3a66fb0b57ce0a1565b3676c6ed9c9e5d1921a4b45a341f88a01b0c0096
+archive-sha256: a3ead5eedad5df82318c51685dbc1c147a36d1ff8584fc82de6b08d0bf63a795
 ---
 
 ## Why Saved
@@ -30,5 +30,5 @@ challenges::
 refutes:: 
 cites:: 
 rebuts:: 
-related:: 
-raw:: .archive/2026-09-17-long-unread.md
+related:: [[2026-09-17-good]]
+raw:: .archive/2026-09-17-mismatched.md

@@ -1,16 +1,16 @@
 ---
 type: Source
-title: 2026-09-17-long-unread
-description: under-extracted fixture source
-url: https://doi.org/10.1000/2026-09-17-long-unread
+title: 2026-09-17-malformed
+description: archive-hash fixture source
+url: https://doi.org/10.1000/2026-09-17-malformed
 medium: paper
 saved: 2026-09-17
 tags: [statistics]
 stage: unread
-authors: [Ed Fixture]
+authors: [Cy Fixture]
 published: 2021
 venue: Journal of Fixtures
-archive-sha256: e317b3a66fb0b57ce0a1565b3676c6ed9c9e5d1921a4b45a341f88a01b0c0096
+archive-sha256: ABC123
 ---
 
 ## Why Saved
@@ -30,5 +30,5 @@ challenges::
 refutes:: 
 cites:: 
 rebuts:: 
-related:: 
-raw:: .archive/2026-09-17-long-unread.md
+related:: [[2026-09-17-good]]
+raw:: .archive/2026-09-17-malformed.md

@@ -1,0 +1,19 @@
+exit=0
+WARN  sources/paper/2026-09-17-hash-no-raw.md — archive-sha256: with no raw::; the hash is present exactly when raw:: is
+WARN  sources/paper/2026-09-17-malformed.md — archive-sha256: 'ABC123' is not 64 lowercase hex digits
+WARN  sources/paper/2026-09-17-mismatched.md — archive-sha256: does not match .archive/2026-09-17-mismatched.md (archive changed after its quotes were checked: re-fetched, edited, or re-normalized)
+WARN  sources/paper/2026-09-17-no-hash.md — raw:: with no archive-sha256:; a restored archive cannot be checked against the bytes its quotes were grounded in
+--- summary ---
+Sources (web): 0
+Sources (video): 0
+Sources (paper): 5
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 0
+Independent units: 5 of 5 sources
+Extracts: 0
+Atoms: 0
+Glossary terms: 0
+Concept maps: 0
+Projects: 0
+Research notes: 0

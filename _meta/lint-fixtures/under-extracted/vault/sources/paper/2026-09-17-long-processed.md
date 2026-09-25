@@ -10,6 +10,7 @@ stage: processed
 authors: [Bea Fixture]
 published: 2021
 venue: Journal of Fixtures
+archive-sha256: d67c2d2da81ea9b763f021131958a513206516701c1fe330dc614de01944e584
 ---
 
 ## Why Saved

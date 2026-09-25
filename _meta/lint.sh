@@ -10,7 +10,8 @@
 #   2. Missing required frontmatter fields
 #   3. (retired in rc.2 — temporal threshold, roadmap M11a; number kept)
 #   4. Orphan atoms (no cites::, no inbound links from curated nodes)
-#   5. Archive mismatches (raw:: pointing to missing file)
+#   5. Archive mismatches (raw:: pointing to missing file, archive-sha256: missing
+#      or not matching)
 #   6. Graph health (inbox-only sources, isolated atoms, bloated atoms, broad topic maps)
 #   7. Structural integrity (orphan part-of, atom freshness, unknown relation fields,
 #      topic tree shape)
@@ -861,6 +862,48 @@ echo "── 5. Archive Mismatches (raw:: links) ──────────�
 # the clone case and SKIPs; a file missing while the folder exists is a real
 # mismatch and FAILs. Without that split every clone would fail lint on the first
 # raw:: it met — the same trap section 12 avoids, and the same reasoning.
+#
+# archive-sha256: (_meta/schema.md § Source Archive Hash, roadmap R2's labelling
+# half) is checked in two halves. Its presence is a property of the note, so it
+# is checked on a clone too: a raw:: without a hash, a hash without raw::, or a
+# hash that is not 64 lowercase hex digits. Its value needs the bytes, so a
+# mismatch is checked only where the archive is present. All WARN: a mismatch
+# means section 12 grounded quotes against different bytes, which is worth
+# stopping for, but the note itself is intact.
+if command -v sha256sum >/dev/null 2>&1; then
+    sha256_of() { sha256sum "$1" | cut -d' ' -f1; }
+elif command -v shasum >/dev/null 2>&1; then
+    sha256_of() { shasum -a 256 "$1" | cut -d' ' -f1; }
+else
+    sha256_of() { :; }
+    echo "  ${DIM}SKIP${NC}  neither sha256sum nor shasum found — archive-sha256: values unverifiable"
+fi
+
+while IFS= read -r -d '' f; do
+    label=${f#"$VAULT"/}
+    raw_path=$(grep -m1 "^raw::" "$f" 2>/dev/null | sed 's/^raw::[[:space:]]*//; s/[[:space:]]*$//' || true)
+    fm_value "$f" archive-sha256; want=$REPLY; has_hash=$FM_FOUND
+    if [ -n "$raw_path" ] && { [ "$has_hash" -eq 0 ] || [ -z "$want" ]; }; then
+        warn "$label — raw:: with no archive-sha256:; a restored archive cannot be checked against the bytes its quotes were grounded in"
+        continue
+    fi
+    if [ -z "$raw_path" ] && [ "$has_hash" -eq 1 ]; then
+        warn "$label — archive-sha256: with no raw::; the hash is present exactly when raw:: is"
+        continue
+    fi
+    [ -n "$raw_path" ] || continue
+    if [[ ! $want =~ ^[0-9a-f]{64}$ ]]; then
+        warn "$label — archive-sha256: '$want' is not 64 lowercase hex digits"
+        continue
+    fi
+    [[ $raw_path == /* ]] || raw_path="$VAULT/$raw_path"
+    [ -f "$raw_path" ] || continue            # missing: the FAIL below, or a clone
+    got=$(sha256_of "$raw_path")
+    if [ -n "$got" ] && [ "$got" != "$want" ]; then
+        warn "$label — archive-sha256: does not match ${raw_path#"$VAULT"/} (archive changed after its quotes were checked: re-fetched, edited, or re-normalized)"
+    fi
+done < <(find "$VAULT/sources" -name "*.md" ! -name ".gitkeep" -print0)
+
 if [ ! -d "$VAULT/.archive" ]; then
     echo "  ${DIM}SKIP${NC}  no .archive/ directory — raw:: targets unverifiable (expected on a fresh clone)"
 else
@@ -878,9 +921,8 @@ else
             fi
         done < <(grep "^raw::" "$f" 2>/dev/null || true)
     done < <(find "$VAULT/sources" -name "*.md" ! -name ".gitkeep" -print0)
-
-    ok "archive mismatch check complete"
 fi
+ok "archive mismatch check complete"
 
 # ── 6. Graph Health ──────────────────────────────────────────────────────────
 

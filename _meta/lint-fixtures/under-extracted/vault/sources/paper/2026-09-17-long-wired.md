@@ -10,6 +10,7 @@ stage: processed
 authors: [Di Fixture]
 published: 2021
 venue: Journal of Fixtures
+archive-sha256: 97f97ae76254067786b2758ea34da250746e054872ee11047e4d216ab1a0c27e
 ---
 
 ## Why Saved

@@ -10,6 +10,7 @@ stage: processed
 authors: [Ronald Fixture]
 published: 2021
 venue: Journal of Fixtures
+archive-sha256: 3ac954d9adbe34d1f95ca8c841bc3c8c555abd4d3eff4d31b468e598e4d230c6
 ---
 
 ## Why Saved

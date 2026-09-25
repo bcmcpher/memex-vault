@@ -957,6 +957,7 @@ These thresholds are soft signals surfaced as WARNings, not hard failures. They 
 | Topic map: empty | Concept map (leaf) | 0 live member atoms; skipped below 10 live atoms vault-wide | Created and never filled; wire atoms with `memex-connect` or remove the map |
 | Atom: untyped `related::` only | Atom | ≥ 1 `related::` naming an existing atom AND no typed atom→atom relation; retired atoms skipped | Promotion backlog; run `memex-reconcile` |
 | Glossary: unreachable | Glossary | no note carries `defines:: [[term]]` | The note that uses the term should point at it; compose and search read only these links |
+| Source: archive hash | Source | `raw::` without `archive-sha256:`, the reverse, a value that is not 64 lowercase hex, or (archive present) a value that does not match its bytes | See § Source Archive Hash; a mismatch means section 12 grounded quotes against other bytes |
 | Source: under-extracted | Source | `stage: read` or `processed` AND `raw::` archive ≥ 15,000 bytes AND no extract AND `introduces::`+`supports::` targets < 2 | A long document nobody read claim by claim and that feeds almost no atoms; run `memex-deep-extract`. Measured on the archive, not the note — a source note is a template-sized summary |
 | Extract: `claims:` count wrong | Extract | frontmatter ≠ `^cNN` block ids in body | Hand edit drifted from the frontmatter; recount |
 | Atom: `high` without grounding | Atom | `confidence: high` and no `cites:: [[…#^…]]` | Confidence rests on filenames, not sentences; run `memex-deep-extract` |
