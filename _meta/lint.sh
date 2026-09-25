@@ -922,17 +922,40 @@ else
     done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 fi
 
-# 6d. Broad topic maps: many member atoms (sub-domain split candidate)
+# 6d. Topic map breadth: a leaf holding too much of the vault, or nothing.
 # Membership is derived, so count atoms pointing here rather than reading the topic.
 # Leaves only: a concept map with sub-topics has already been split, and its
 # breadth is its children's (_meta/schema.md § Topic Hierarchy).
+#
+# Relative, not absolute. Until rc.3 this fired at > 15 members, so a leaf holding
+# 15 of 18 atoms (83% of the vault) was silent and one holding 16 of 2000 warned —
+# the split signal memex-tend routes on could not fire on a young vault (T2-19).
+# Now: >= 8 members that are also >= half of all live atoms, or > 25 regardless.
+# Retired atoms count on neither side of the ratio: a split's stub keeps its
+# part-of::, and counting it raised breadth on retirement alone (T2-19, T2-33).
+#
+# The lower bound is a leaf with no live members at all — created, then never
+# filled, and reported by nothing else (T2-32). Gated at 10 live atoms so a
+# freshly seeded topic scaffold does not warn on every leaf before the first
+# connect pass.
+live_atoms=0
+while IFS= read -r -d '' f; do
+    is_retired "$(basename "$f" .md)" || live_atoms=$((live_atoms + 1))
+done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 while IFS= read -r -d '' f; do
     topic_name="$(basename "$f" .md)"
     [ -n "${CM_HAS_CHILD[$topic_name]+x}" ] && continue
-    member_count=$(grep -rlE "^part-of::.*\[\[${topic_name}\]\]" \
-        --include='*.md' "$VAULT/atoms" 2>/dev/null | wc -l || true)
-    if [ "$member_count" -gt 15 ]; then
-        warn "topics/concepts/$(basename "$f") — $member_count atoms declare part-of; consider splitting into sub-domains"
+    member_count=0
+    while IFS= read -r m; do
+        [ -n "$m" ] || continue
+        is_retired "$(basename "$m" .md)" || member_count=$((member_count + 1))
+    done < <(grep -rlE "^part-of::.*\[\[${topic_name}\]\]" \
+        --include='*.md' "$VAULT/atoms" 2>/dev/null || true)
+    if { [ "$member_count" -ge 8 ] && [ $((member_count * 2)) -ge "$live_atoms" ]; } \
+       || [ "$member_count" -gt 25 ]; then
+        warn "topics/concepts/$(basename "$f") — $member_count of $live_atoms live atoms declare part-of; consider splitting into sub-topics (every direct member must move to a child, or each one left behind warns)"
+    elif [ "$member_count" -eq 0 ] && [ "$live_atoms" -ge 10 ]; then
+        warn "topics/concepts/$(basename "$f") — leaf concept map with no live member atoms; wire atoms to it or remove it"
     fi
 done < <(find "$VAULT/topics/concepts" -name "*.md" ! -name ".gitkeep" -print0)
 

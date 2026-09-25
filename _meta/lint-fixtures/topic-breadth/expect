@@ -1,0 +1,18 @@
+exit=0
+WARN  topics/concepts/broad-leaf.md — 8 of 10 live atoms declare part-of; consider splitting into sub-topics (every direct member must move to a child, or each one left behind warns)
+WARN  topics/concepts/empty-leaf.md — leaf concept map with no live member atoms; wire atoms to it or remove it
+WARN  topics/concepts/tomb-leaf.md — leaf concept map with no live member atoms; wire atoms to it or remove it
+--- summary ---
+Sources (web): 0
+Sources (video): 0
+Sources (paper): 0
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 0
+Independent units: 0 of 0 sources
+Extracts: 0
+Atoms: 11
+Glossary terms: 0
+Concept maps: 5
+Projects: 0
+Research notes: 0
