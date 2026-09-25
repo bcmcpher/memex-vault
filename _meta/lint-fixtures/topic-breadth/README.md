@@ -15,4 +15,6 @@ so 10 live. The live atoms form a `uses::` ring so section 4 stays quiet.
 - `empty-leaf` — no members → WARN (new).
 - `tomb-leaf` — its only member is the retired stub → WARN as empty. This is
   the line that proves retired atoms are not counted.
+  The stub keeping its `part-of::` is itself the rc.2 shape, so section 7i
+  also warns on `old-concept` (added with 7i in 6e).
 - `fixture-root` — has children, so it is not a leaf and is never measured.

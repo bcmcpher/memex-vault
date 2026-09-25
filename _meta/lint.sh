@@ -297,11 +297,17 @@ list_has() {
 # supersedes:: names. Derived here once, so every check that counts live concepts
 # skips exactly the same set. In trial 2 a split's retirement stub was counted,
 # graded and offered for promotion as a live concept by four consumers (T2-33).
+# RETIRED[atom] holds the first successor found, for messages; an atom naming
+# itself is not retired by it.
 declare -A RETIRED=()
-while IFS= read -r t; do
-    if [ -n "$t" ]; then RETIRED[$t]=1; fi
-done < <(find "$VAULT/atoms" -name "*.md" -exec grep -hE '^supersedes::[[:space:]]*\[\[' {} + 2>/dev/null \
-         | grep -oE '\[\[[^]|#]+' | sed 's/^\[\[//' | sort -u || true)
+while IFS= read -r -d '' f; do
+    holder="$(basename "$f" .md)"
+    while IFS= read -r t; do
+        if [ -n "$t" ] && [ "$t" != "$holder" ] && [ -z "${RETIRED[$t]+x}" ]; then
+            RETIRED[$t]=$holder
+        fi
+    done < <(field_targets "$f" supersedes)
+done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null)
 is_retired() { [ -n "${RETIRED[$1]+x}" ]; }
 
 # ── Source independence (finding 7, M15) ────────────────────────────────────
@@ -805,6 +811,8 @@ echo "── 4. Orphan Atoms (no cites::, no inbound links) ──────�
 while IFS= read -r -d '' f; do
     label="atoms/$(basename "$f")"
     slug="$(basename "$f" .md)"
+    # A retired atom is expected to lose its evidence; 7i checks its shape.
+    is_retired "$slug" && continue
 
     # A populated cites::, not merely the field's presence. _templates/atom.md ships
     # an empty `cites:: ` line, which Dataview reads as absent (`!cites` is true).
@@ -874,8 +882,10 @@ while IFS= read -r -d '' f; do
     fi
 done < <(find "$VAULT/sources" -name "*.md" ! -name ".gitkeep" -print0)
 
-# 6b. Isolated atoms: no populated relation fields at all
+# 6b. Isolated atoms: no populated relation fields at all. A retirement stub
+# carries none by design (_meta/schema.md § Retirement), so retired atoms are skipped.
 while IFS= read -r -d '' f; do
+    is_retired "$(basename "$f" .md)" && continue
     has_relations=$(grep -cE "^(extends|uses|contradicts|part-of|related|cites)::[[:space:]]*\[\[" "$f" 2>/dev/null || true)
     if [ "$has_relations" -eq 0 ]; then
         warn "atoms/$(basename "$f") — atom has no populated relation fields (fully isolated)"
@@ -974,7 +984,12 @@ while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
     while IFS= read -r line; do
         while IFS= read -r target; do
-            if [ -z "$target" ] || [ -z "${TOPIC_PATH[$target]+x}" ]; then
+            if [ -n "$target" ] && [ -z "${TOPIC_PATH[$target]+x}" ] && [ -f "$VAULT/atoms/${target}.md" ]; then
+                # part-of:: is topic-only (T2-25). An atom target resolves, so the
+                # generic message read as a dangling link and memex-reconcile
+                # offered to delete a relation two skills had just written.
+                warn "atoms/${atom_name}.md — part-of:: [[${target}]] names an atom; part-of:: is topic-only (atom composition is extends::)"
+            elif [ -z "$target" ] || [ -z "${TOPIC_PATH[$target]+x}" ]; then
                 warn "atoms/${atom_name}.md — part-of:: [[${target}]] but no matching topic file found"
             fi
         done < <(echo "$line" | grep -oE '\[\[[^]|]+' | tr -d '[')
@@ -1024,6 +1039,7 @@ done
 # _meta/index.md lists uncategorized atoms.
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
+    is_retired "$atom_name" && continue
     atom_maps=()
     while IFS= read -r target; do
         if [ -n "$target" ] && [ -n "${CM_PARENTS[$target]+x}" ]; then atom_maps+=("$target"); fi
@@ -1039,6 +1055,7 @@ done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 if cutoff18=$(date -d "18 months ago" +%Y-%m-%d 2>/dev/null) || cutoff18=$(date -v-18m +%Y-%m-%d 2>/dev/null); then
     while IFS= read -r -d '' f; do
         atom_name="$(basename "$f" .md)"
+        is_retired "$atom_name" && continue
         newest_saved=""
         backing_sources "$f"
         while IFS= read -r src_file; do
@@ -1067,6 +1084,7 @@ fi
 # survives as an annotation that nothing here depends on.
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
+    is_retired "$atom_name" && continue
     backing_sources "$f"; resolved=$REPLY
     # No resolvable source is a dangling-link problem, not an evidence one — do
     # not report it here.
@@ -1137,6 +1155,36 @@ while IFS= read -r -d '' f; do
 done < <(find "$VAULT/sources" "$VAULT/atoms" "$VAULT/extracts" "$VAULT/topics" \
               "$VAULT/glossary" -name "*.md" ! -name ".gitkeep" -print0 2>/dev/null)
 
+# 7i. Retirement shape (_meta/schema.md § Retirement). `B supersedes:: [[A]]`
+# retires A, and the successor is the one holding the field. rc.2's
+# memex-refactor wrote it on the stub, pointing at its successors, which retired
+# the live atoms and left the tombstone live; nothing noticed (T2-33). Direction
+# cannot be read off one line, so these are the shapes that give it away:
+#   - the atom named is newer than the atom naming it (a stub predates its children)
+#   - two atoms supersede each other
+#   - a retired atom still claims membership or evidence (part-of::, cites::)
+while IFS= read -r -d '' f; do
+    atom_name="$(basename "$f" .md)"
+    fm_value "$f" created; mine=$REPLY
+    while IFS= read -r t; do
+        [ -n "$t" ] && [ "$t" != "$atom_name" ] && [ -f "$VAULT/atoms/${t}.md" ] || continue
+        fm_value "$VAULT/atoms/${t}.md" created; theirs=$REPLY
+        if [ -n "$mine" ] && [ -n "$theirs" ] && [[ "$theirs" > "$mine" ]]; then
+            warn "atoms/${atom_name}.md — supersedes:: [[${t}]], which is newer (created $theirs, this atom $mine); the successor holds supersedes:: naming what it replaced"
+        fi
+        if field_targets "$VAULT/atoms/${t}.md" supersedes | grep -qFx "$atom_name"; then
+            warn "atoms/${atom_name}.md — supersedes:: [[${t}]], and [[${t}]] supersedes this atom; only the successor holds the field"
+        fi
+    done < <(field_targets "$f" supersedes)
+    if is_retired "$atom_name"; then
+        for field in part-of cites; do
+            if [ -n "$(field_targets "$f" "$field")" ]; then
+                warn "atoms/${atom_name}.md — retired (superseded by [[${RETIRED[$atom_name]}]]) but still has ${field}::; a retirement stub keeps only its body"
+            fi
+        done
+    fi
+done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
+
 ok "structural integrity check complete"
 
 # ── 8. Confidence and Coverage ───────────────────────────────────────────────
@@ -1164,6 +1212,7 @@ compute_independence
 # unit count remains an upper bound — it can only under-report.
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
+    is_retired "$atom_name" && continue
     fm_value "$f" confidence; confidence=$REPLY
     if [ "$confidence" = "high" ]; then
         backing_sources "$f"
@@ -1184,6 +1233,7 @@ done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 # false positives in one run, every one two sources from one author group.
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
+    is_retired "$atom_name" && continue
     fm_value "$f" confidence; confidence=$REPLY
     if [ "$confidence" = "low" ]; then
         processed_count=0
@@ -1207,6 +1257,7 @@ done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
 # warned twice. Same verifiable test as 7d, for the same reason (finding 11).
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
+    is_retired "$atom_name" && continue
     fm_value "$f" confidence; confidence=$REPLY
     case "$confidence" in medium|high) ;; *) continue ;; esac
     backing_sources "$f"; resolved=$REPLY
@@ -1241,6 +1292,7 @@ done < <(find "$VAULT/sources" -name "*.md" ! -name ".gitkeep" -print0)
 # regardless of confidence. This asks whether `high` is still earned.
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
+    is_retired "$atom_name" && continue
     fm_value "$f" confidence; confidence=$REPLY
     [ "$confidence" = "high" ] || continue
     outgoing=$(count_links "$f" 'contradicts|refutes')
@@ -1616,6 +1668,7 @@ done < <(find "$VAULT/atoms" "$VAULT/sources" "$VAULT/topics" "$VAULT/glossary" 
 # which checks how many sources there are; this checks how specific they are.
 while IFS= read -r -d '' f; do
     atom_name="$(basename "$f" .md)"
+    is_retired "$atom_name" && continue
     fm_value "$f" confidence; confidence=$REPLY
     if [ "$confidence" = "high" ]; then
         anchored=$(grep -cE '^cites::.*\[\[[^]|]+#\^' "$f" 2>/dev/null || true)

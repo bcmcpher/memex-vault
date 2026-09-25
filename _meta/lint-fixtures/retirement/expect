@@ -1,0 +1,23 @@
+exit=0
+WARN  atoms/child-b1.md — retired (superseded by [[stub-b]]) but still has cites::; a retirement stub keeps only its body
+WARN  atoms/child-b1.md — retired (superseded by [[stub-b]]) but still has part-of::; a retirement stub keeps only its body
+WARN  atoms/child-b2.md — retired (superseded by [[stub-b]]) but still has part-of::; a retirement stub keeps only its body
+WARN  atoms/composite.md — part-of:: [[successor-a]] names an atom; part-of:: is topic-only (atom composition is extends::)
+WARN  atoms/mutual-one.md — supersedes:: [[mutual-two]], and [[mutual-two]] supersedes this atom; only the successor holds the field
+WARN  atoms/mutual-two.md — supersedes:: [[mutual-one]], and [[mutual-one]] supersedes this atom; only the successor holds the field
+WARN  atoms/stub-b.md — supersedes:: [[child-b1]], which is newer (created 2026-09-20, this atom 2026-09-01); the successor holds supersedes:: naming what it replaced
+WARN  atoms/stub-b.md — supersedes:: [[child-b2]], which is newer (created 2026-09-20, this atom 2026-09-01); the successor holds supersedes:: naming what it replaced
+--- summary ---
+Sources (web): 0
+Sources (video): 0
+Sources (paper): 0
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 0
+Independent units: 0 of 0 sources
+Extracts: 0
+Atoms: 8
+Glossary terms: 0
+Concept maps: 1
+Projects: 0
+Research notes: 0
