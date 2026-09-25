@@ -68,11 +68,18 @@ archive written before Phase 3 is not, and every multi-line quote from it will
 fail grounding. Normalizing is idempotent, so it is always safe:
 
 ```bash
-bash "$VAULT/_meta/normalize.sh" --in-place "$VAULT/.archive/<slug>.md"
+A="$VAULT/.archive/<slug>.md"
+before=$( (sha256sum "$A" 2>/dev/null || shasum -a 256 "$A") | cut -d' ' -f1)
+bash "$VAULT/_meta/normalize.sh" --in-place "$A"
+after=$( (sha256sum "$A" 2>/dev/null || shasum -a 256 "$A") | cut -d' ' -f1)
 ```
 
 Tell the user you did this and why. It is a real edit to a file another skill
-wrote.
+wrote. **If `$before` and `$after` differ, the note's `archive-sha256:` is now
+stale** — `_meta/lint.sh` section 5 warns on the mismatch, and the hash exists to say
+which bytes the quotes were checked against (`_meta/schema.md` § Source Archive
+Hash). Propose updating it to `$after`, as a replace candidate (§ Candidate gating
+in mode A). A note with `raw::` and no hash at all gets one the same way.
 
 **If `raw::` is absent** — fetch the URL, normalize, save, and wire it up:
 
@@ -81,8 +88,10 @@ wrote.
 ... | bash "$VAULT/_meta/normalize.sh" > "$VAULT/.archive/<slug>.md"
 ```
 
-Then add `raw:: .archive/<slug>.md` to the source note's `## Connections`. Ask
-before writing that line — it is a change to an existing note.
+Then hash it with the `$after` command from the block above, and add both lines to the source note:
+`raw:: .archive/<slug>.md` in `## Connections`, and `archive-sha256: <hash>` in
+frontmatter. Ask before writing them — they are a change to an existing note. The
+two travel together: lint section 5 warns on either without the other.
 
 **If neither is possible** — a paywall, a binary PDF that will not extract, a
 video with no transcript — **stop**. Say so plainly:
@@ -112,6 +121,14 @@ Two hard rules on quotes, both consequences of how the check works:
   cannot span a paragraph boundary. If the evidence does, that is two claims.
 - **No ellipsis.** An elided span is unmatchable by `grep -F`. Emit two `quote:`
   lines under the same claim instead.
+
+One soft rule: **prefer a span that does not cross a de-hyphenation join.**
+`normalize.sh` step 4 drops the hyphen at every line-break split, so a compound
+the PDF broke after its own hyphen archives fused — `realvalued`, `illposed`,
+`DesikanKilliany` in trial 2 (T2-8). The fused form is then the only quotable
+form, and a quote carries it into every atom promoted from the claim. It still
+grounds; it just reads wrong. Where another sentence carries the same evidence,
+quote that one; where none does, quote the fused form exactly — never repair it.
 
 Number claims `^c01`, `^c02`, … in reading order, zero-padded to two digits, never
 reused within a file. The ids are stable addresses — an atom will cite
@@ -242,8 +259,22 @@ If any quote FAILs, **fix the extract, do not fix the archive.** A failing quote
 means the claim was transcribed wrong or invented; editing the archive to match
 would destroy the only independent record.
 
+Then check the claim count three ways, and report all three:
+
+```bash
+E="$VAULT/extracts/ext-<source-slug>.md"
+grep -m1 '^claims:' "$E"                        # declared
+grep -cE ' \^c[0-9]{2,}$' "$E"                  # ids on claim lines
+grep -oE '\^c[0-9]{2,}$' "$E" | sort -u | wc -l # distinct ids
+```
+
+All three must agree. Grounding alone does not catch a body that belongs to another
+source: in trial 2 parallel workers shared a scratch file (T2-6), and a same-length
+cross-contaminated body passes a count check on its own but not the pair of checks
+together with grounding against *this* source's archive.
+
 Report: N claims, M concepts (K matched / L new / P ambiguous), Q relations
-proposed, and the grounding result. Then stop — mode A ends here.
+proposed, the three counts, and the grounding result. Then stop — mode A ends here.
 
 ### Candidate gating in mode A
 
@@ -262,10 +293,20 @@ stage: pending
 ```
 
 Body: the full extract. Write candidate → show the user → write to vault →
-delete candidate.
+**assert** → delete candidate (`_meta/schema.md` § Candidate Lifecycle). The assert
+re-reads the extract and checks it equals the candidate body; an edit tool can
+report success on a write that did not happen (trial 1, finding 13). On a miss,
+keep the candidate and stop.
 
-The `raw::` line added to the source note in step 1 is a separate modify
-candidate, since it edits an existing file.
+Step 1's edits to the source note are modify candidates, since they edit an
+existing file:
+
+- `raw::` — `section: "## Connections"`, `change: append`.
+- `archive-sha256:` — frontmatter is not a section, so this is a
+  `change: replace` anchored on a line the note is sure to have. To add the hash,
+  `replaces:` the note's `medium:` line and the body is that same line followed by
+  `archive-sha256: <hash>`. To update a stale one, `replaces:` the old
+  `archive-sha256:` line and the body is the new one.
 
 ---
 
@@ -415,8 +456,8 @@ A `confidence:` change stays its own question even inside a batch (step 1).
 ## What this skill does NOT do
 
 - **Mode A never writes an atom, glossary entry, or topic.** One file. If mode A
-  is about to touch a second file — other than the `raw::` line on the source —
-  something has gone wrong.
+  is about to touch a second file — other than the `raw::` and `archive-sha256:`
+  lines on the source — something has gone wrong.
 - **It does not replace `memex-ingest` or `memex-connect`.** Ingest summarizes,
   connect wires whole sources to atoms, extract reads claim by claim. Ingest
   first, then extract.
@@ -447,7 +488,9 @@ The rule is `_meta/schema.md` § Concurrency. Here is how it applies.
 
 **Mode A may fan out, one worker per source.** Each worker's writes are keyed to its
 source slug — `.archive/<slug>.md`, `extracts/ext-<slug>.md`, that source's own
-`raw::` line — and its reads are of state no mode A run writes: its own archive, and
+`raw::` and `archive-sha256:` lines, **and every scratch file**, which comes from
+`mktemp -d` or carries the slug in its name, never a fixed `/tmp/<name>.md`. In
+trial 2 workers staging at one fixed path overwrote each other's bodies (T2-6). Its reads are of state no mode A run writes: its own archive, and
 `atoms/` for pass 4 resolution. Two conditions:
 
 - **Workers do not append to `_meta/log.md`.** The coordinator writes every entry,
@@ -467,6 +510,13 @@ stub proposals collide the same way.
 
 The payoff from parallel mode A is **context, not wall time**: a normalized archive is
 75–100 KB, and fitting several in one window is the binding constraint.
+
+**The cost is vocabulary.** Pass 4 resolves mentions against `atoms/` and
+`glossary/`, and no worker can see the slugs its siblings are coining. On an empty
+vault every mention resolves `new`, and twelve workers in trial 2 minted one concept
+under several slugs (T2-11, T2-16). A serial run has the same blind spot until
+atoms exist. Mode B step 0 reconciles the union before anything is promoted; run it
+after any batch of mode A, parallel or not.
 
 ---
 
