@@ -1,0 +1,23 @@
+exit=0
+WARN  atoms/bare-challenges.md — has challenges:: but no explanatory prose in body (bare conflict link)
+WARN  atoms/bare-challenges.md — no cited source has been read claim by claim (no block-anchored cites::, and no cited source has an extract)
+WARN  atoms/bare-contrasts.md — no cited source has been read claim by claim (no block-anchored cites::, and no cited source has an extract)
+WARN  atoms/bare-limits.md — has limits:: but no explanatory prose in body (bare conflict link)
+WARN  atoms/bare-limits.md — no cited source has been read claim by claim (no block-anchored cites::, and no cited source has an extract)
+WARN  atoms/explained-challenges.md — no cited source has been read claim by claim (no block-anchored cites::, and no cited source has an extract)
+WARN  atoms/target-atom.md — no cited source has been read claim by claim (no block-anchored cites::, and no cited source has an extract)
+WARN  sources/paper/2026-09-17-bare-refutes.md — has refutes:: but no explanatory prose in body (bare conflict link)
+--- summary ---
+Sources (web): 0
+Sources (video): 0
+Sources (paper): 2
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 0
+Independent units: 2 of 2 sources
+Extracts: 0
+Atoms: 5
+Glossary terms: 0
+Concept maps: 0
+Projects: 0
+Research notes: 0

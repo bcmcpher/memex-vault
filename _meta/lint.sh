@@ -1236,20 +1236,31 @@ ok "confidence and coverage check complete"
 echo ""
 echo "── 9. Conflict Acknowledgment ─────────────────────────────────────────────"
 
-# 9a. Bare conflict link: atom has contradicts:: or refutes:: but no prose in body
+# 9a. Bare conflict link: a note has a tension field but no prose in body.
+#
+# Tension fields are the ones that assert a disagreement and so owe the reader
+# a sentence saying what it is: contradicts::, refutes::, challenges:: and
+# limits::. The other two epistemic fields are exempt on purpose, not by
+# omission — supersedes:: records a replacement and contrasts-with:: a
+# distinction, and neither claims the two notes disagree.
+#
+# Both roots are walked. The schema defines challenges:: and refutes:: as
+# Source -> Atom fields first, and a dispute between two sources over one
+# concept can only be written on a source; until rc.3 this scanned atoms/ only
+# and matched two of the four fields, so that dispute had no oracle (T2-17).
 while IFS= read -r -d '' f; do
-    atom_name="$(basename "$f" .md)"
-    has_conflict=$(grep -cE "^(contradicts|refutes)::[[:space:]]*\[\[" "$f" 2>/dev/null || true)
+    label="${f#"$VAULT"/}"
+    has_conflict=$(grep -cE "^(contradicts|refutes|challenges|limits)::[[:space:]]*\[\[" "$f" 2>/dev/null || true)
     if [ "$has_conflict" -gt 0 ]; then
         # Prose: a body line that is not empty, not a # header, not a field line,
         # not an HTML comment, and has at least 10 characters
         has_prose=$(awk 'BEGIN{fm=0} /^---$/{fm++; next} fm>=2 && /^[^#[:space:]]/ && !/^[a-z][a-z-]*::/ && !/^<!--/ && length($0)>=10{print; exit}' "$f" 2>/dev/null)
         if [ -z "$has_prose" ]; then
-            conflict_field=$(grep -oE "^(contradicts|refutes)::" "$f" | head -1 || true)
-            warn "atoms/${atom_name}.md — has ${conflict_field} but no explanatory prose in body (bare conflict link)"
+            conflict_field=$(grep -oE "^(contradicts|refutes|challenges|limits)::[[:space:]]*\[\[" "$f" | head -1 | sed 's/[[:space:]]*\[\[$//' || true)
+            warn "${label} — has ${conflict_field} but no explanatory prose in body (bare conflict link)"
         fi
     fi
-done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
+done < <(find "$VAULT/atoms" "$VAULT/sources" -name "*.md" ! -name ".gitkeep" -print0)
 
 ok "conflict acknowledgment check complete"
 
