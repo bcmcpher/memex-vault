@@ -1,0 +1,20 @@
+exit=0
+WARN  atoms/high-signed.md — confidence: high backed by 0 distinct source(s) in 0 independent unit(s) (needs 3+ independent for high)
+WARN  atoms/high-signed.md — confidence: high with no block-anchored cites:: (capped at medium without claim-level grounding)
+WARN  atoms/high-unsigned.md — confidence: high backed by 0 distinct source(s) in 0 independent unit(s) (needs 3+ independent for high)
+WARN  atoms/high-unsigned.md — confidence: high but never signed off (no verified:); run memex-trust-audit sign-off
+WARN  atoms/high-unsigned.md — confidence: high with no block-anchored cites:: (capped at medium without claim-level grounding)
+--- summary ---
+Sources (web): 0
+Sources (video): 0
+Sources (paper): 0
+Sources (docs): 0
+Sources (code): 0
+Sources (meeting): 0
+Independent units: 0 of 0 sources
+Extracts: 0
+Atoms: 3
+Glossary terms: 0
+Concept maps: 0
+Projects: 0
+Research notes: 0

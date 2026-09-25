@@ -959,6 +959,7 @@ These thresholds are soft signals surfaced as WARNings, not hard failures. They 
 | Source: under-extracted | Source | `stage: read` or `processed` AND `raw::` archive ≥ 15,000 bytes AND no extract AND `introduces::`+`supports::` targets < 2 | A long document nobody read claim by claim and that feeds almost no atoms; run `memex-deep-extract`. Measured on the archive, not the note — a source note is a template-sized summary |
 | Extract: `claims:` count wrong | Extract | frontmatter ≠ `^cNN` block ids in body | Hand edit drifted from the frontmatter; recount |
 | Atom: `high` without grounding | Atom | `confidence: high` and no `cites:: [[…#^…]]` | Confidence rests on filenames, not sentences; run `memex-deep-extract` |
+| Atom: `high` never signed off | Atom | `confidence: high` AND no `verified:` block; retired atoms skipped | Section 13 also reports how many live atoms are signed off; run `memex-trust-audit` sign-off |
 
 Note: high `cites::` count on a **source** note is not a smell. A survey paper or conference talk legitimately references many prior works.
 

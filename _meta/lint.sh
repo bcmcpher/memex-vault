@@ -20,7 +20,8 @@
 #  11. Schema conformance (type: present and correct, stage: in vocabulary,
 #      status: absent)
 #  12. Extract grounding (every claim's quote present in the normalized archive)
-#  13. Provenance blocks (generated:/verified: shape, actor form, stale sign-off)
+#  13. Provenance blocks (generated:/verified: shape, actor form, stale sign-off,
+#      never-signed high)
 #   Summary counts
 #
 # Exit status:
@@ -1902,6 +1903,31 @@ done < <(find "$VAULT/atoms" "$VAULT/sources" "$VAULT/topics" "$VAULT/glossary" 
 
 if [ "$prov_checked" -eq 0 ]; then
     echo "  ${DIM}SKIP${NC}  no generated: or verified: blocks yet"
+fi
+
+# 13d. Sign-off population. 13b-13c audit sign-offs that exist and had no view
+# on ones that do not: a vault where no atom was ever signed off reported this
+# section exactly like a clean one, so memex-tend could never route to the
+# sign-off pass (T2-13). Report the count, and WARN where it matters — a live
+# atom claiming `high` that no human has checked. Scoped to high so a young
+# vault is quiet; retired atoms are not concepts and are not counted.
+live_total=0; signed=0
+while IFS= read -r -d '' f; do
+    atom_name="$(basename "$f" .md)"
+    is_retired "$atom_name" && continue
+    live_total=$((live_total + 1))
+    fm_value "$f" verified
+    if [ "$FM_FOUND" -eq 1 ]; then
+        signed=$((signed + 1))
+    else
+        fm_value "$f" confidence
+        if [ "$REPLY" = "high" ]; then
+            warn "atoms/${atom_name}.md — confidence: high but never signed off (no verified:); run memex-trust-audit sign-off"
+        fi
+    fi
+done < <(find "$VAULT/atoms" -name "*.md" ! -name ".gitkeep" -print0)
+if [ "$live_total" -gt 0 ]; then
+    echo "  ${DIM}INFO${NC}  $signed of $live_total live atom(s) signed off (verified:)"
 fi
 ok "provenance block check complete"
 
