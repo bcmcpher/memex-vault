@@ -52,7 +52,9 @@ ls "$VAULT/sources/meeting/" | grep "<date>"
 
 ### 3. Fill the meeting template
 
-Create the file using `_templates/source-meeting.md` as the structure.
+Draft the note using `_templates/source-meeting.md` as the structure. Nothing is
+written to the vault until step 6c: steps 4–6b add to this draft, and step 6c writes
+the whole set at once.
 
 **Frontmatter:**
 ```yaml
@@ -94,10 +96,13 @@ generated:
 supports:: 
 introduces:: 
 challenges:: 
+defines:: 
 related:: 
+cites:: 
 ```
 
-Where the user's notes are thin, draft placeholder text and ask them to review before writing.
+Keep all six lines, as the template has them — `defines::` and `cites::` are where
+steps 4 and 6b write. Where the user's notes are thin, draft placeholder text and ask them to review before writing.
 
 ### 4. Follow-up captures
 
@@ -128,7 +133,7 @@ For each new concept that emerged (not yet in `atoms/`):
 
 > "The concept [X] came up but has no atom yet. Want to create a stub? (Yes / Skip)"
 
-Write a candidate file to `_meta/candidates/` before creating the atom. If yes, create `atoms/kebab-concept.md` with `confidence: low` and `cites:: [[meeting-filename#Key Concepts Discussed]]` (or `#Decisions Made` if the concept emerged from a decision). Add `introduces:: [[concept-name]]` to the meeting note's Connections.
+If yes, draft `atoms/kebab-concept.md` with `confidence: low` and `cites:: [[meeting-filename#Key Concepts Discussed]]` (or `#Decisions Made` if the concept emerged from a decision). Add `introduces:: [[concept-name]]` to the meeting note's Connections.
 
 Ask before creating each stub — do not auto-create.
 
@@ -146,7 +151,7 @@ If either check returns a match, show the existing entry and skip the creation p
 
 > "The term [X] came up but has no glossary entry yet. Want to create a stub? (Yes / Skip)"
 
-Write a candidate file to `_meta/candidates/` before creating the glossary entry. If yes, create `glossary/kebab-term.md`:
+If yes, draft `glossary/kebab-term.md`:
 ```markdown
 ---
 type: Glossary Term
@@ -173,11 +178,31 @@ generated:
 cites:: [[meeting-filename]]
 ```
 
-Then add `defines:: [[term-name]]` to the meeting note's `## Connections` section.
+Then add `defines:: [[term-name]]` to the draft meeting note's `## Connections`.
+This is not optional: a glossary entry no source `defines::` is unreachable from
+the graph, and `_meta/lint.sh` section 6e warns on it (trial 2, T2-21).
 
 **Atom vs. glossary:** if the term has competing definitions, accumulated claims, or would naturally connect to multiple other concepts via structural relations — create an atom stub (Step 6) instead.
 
 Ask before creating each stub — do not auto-create.
+
+### 6c. Write the set
+
+The write set is the meeting note plus every atom and glossary stub the user said
+yes to. Each file is gated — one create candidate per file, all sharing the session
+ID `YYYY-MM-DD-HHMM` taken at the start, named
+`_meta/candidates/YYYY-MM-DD-HHMMSS-create-{target-slug}.md` (`_meta/schema.md`
+§ Candidate Lifecycle). Gating the stubs and not the note would leave a dropped
+session with stubs whose `cites::` names a meeting note that was never written.
+
+For each file: write candidate → show → write to vault → **assert** → delete
+candidate. The assert re-reads the file and checks it equals the candidate body; an
+edit tool can report success on a write that did not happen (trial 1, finding 13).
+On a miss, stop: keep that candidate and the unwritten ones, and report which
+target failed. Write the meeting note first, so no stub ever cites a missing note.
+
+Because the note is written once with its final `## Connections`, no candidate ever
+modifies it.
 
 ### 7. Status
 
@@ -187,7 +212,8 @@ Set `stage: unprocessed` on creation. Note to the user:
 
 ### 8. Log entry
 
-Append to `_meta/log.md`:
+Last, after every assert in step 6c has passed — listing only the files that were
+written. Append to `_meta/log.md`:
 ```markdown
 ## [YYYY-MM-DD] meeting | <context label>
 url:: n/a
