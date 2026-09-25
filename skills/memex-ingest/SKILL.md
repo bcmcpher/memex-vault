@@ -330,7 +330,10 @@ one without the other, and on a hash that does not match the file.
 **Decide on the archive before step 4's candidate is written**, and write the
 archive first: then both lines go into the create candidate, and the note never
 exists with a `raw::` naming a missing file — a section 5 FAIL. If the user asks to
-archive after the note is written, the two lines are one modify candidate.
+archive after the note is written, the two lines are two modify candidates: `raw::`
+appended to `## Connections`, and `archive-sha256:` as a `change: replace` of the
+note's `medium:` line with that line plus the hash — frontmatter is not an
+appendable section (`memex-deep-extract` § Candidate gating in mode A shows both).
 
 The `.archive/` folder is gitignored and excluded from Obsidian's indexer — it won't appear in the graph.
 
