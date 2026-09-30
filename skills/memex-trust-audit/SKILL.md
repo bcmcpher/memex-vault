@@ -157,6 +157,16 @@ same independence test, and **cannot exceed `medium`** however many it has. That
 is not a penalty. Nobody has read those sources claim by claim, so the vault
 genuinely cannot tell three corroborations from three restatements.
 
+**Mixed citations.** Most atoms carry both kinds, and neither paragraph above
+covers that on its own (T2-30). A bare citation adds an independent *source*. It
+counts toward `medium` and toward the cap, but it adds **zero claims**, so it can
+never help an atom reach `high`. With that rule, the rows above settle every mix.
+An atom with seven claims from two reviewed sources plus one bare reviewed citation
+has three independent sources but only two that contribute claims, so it is
+`medium`. The same holds for twenty claims from two sources plus ten bare
+citations: still `medium`. The way up is to extract a third source, not to cite
+another one.
+
 ```bash
 # Does this atom rest on specific sentences, or on filenames?
 grep -cE '^cites::.*\[\[[^]|]+#\^' "$VAULT/atoms/<atom>.md"
@@ -195,20 +205,44 @@ is not named is a complaint.
 
 ### 4. Source extraction completeness (G13)
 
-For each source with `stage: processed` cited by an atom in scope:
+This is the same rule as lint section 8d, and it covers the same sources: every
+source in `sources/`, whether an atom cites it or not. Do not narrow it to sources
+an atom cites directly. After `memex-deep-extract` mode B an atom cites
+`[[ext-<slug>#^cNN]]`, not `[[<slug>]]`, so a direct-citation filter sees none of
+the extracted sources. In trial 2 it matched four sources, and none of them was
+`processed` (T2-29). An uncited dense source is as much a finding as a cited one.
+
+It measures the **document**, not the note. A source note is a summary shaped by
+the template, 34 to 65 lines on a real vault, so a line count on the note never
+fires (T2-28). The document is the `raw::` archive.
 
 ```bash
-grep -c "^introduces::" "$source_file"
-grep -c "^supports::" "$source_file"
-wc -l < "$source_file"
-ls "$VAULT/extracts/ext-$(basename "$source_file")" 2>/dev/null
+# Every source with an extract: the target of some extract's extracted-from::
+grep -rh -m1 '^extracted-from::' "$VAULT/extracts" --include='*.md' \
+  | grep -oE '\[\[[^]|#]+' | tr -d '['
+
+# Per source
+grep -m1 '^stage:' "$source_file"
+raw=$(grep -m1 '^raw::' "$source_file" | sed 's/^raw::[[:space:]]*//; s/[[:space:]]*$//')
+[ -n "$raw" ] && wc -c < "$VAULT/$raw"
+# Atom connections: distinct link targets, not lines — one line can name several
+grep -E '^(introduces|supports)::' "$source_file" | grep -oE '\[\[[^]]+\]\]' | sort -u | wc -l
 ```
 
-Body > 100 lines AND `introduces::` = 0 AND `supports::` < 2 → **UNDER-EXTRACTED**.
+A source is **UNDER-EXTRACTED** when all of these hold:
+- `stage:` is `read` or `processed`;
+- no extract names it;
+- it has a `raw::` archive, and that archive is ≥ 15000 bytes;
+- it has fewer than 2 atom connections. Count them as lint does: `introduces::` and
+  `supports::` targets together.
 
-A long processed source with **no extract at all** is the clearest case: nobody
-has read it claim by claim, so every atom citing it is capped at `medium` by
-construction. Remedy: `memex-deep-extract` mode A.
+A source with no `raw::`, or whose archive file is missing, has nothing to measure
+and is not a finding. `read` counts as well as `processed` because read with no
+extract is exactly the state this check describes.
+
+A dense source with **no extract at all** is the clearest case. Nobody has read it
+claim by claim, so every atom citing it is capped at `medium` by construction.
+Remedy: `memex-deep-extract` mode A.
 
 Report under-extracted sources as their own group, never mixed with atom findings.
 
@@ -259,7 +293,7 @@ rests on, so the user can check the arithmetic rather than trust it:
 
 ## Under-extracted sources
   sources/paper/2026-01-01-big-survey.md
-  - 187 lines, stage: processed, 0 introduces:: / 1 supports::, no extract
+  - archive 92 KB, stage: processed, 0 introduces:: / 1 supports::, no extract
   → Run: memex-deep-extract mode A
 
 ## Never verified / stale sign-off
@@ -291,6 +325,16 @@ Apply each accepted transition as:
 - `confidence:` → the new value
 - `updated:` → today
 - nothing else
+
+Write each atom's transition through one rewrite candidate in `_meta/candidates/`
+(`$VAULT/_meta/schema.md` § Candidate Lifecycle), one session ID for the run, with
+`was-sha256:` set to the atom's current hash. The body is the whole atom with only
+those two lines changed. A replace candidate swaps a single line, so the two lines
+would need two candidates and could land apart. Order: candidate → confirm → write
+→ **assert** → delete candidate. The assert re-reads the atom. It must equal the
+candidate body, with the new `confidence:` and `updated:` present and the old ones
+gone. On a miss, stop, keep the candidate, and leave that atom out of the log. An
+edit tool can report success on a write that did not happen (trial 1, finding 13).
 
 ---
 
@@ -336,6 +380,14 @@ If `verified:` already exists, add an entry to the list; never rewrite or remove
 an existing one. If an entry with the same `by:` and the same `at:` is already
 there, it is already recorded — skip it rather than duplicating.
 
+Each sign-off is written the same way as a confidence change: a rewrite candidate
+guarded by `was-sha256:`. `verified:` is a frontmatter list, and a section append
+cannot reach it. Take the hash after step 6's write for that atom has passed its
+assert, so a sign-off never overwrites a confidence change from the same session.
+Then assert. The atom must equal the candidate body, the new `by:`/`at:` pair must
+be present, and every entry that was there before must still be there. An append
+that drops an older sign-off is the one failure this field cannot survive.
+
 **Do not touch `updated:`.** Checking a note is not revising it. Bumping the
 timestamp would tell `memex-stale` the atom had been refreshed when it had only
 been read, and would clear the atom's own STALE finding — so signing off on an
@@ -355,8 +407,9 @@ skill:: memex-trust-audit
 notes: N atoms evaluated; M upgraded, K downgraded, S signed off, P flagged-only
 ```
 
-List every atom whose file changed — `confidence:` transitions and sign-offs
-both.
+Write the log entry last. List every atom whose file changed, covering both
+`confidence:` transitions and sign-offs, and name only atoms whose writes passed
+the assert.
 
 ---
 
