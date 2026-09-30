@@ -63,10 +63,11 @@ vault/
 │   ├── test-lint.sh          # Regression tests for lint.sh — run after editing it
 │   ├── lint-fixtures/        # Minimal vaults with expected lint output, one per check
 │   ├── check-skills.sh       # Static checks on skills/*/SKILL.md — run after editing a skill
-│   ├── test-tools.sh         # Contract tests for normalize.sh, pdf-clean.sh, validate-archive.sh
+│   ├── test-tools.sh         # Contract tests for the archive scripts and the migration
 │   ├── normalize.sh          # Archive text normalizer — every .archive/ write pipes through it
 │   ├── validate-archive.sh   # Is this archive a real full text, or a landing page?
 │   ├── pdf-clean.sh          # pdftotext output → archivable prose
+│   ├── migrate-rc2-rc3.sh    # One-shot: bring an rc.2 fork's vault up to rc.3 (see CHANGELOG)
 │   ├── roadmap.md            # Work that is still open (R1–R16), and the release state
 │   ├── roadmap-applied.md    # What shipped, and why — the applied findings and phases
 │   ├── skill-evaluation.md   # Empty by design — your fork's record of observed friction
@@ -598,7 +599,7 @@ Two more checks sit next to it:
 
 ```bash
 bash _meta/check-skills.sh   # after editing a skill
-bash _meta/test-tools.sh     # after editing normalize.sh, pdf-clean.sh or validate-archive.sh
+bash _meta/test-tools.sh     # after editing normalize.sh, pdf-clean.sh, validate-archive.sh or a migration
 ```
 
 `check-skills.sh` rejects positional parameters in a `SKILL.md`: `$1`–`$9`, `$0`
@@ -607,7 +608,8 @@ invocation's arguments before any shell sees the text, including inside code
 fences, so `awk '{print $2}'` silently computes something else. It also rejects any
 bundled copy of the schema, since skills read `_meta/schema.md` directly.
 `test-tools.sh` pins the archive scripts' contracts: exit codes, idempotence, and
-what NFC folds.
+what NFC folds. It also runs the rc.2 → rc.3 migration on a two-note vault: the
+dry run writes nothing, and a second `--apply` changes nothing.
 
 GitHub Actions runs all three plus `lint.sh` on every push
 (`.github/workflows/test.yml`), and a fork inherits it. Note what a green check

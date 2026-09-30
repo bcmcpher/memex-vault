@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
-# test-tools.sh — regression tests for the archive scripts.
+# test-tools.sh — regression tests for the archive scripts and the migration.
 #
 # `normalize.sh`, `pdf-clean.sh` and `validate-archive.sh` decide the bytes of
 # every archive, and lint section 12 grounds quotes against those bytes. Their
 # contracts — exit codes, idempotence, what NFC folds — were only ever checked by
 # hand, and trial 2 found three of them broken (T2-3, T2-5, T2-7). Each case below
 # pins one. Inputs are built inline, so this means the same in CI as on a laptop.
+#
+# `migrate-rc2-rc3.sh` rewrites those bytes in a fork's vault, where `.archive/`
+# is gitignored and git cannot undo it. Its cases pin the dry run writing
+# nothing, the order (archive, then quote, then hash), and idempotence.
 #
 # Usage:
 #   bash _meta/test-tools.sh
@@ -112,6 +116,42 @@ check "validate-archive: 'Page N of M' is warned" "warn" \
     "$(bash "$V" "$tmp/paper.md" | awk '/furniture:/ {print $1}')"
 check "validate-archive: furniture never decides the verdict" 0 "$(status bash "$V" --quiet "$tmp/paper.md")"
 check "validate-archive: a directory exits 2" 2 "$(status bash "$V" "$tmp")"
+
+# ── migrate-rc2-rc3.sh ───────────────────────────────────────────────────────
+# A two-note rc.2-shaped vault: an archive and a quote holding U+2126, a source
+# with raw:: and no hash. The script finds its vault from its own path, so it
+# runs from a copy inside the scratch vault.
+M="$VAULT/_meta/migrate-rc2-rc3.sh"
+mvault="$tmp/mvault"
+mkdir -p "$mvault/_meta" "$mvault/.archive" "$mvault/extracts" "$mvault/sources/paper" "$mvault/skills"
+cp "$VAULT/_meta/schema.md" "$VAULT/_meta/domain.md" "$N" "$VAULT/_meta/lint.sh" "$M" "$mvault/_meta/"
+printf 'Resistance in \xe2\x84\xa6 per metre.\n' > "$mvault/.archive/a.md"
+printf -- '---\ntype: Extract\nclaims: 1\n---\n\nextracted-from:: [[s]]\n\n- A claim. ^c01\n    - quote: "Resistance in \xe2\x84\xa6 per metre."\n' \
+    > "$mvault/extracts/ext-s.md"
+printf -- '---\ntype: Source\ntitle: S\nstage: read\ngenerated:\n  by: test\n---\n\nraw:: .archive/a.md\n' \
+    > "$mvault/sources/paper/s.md"
+tree_sum() { (cd "$mvault" && find . -type f ! -path './_meta/*' -print0 | sort -z | xargs -0 cat | cksum); }
+
+before=$(tree_sum)
+check "migrate: dry run exits 0" 0 "$(status bash "$mvault/_meta/migrate-rc2-rc3.sh")"
+check "migrate: dry run writes nothing" "$before" "$(tree_sum)"
+check "migrate: --apply exits 0" 0 "$(status bash "$mvault/_meta/migrate-rc2-rc3.sh" --apply)"
+check "migrate: creates _meta/candidates/.gitkeep" "yes" "$([ -f "$mvault/_meta/candidates/.gitkeep" ] && echo yes || echo no)"
+check "migrate: archive re-normalized to NFC (U+2126 -> U+03A9)" "same" \
+    "$(printf 'Resistance in \xce\xa9 per metre.\n' | cmp -s - "$mvault/.archive/a.md" && echo same || echo differs)"
+check "migrate: quote normalized to match" "1" \
+    "$(grep -cF "$(printf 'quote: "Resistance in \xce\xa9 per metre."')" "$mvault/extracts/ext-s.md")"
+check "migrate: hash is the archive's, written before generated:" \
+    "archive-sha256: $({ sha256sum 2>/dev/null || shasum -a 256; } < "$mvault/.archive/a.md" | cut -d' ' -f1)|generated:" \
+    "$(grep -A1 '^archive-sha256:' "$mvault/sources/paper/s.md" | paste -sd'|')"
+after=$(tree_sum)
+check "migrate: second --apply exits 0" 0 "$(status bash "$mvault/_meta/migrate-rc2-rc3.sh" --apply)"
+check "migrate: second --apply changes nothing" "$after" "$(tree_sum)"
+rm "$mvault/.archive/a.md"; sed -i '/^archive-sha256:/d' "$mvault/sources/paper/s.md"
+check "migrate: raw:: to a missing archive exits 1" 1 "$(status bash "$mvault/_meta/migrate-rc2-rc3.sh")"
+check "migrate: unknown flag exits 2" 2 "$(status bash "$mvault/_meta/migrate-rc2-rc3.sh" --dry-run)"
+sed -i 's/Unicode::Normalize/Unicode-Normalize/g' "$mvault/_meta/normalize.sh"
+check "migrate: refuses an rc.2 normalize.sh (exit 2)" 2 "$(status bash "$mvault/_meta/migrate-rc2-rc3.sh")"
 
 echo ""
 if [ "$fail" -gt 0 ]; then

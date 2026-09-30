@@ -63,7 +63,7 @@ exposes:
   pointer to one (T2-2, T2-24).
 - **`_meta/test-tools.sh`, in CI.** It pins the contracts of `normalize.sh`,
   `pdf-clean.sh` and `validate-archive.sh`: exit codes, idempotence, and NFC
-  (T2-3, T2-5, T2-7).
+  (T2-3, T2-5, T2-7). It also runs `migrate-rc2-rc3.sh` on a two-note vault.
 - **§ Retirement in `_meta/schema.md`.** An atom named in any `supersedes::` is
   retired. Lint builds one `RETIRED[]` table from this rule. Retired atoms are
   skipped when lint counts orphans, freshness, membership and extraction, and when
@@ -185,6 +185,17 @@ anything is hashed, and quotes are re-normalized so they match the new bytes.
    2. re-normalize `.archive/*` to NFC;
    3. pipe every extract `quote:` through the same `normalize.sh`;
    4. write `archive-sha256:` on every source note with `raw::`.
+
+   It uses the vault's own `normalize.sh` and `lint.sh`, and exits 2 if they are
+   still rc.2's, so take the template's `_meta/` first. `.archive/` is gitignored,
+   so git cannot undo step 2; `--apply` copies each archive it rewrites to a
+   scratch directory first and prints the path. If rc.2's `.gitignore` line
+   `_meta/candidates/` is still there, it ignores the new `.gitkeep`. The script
+   says so, and you replace that line with the template's two. Exit 1 means a
+   step could not finish: an archive named by `raw::` is missing, or a hash is
+   already present and does not match. It never overwrites that hash. On trial
+   2's vault it rewrote 5 of 12 archives and 9 of 460 quotes, all in one paper,
+   and wrote 12 hashes. Afterwards lint verified all 460 quotes.
 3. **Work the lint-driven checklist it prints.** These steps need judgement, so the
    script does not do them:
    - Flip each backwards `supersedes::`. Lint's direction WARN names each one.
