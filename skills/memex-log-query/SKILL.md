@@ -162,7 +162,7 @@ If the log has no entries matching the filter:
 - Does not answer stage questions — see step 4
 - Does not generate synthesis reports — use `memex-compose` for that
 - Does not query Obsidian's graph or Dataview — works only from the append-only log
-- Does not surface glossary activity — `memex-glossary` sessions produce no log entry by design; to audit what terms were defined, scan `glossary/` directly or grep for `defines::` fields across atom and source notes
+- Does not see glossary entries created before rc.3. `memex-glossary` has logged its sessions since rc.3 (`## [date] glossary | <note>`); older entries are found only by scanning `glossary/` or grepping `defines::` across atom and source notes
 
 ---
 

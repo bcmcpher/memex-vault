@@ -128,9 +128,26 @@ Group by confidence, most valuable first:
 
 For each proposal, ask: "Create this entry? (Yes / Edit / Skip)"
 
-### 5. Create accepted stubs
+### 5. Write candidates — the whole set
 
-Write a candidate file to `_meta/candidates/` before creating each glossary entry:
+Step 4 decides term by term. Nothing is written until the last term is decided. Then
+write a candidate for **every** file the session will change, in one `session:`,
+before changing any of them (`$VAULT/_meta/schema.md` § Candidate Lifecycle, "Gate
+the whole write set"). The write set is the new entries **and** the `defines::`
+wiring that makes them reachable.
+
+In trial 2 this skill gated its creates and wrote the `defines::` back-link as a
+direct edit after them. A session interrupted between the two was recovered through
+`memex-candidates` as three glossary entries nothing pointed at. The candidate files
+never named the scanned note, so the wiring was not on disk to recover (T2-42).
+`_meta/lint.sh` section 6e warns on an entry no note wires.
+
+**One create candidate per accepted term.** Run
+`find "$VAULT" -name "<kebab-term>.md" -not -path '*/.archive/*' -not -path '*/.git/*'`
+first. It must print nothing. A slug already taken by an atom or topic is resolved by
+`$VAULT/_meta/schema.md` § Disambiguation Policy, and lint section 1 FAILs the
+collision.
+
 ```yaml
 ---
 proposed: YYYY-MM-DD HH:MM
@@ -141,9 +158,8 @@ session: YYYY-MM-DD-HHMM
 stage: pending
 ---
 ```
-Body: full proposed glossary file content. Write to vault and delete candidate after user confirms.
 
-For each accepted term, create `glossary/kebab-term.md`:
+The body is the full glossary file. Draft it from `$VAULT/_templates/glossary.md`:
 
 ```markdown
 ---
@@ -171,13 +187,67 @@ generated:
 cites:: [[source-note-filename]]
 ```
 
-Then add `defines:: [[term-name]]` to the scanned note's `## Connections` section. If no `## Connections` section exists, append one. If the term came from a source note, add `defines::` to that source; if the term came from an atom body, add `defines::` to the atom. The `defines::` direction is always: the note that *uses* the term points at the glossary entry — not the other way around.
+If the user edited the definition in step 4, the body carries their version.
 
-If the user edits the definition during the "Yes / Edit / Skip" step, write their version.
+**One wiring candidate for the scanned note.** `defines::` always runs from the note
+that *uses* the term to the glossary entry, never the other way round. A term taken
+from a source note is wired on that source; a term taken from an atom body is wired
+on the atom. All of the session's new terms go on one line. How that line is written
+depends on what the note already has:
 
-Ask before creating each stub.
+| The scanned note has | Candidate |
+|---|---|
+| an empty `defines::` line (the atom and source templates ship one) | replace it: `replaces: "defines:: "`, body `defines:: [[term-a]], [[term-b]]` |
+| `defines:: [[x]]` | replace it: `replaces: "defines:: [[x]]"`, body `defines:: [[x]], [[term-a]], [[term-b]]` |
+| no `defines::` line (topics, older notes) | append under `## Connections`: `section: "## Connections"`, `change: append`, body `defines:: [[term-a]], [[term-b]]` |
 
-### 6. Session summary
+Copy `replaces:` from the file byte for byte, including the empty line's trailing
+space. Read it with `grep -n '^defines::' "$VAULT/<note>"`. If the note has no
+`## Connections` section, `memex-candidates` asks before appending at the end of the
+file, so say so when you show the set.
+
+**An atom's `updated:` line.** When the scanned note is an atom, add a replace of its
+`updated:` line with today's date. A `defines::` edit with no bump cannot be told
+apart, by date, from one written at seed time (T2-42, as T2-41 records for
+`memex-review`). Sources and topics carry no `updated:`.
+
+### 6. Apply
+
+Show the candidate set: each entry's path and definition, plus the wiring line and
+the note it lands on. Confirm the set. Then apply the creates first, then the
+wiring, then `updated:`. Each one goes write → **assert** → delete candidate. The
+assert re-reads the target:
+
+- a create's file exists and equals the candidate body;
+- a replace's new line is present and its `replaces:` line is gone;
+- an append's line is under `## Connections`.
+
+On a miss, stop. Keep that candidate and every one after it, report the target, and
+do not log what did not land. An edit tool can report success on a write that did
+not happen (trial 1, finding 13).
+
+If the session drops anywhere in step 5 or 6, every pending candidate shares one
+`session:`, so `memex-candidates` recovers the entries and their wiring together.
+
+### 7. Log
+
+Last, after every assert has passed, append to `_meta/log.md`, naming only what
+landed:
+
+```markdown
+## [YYYY-MM-DD] glossary | <scanned-note-slug>
+url:: n/a
+atoms:: [[scanned-atom]]
+skill:: memex-glossary
+notes: created [[multi-head-attention]], [[positional-encoding]]; defines:: on <note path>; skipped <n>
+```
+
+`atoms::` names the scanned note only when it is an atom; otherwise leave it empty.
+A session that created nothing writes no entry. Without an entry, the glossary
+entries a session creates are invisible to `memex-log-query`. In trial 2, five
+entries were created and the log recorded none of them (T2-42).
+
+### 8. Session summary
 
 ```
 Glossary scan complete: atoms/transformer-architecture.md
@@ -186,8 +256,6 @@ Glossary scan complete: atoms/transformer-architecture.md
   Already covered: transformer (atom), attention-mechanism (atom)
   defines:: added to: atoms/transformer-architecture.md
 ```
-
-No log entry for glossary-only sessions. If `defines::` fields were added to existing notes, those files are the only ones modified.
 
 ---
 
@@ -212,5 +280,7 @@ A term can have BOTH if the definition is worth pinning separately from the clai
 - Don't use generic definitions — ground each one in how the term is used in the scanned note
 - Don't create entries for terms the user clearly already knows and is using correctly — the glossary is for terms a future reader of these notes would need
 - Don't add `defines::` links before a stub is accepted — only wire after confirmation
+- Don't write the `defines::` edit directly, after the creates. It is a candidate in the same session, or an interrupted session recovers entries nothing points at (T2-42)
+- Don't give each term its own `defines::` line on one note. Extend the existing line, so the note keeps one line that a replace can target
 - Don't batch-create silently — confirm each file before writing
 - Don't scan notes you haven't read — always read the full body before extracting candidates
