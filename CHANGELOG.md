@@ -17,8 +17,185 @@ and is the authority on what remains.
 
 ## [Unreleased]
 
-*Nothing. Trial 2 runs against `v1.0.0-rc.2`, and whatever it surfaces opens
-`rc.3`.*
+*Nothing yet. Trial 3 runs against `v1.0.0-rc.3`. Anything it surfaces opens
+`rc.4`.*
+
+## [1.0.0-rc.3] — 2026-09-30
+
+This release applies all 44 of trial 2's findings, along with the labelling half of
+roadmap `R2` and every row of `rc-2-plan.md` § Not in RC-2. **As with `rc.2`, tagging
+this promotes nothing.** `v1.0.0` needs a trial against the tag that finds nothing
+new, and trial 3 is that trial.
+
+Trial 2 ran all 21 skills on a fresh fork of `rc.2`, `~/Projects/memex-trial2`,
+over a 12-paper seeded corpus. Its evidence stays in that fork. T2-1…T2-44 are in
+its `_meta/skill-evaluation.md`, each with its observed output and a root cause at
+file:line. `_meta/roadmap-applied.md` § From the trial-2 skill campaign says where
+each one landed, and every commit body lists the ids it closes. `_meta/rc-3-plan.md`
+holds the execution order.
+
+The shape of the 44 is the argument for trials. Most are the kind only real content
+exposes:
+- The skill loader substitutes `$1` inside code fences (T2-2, T2-4).
+- `supersedes::` was written backwards by the only skill that writes it (T2-33).
+- Two skills wrote six files per operation with no candidate on disk (T2-20).
+- The orchestrator's routing table had a usable route for 1 of 16 real findings
+  (T2-43).
+
+**This release changes the vault format.** A fork on `rc.2` has to migrate. See
+§ Migrating from rc.2 below.
+
+### Added
+
+- **`archive-sha256:` on every source note with `raw::`** (roadmap `R2`, labelling
+  half). It holds the SHA-256 of the normalized archive, written by the skill that
+  writes the archive: `memex-seed`, `memex-ingest`, and `memex-deep-extract` mode A.
+  `_meta/lint.sh` section 5 WARNs in four cases: the hash is missing, it is present
+  without `raw::`, it is malformed, or it no longer matches the archive on disk. A
+  mismatch means section 12 grounded the quotes against other bytes.
+
+  Grounding proves that a quote's bytes occur in this one archive file. It does not
+  prove the paper says it, because the file may be a preprint or a re-render, and
+  until now nothing recorded which file it was. The README now says this directly.
+  The version model, with `version:` and a reconcile skill, stays 1.x.
+- **`_meta/check-skills.sh`, in CI.** It rejects positional parameters (`$0`–`$9`,
+  `$ARGUMENTS`, braced or not) in any `SKILL.md`, and any bundled schema digest or
+  pointer to one (T2-2, T2-24).
+- **`_meta/test-tools.sh`, in CI.** It pins the contracts of `normalize.sh`,
+  `pdf-clean.sh` and `validate-archive.sh`: exit codes, idempotence, and NFC
+  (T2-3, T2-5, T2-7).
+- **§ Retirement in `_meta/schema.md`.** An atom named in any `supersedes::` is
+  retired. Lint builds one `RETIRED[]` table from this rule. Retired atoms are
+  skipped when lint counts orphans, freshness, membership and extraction, and when
+  `memex-reconcile`, `memex-review`, `memex-topic-emerge`, `memex-stale` and
+  `memex-compose` do their own counting (T2-33).
+- **`rewrite` candidates** in `memex-candidates`, guarded by the target file's hash
+  (`was-sha256:`), for whole-body edits such as a split's stub (T2-20).
+- **New lint checks**, each with a fixture:
+  - `supersedes::` direction and retirement shape (T2-33);
+  - untyped `related::` (T2-12);
+  - glossary entries with no inbound `defines::` (T2-21);
+  - a topic slug that collides with a note elsewhere (T2-37);
+  - atom-targeted `part-of::`, now named as topic-only (T2-25);
+  - an empty-leaf WARN once the vault has 10 live atoms (T2-32);
+  - section 13's "N of M verified", with a WARN on a `high` atom nobody has signed
+    off (T2-13).
+
+  The fixtures go from 8 to 22.
+- **`memex-deep-extract` mode B step 0.** It reconciles concept slugs across
+  extracts before anything counts them, by rewriting their `about:` lines and
+  § Concepts rows through replace candidates. Quotes and `^cNN` ids are untouched
+  (T2-11, T2-16).
+- **`memex-stale` Check 5, empty topics** (T2-32).
+- **`_meta/migrate-rc2-rc3.sh`.** See below.
+
+### Changed
+
+- **Every file a skill writes is gated before the first write, and every write is
+  asserted.** `_meta/schema.md` § Candidate Lifecycle now requires the whole write
+  set to be on disk as candidates before anything is written. The protocol is
+  candidate → confirm → write → **assert** → delete → log. Every writing skill
+  follows it, including `memex-refactor` and `memex-reconcile`, which had no
+  candidates at all (T2-20, T2-42, trial-1 Finding 13). This makes true the premise
+  roadmap `R8` was deferred on. `R8` itself, grouping and recovery, remains with the
+  user.
+- **`part-of::` is topic-only** (T2-25). A component relation between atoms is
+  `extends::` or `uses::`.
+- **`supersedes::` is written on the successor**: `new supersedes:: [[old]]`.
+  `memex-refactor`'s split now writes it that way (T2-33).
+- **The fifteen `skills/*/references/vault-schema.md` digests are deleted.** Skills
+  read `$VAULT/_meta/schema.md` (T2-24, T2-35).
+- **`_meta/normalize.sh` puts text in Unicode NFC** through perl
+  `Unicode::Normalize`, so perl joins the toolchain. A missing module is a hard
+  exit 2 with no fallback. NFC changes archive bytes, and so hashes and grounding,
+  which is why the migration re-normalizes (T2-7).
+- **`memex-tend` routes by lint message text, not section number.** Every WARN and
+  FAIL lint can emit has a route. Findings that match no route are printed, not
+  dropped. Lint 7g goes to `memex-review` Lens F. Untyped `related::` and unsigned
+  `high` atoms are now scheduled, not just offered (T2-43, T2-12, T2-13).
+- **The topic layer sees the tree.**
+  - `memex-review` loads every descendant map, and Lens F hands missing leaves to
+    `memex-topic-init` (T2-40).
+  - `memex-topic-init` re-homes a parent's atoms when it gains a child (T2-34).
+  - `memex-topic-emerge` clusters on Domain Tags only, and counts through ancestors
+    and typed links (T2-36, T2-38, T2-39).
+  - `memex-topic-init` and `memex-topic-emerge` both check a new slug across the
+    whole vault (T2-37).
+- **Lint thresholds.**
+  - 6d is relative: WARN at ≥ 8 live atoms and ≥ 50% of live atoms, or at more
+    than 25 (T2-19).
+  - 8d measures the bytes of the `raw::` archive, for stages `read` and `processed`
+    (T2-28).
+  - 7c keys on `published:`, with a 5-year window.
+  - Section 9 and `memex-conflicts` scan `sources/` and all four epistemic fields
+    (T2-17).
+  - Independence reads `attendees:`, `"Last, First"` and block-list authors
+    (T2-23).
+- **`_meta/test-lint.sh` scaffolds from a fixture-owned `domain.md`.** CI runs the
+  fixtures a second time against a foreign `domain.md` (T2-1).
+- **Capture skills.** `memex-save` routes PMC's current URLs and gains a verified
+  Vimeo oEmbed route, and its reactions prompt (step 5a) is opt-in (T2-22).
+  `memex-init` creates `_meta/candidates/` (T2-18). Candidate filenames are
+  `YYYY-MM-DD-HHMMSS-…` everywhere.
+
+### Fixed
+
+- `normalize.sh` exits 2 on an unknown flag instead of reading it as a filename
+  (T2-3). `pdf-clean.sh --report` says "cannot analyze" on text with no form feeds
+  instead of certifying it (T2-5).
+- `memex-seed` and `memex-tend` step 1 no longer lose commands to loader
+  substitution (T2-2, T2-4).
+- `memex-connect` discovery no longer counts `extracted-from::` as wiring, so it
+  runs on the vault that mode A leaves behind (T2-9).
+- Parallel `memex-deep-extract` workers no longer collide on scratch files
+  (T2-6).
+- `memex-stale` Check 2 waits 14 days (T2-31). The `memex-trust-audit` rubric covers
+  atoms with both claim-level and bare citations (T2-30), and its step 4 resolves
+  extract citations (T2-29).
+- `memex-compose` resolves `ext-…#^cNN` citations to their source and quotes the
+  claim (T2-44). `memex-glossary` gates its `defines::` wiring along with its
+  creates, and logs the session (T2-42).
+- Lint's `warn`/`error` use `printf`, so a backslash in a quote prints verbatim.
+- `_meta/candidates/` is kept in git, with only its contents ignored, so the first
+  candidate write on a fresh clone no longer fails (T2-18).
+
+### Removed
+
+- `skills/*/references/vault-schema.md`, all fifteen (see Changed).
+
+### Migrating from rc.2
+
+Take the template's changes as the README describes, then migrate. **Order
+matters.** NFC changes archive bytes, so archives are re-normalized before
+anything is hashed, and quotes are re-normalized so they match the new bytes.
+
+1. **Delete the digests yourself.** A path-scoped `git diff` or copy does not carry
+   deletions:
+   ```bash
+   git rm -r skills/*/references/vault-schema.md
+   ```
+2. **Run the migration script.** It defaults to a dry run. Read its report, then
+   apply:
+   ```bash
+   bash _meta/migrate-rc2-rc3.sh           # dry run: what would change
+   bash _meta/migrate-rc2-rc3.sh --apply
+   ```
+   It is idempotent. It runs these deterministic steps, in this order:
+   1. create `_meta/candidates/.gitkeep`;
+   2. re-normalize `.archive/*` to NFC;
+   3. pipe every extract `quote:` through the same `normalize.sh`;
+   4. write `archive-sha256:` on every source note with `raw::`.
+3. **Work the lint-driven checklist it prints.** These steps need judgement, so the
+   script does not do them:
+   - Flip each backwards `supersedes::`. Lint's direction WARN names each one.
+   - Add missing `defines::` back-links, which lint lists per glossary entry.
+   - Retype each atom → atom `part-of::` to `extends::` or `uses::`.
+4. **Expect new warnings before this is done.** rc.3's lint checks things rc.2 did
+   not: hashes, `supersedes::` direction, untyped `related::`, unwired glossary
+   entries, unsigned `high` atoms, and empty leaves. On trial 2's vault, these came
+   to 65 findings at exit 0. `memex-tend` routes every one of them.
+5. Run `bash _meta/lint.sh` and `bash _meta/test-lint.sh`, then re-run `memex-init`
+   to log the new template version.
 
 ## [1.0.0-rc.2] — 2026-09-17
 
