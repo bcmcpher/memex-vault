@@ -1,6 +1,6 @@
 ---
 name: memex-stale
-description: Surface neglect in the vault — sources marked read but never integrated, topics where all atoms are still low-confidence, and processed sources never read claim by claim. Use when the user wants to audit what's gone stale, catch neglected captures, or prioritize what to process next. Triggers on: "find stale notes", "stale vault audit", "decay check", "what have I neglected", "what's overdue for processing", "show me what's been ignored". Read-only — surfaces findings and suggests which skill to run; makes no vault changes.
+description: Surface neglect in the vault — sources marked read but never integrated, topics where all atoms are still low-confidence, topics never populated, and processed sources never read claim by claim. Use when the user wants to audit what's gone stale, catch neglected captures, or prioritize what to process next. Triggers on: "find stale notes", "stale vault audit", "decay check", "what have I neglected", "what's overdue for processing", "show me what's been ignored". Read-only — surfaces findings and suggests which skill to run; makes no vault changes.
 ---
 
 # Karpathy Wiki Stale Audit
@@ -13,7 +13,7 @@ user — a stale `MEMEX_VAULT`, or this skill invoked from an unrelated reposito
 otherwise writes `sources/`, `atoms/` and `_meta/log.md` into *that* repository,
 and the first sign is `git status` (roadmap R14).
 
-This skill is a read-only decay detector. It finds three categories of staleness and reports them as a prioritized list. It never modifies vault files — it tells you what to act on, and which skill to use.
+This skill is a read-only decay detector. It finds four categories of staleness and reports them as a prioritized list. It never modifies vault files — it tells you what to act on, and which skill to use.
 
 Run it monthly, before a compose session, or whenever the vault feels like it has grown faster than it's been processed.
 
@@ -28,13 +28,32 @@ source has sat unread measures the vault's age, not the source, and on the first
 real vault it found nothing. The remaining checks keep their numbers.
 
 ### Check 2 — Read but not integrated
-Sources with `stage: read` — consumed but never processed into atoms.
+Sources with `stage: read` that have sat there for more than **14 days**. The user
+consumed them but never processed them into atoms. The user can override the
+threshold for a run ("stale audit, 30 days").
 
 ```bash
-grep -rl "stage: read" "$VAULT/sources/"
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
+today=$(date +%s)
+grep -rl --include='*.md' "^stage: read$" "$VAULT/sources/" | while IFS= read -r f; do
+    saved=$(grep -m1 '^saved:' "$f" | sed 's/^saved:[[:space:]]*//')
+    days=$(( (today - $(date -d "$saved" +%s)) / 86400 ))
+    [ "$days" -gt 14 ] && printf '%s\t%s\t%s\n' "$days" "$saved" "$f"
+done | sort -rn
 ```
 
-For each hit, read its title and saved date. These are the highest-value targets: the user already knows the content, they just need to wire it.
+Days elapsed counts from `saved:`, the only date a source carries. The threshold
+applies to that column; the column is not just for display. A source saved and read
+this morning is a work item, not neglect. In trial 2 the ungated check reported two
+sources at 0 days as decay (T2-31). `memex-tend`'s post-ingest pass already sends new
+sources to `memex-connect`, so this check only reports the ones that have been left.
+
+Check 1 was retired because elapsed time since saving says nothing about a source
+nobody has acted on. Here elapsed time is measured against a state someone set
+deliberately, so it does mean something.
+
+For each hit, read its title. List the oldest first. These are the highest-value
+targets: the user already knows the content and only needs to wire it.
 
 ### Check 3 — Underconfident topics
 Topics where every member atom has `confidence: low`.
@@ -45,7 +64,7 @@ ls "$VAULT/topics/concepts/" "$VAULT/topics/research/"
 grep -rlE "^part-of::.*\[\[<topic>\]\]" "$VAULT/atoms/"
 ```
 
-For each topic, collect its member atoms, then check the `confidence:` field in each. If all are `confidence: low`, flag the topic as underconfident. A topic with no member atoms is not underconfident — it is empty; skip it.
+For each topic, collect its member atoms, then check the `confidence:` field in each. If all are `confidence: low`, flag the topic as underconfident. A topic with no member atoms is not underconfident. It is empty, so skip it here; Check 5 reports it.
 
 ### Check 4 — Processed sources never deep-extracted
 
@@ -77,6 +96,39 @@ recommending it sends the user into an operation that does not exist. List them
 under their own heading as having *no extraction path yet*. The count is still worth
 knowing: no atom resting only on them can reach `confidence: high`.
 
+### Check 5 — Empty topics
+
+Leaf concept maps with no live member atoms: created, then never filled. This is
+the clearest kind of neglect this skill looks for. In trial 2, `parcellation` was
+seeded as a leaf, had zero members for the whole trial, and nothing reported it
+(T2-32).
+
+```bash
+VAULT="${MEMEX_VAULT:-$(git rev-parse --show-toplevel)}"
+for t in "$VAULT"/topics/concepts/*.md; do
+    name=$(basename "$t" .md)
+    # A concept map with sub-topics has already been split; it is not a leaf
+    grep -rqE "^part-of::.*\[\[${name}\]\]" "$VAULT/topics/concepts" --include='*.md' && continue
+    members=$(grep -rlE "^part-of::.*\[\[${name}\]\]" "$VAULT/atoms" --include='*.md')
+    echo "$name	$(grep -m1 '^created:' "$t")	$members"
+done
+```
+
+A member is **live** unless it is retired, meaning some atom names it in
+`supersedes::` (`$VAULT/_meta/schema.md` § Retirement). A split's stub keeps its
+`part-of::`, so drop retired members before counting. Otherwise a leaf whose only
+atom was split away looks populated.
+
+This is the same rule as lint section 6d's lower bound, which warns *"leaf concept
+map with no live member atoms"*. Lint holds that warning until the vault has 10
+live atoms, so that a freshly seeded scaffold does not warn on every leaf. Use the
+same gate here: below 10 live atoms, report the count in one line and do not list
+the topics.
+
+Report each empty topic with its `created:` date. Route it to `memex-connect`,
+which wires the sources that motivated the leaf into atoms. The remedy is
+different from Check 3's `memex-trust-audit`, because there is nothing to audit yet.
+
 ---
 
 ## Output Format
@@ -86,8 +138,8 @@ Present findings grouped by check, most actionable first:
 ```
 ## Stale Vault Audit — YYYY-MM-DD
 
-### Read but not integrated (Check 2) — N sources
-These are highest priority: you've already read them.
+### Read but not integrated (Check 2) — N sources, read > 14 days
+These are highest priority: you've already read them. Oldest first.
 | Title | Saved | Days elapsed |
 |-------|-------|-------------|
 | ...   | ...   | ...         |
@@ -111,8 +163,14 @@ These are highest priority: you've already read them.
 | ...   | ...             |
 Listed, not routed: extraction from code is undesigned (roadmap R3, was M8).
 
+### Empty topics (Check 5) — N topics
+| Topic | Created | Live member atoms |
+|-------|---------|-------------------|
+| ...   | ...     | 0                 |
+→ Run: memex-connect (wire the sources that motivated the leaf)
+
 ---
-Total: N findings across 3 checks.
+Total: N findings across 4 checks.
 ```
 
 If a check finds nothing, say so in one line and move on — don't omit the section.
