@@ -62,13 +62,15 @@ vault/
 │   ├── lint.sh               # Programmatic health checks — the only executable oracle
 │   ├── test-lint.sh          # Regression tests for lint.sh — run after editing it
 │   ├── lint-fixtures/        # Minimal vaults with expected lint output, one per check
+│   ├── check-skills.sh       # Static checks on skills/*/SKILL.md — run after editing a skill
+│   ├── test-tools.sh         # Contract tests for normalize.sh, pdf-clean.sh, validate-archive.sh
 │   ├── normalize.sh          # Archive text normalizer — every .archive/ write pipes through it
 │   ├── validate-archive.sh   # Is this archive a real full text, or a landing page?
 │   ├── pdf-clean.sh          # pdftotext output → archivable prose
 │   ├── roadmap.md            # Work that is still open (R1–R16), and the release state
 │   ├── roadmap-applied.md    # What shipped, and why — the applied findings and phases
 │   ├── skill-evaluation.md   # Empty by design — your fork's record of observed friction
-│   ├── candidates/           # Gitignored. Pending writes, for crash recovery
+│   ├── candidates/           # Pending writes, for crash recovery. Contents gitignored; the folder is kept
 │   └── …                     # Design docs: deep-extract, okf-alignment, comparison, forge
 │
 ├── sources/                  # One file per URL or meeting — summary only
@@ -165,7 +167,10 @@ cites:: [[source-filename]]
 |-------|---------|
 | `extends::` | Builds on / specializes another concept |
 | `uses::` | Applies or depends on another concept |
-| `part-of::` | Component of a broader concept |
+
+`part-of::` is not atom → atom. Its target is always a topic: an atom's topic, or a
+concept map's parent (below). A component of a broader concept is `extends::` or
+`uses::`.
 
 ### Epistemic (atom → atom)
 
@@ -173,7 +178,7 @@ cites:: [[source-filename]]
 |-------|---------|
 | `contradicts::` | Direct logical conflict; document tension in both atoms |
 | `challenges::` | Weakens or questions without direct contradiction |
-| `supersedes::` | Replaces or obsoletes in modern understanding |
+| `supersedes::` | Replaces or obsoletes in modern understanding. Written on the successor: `new supersedes:: [[old]]` retires `old` |
 | `limits::` | Defines where the target breaks down or partially applies |
 | `contrasts-with::` | Alternative approach to the same problem |
 
@@ -238,6 +243,12 @@ answers in plain text what `_meta/index.md` answers in Dataview.
 3.2 as `/bin/bash`, so run `brew install bash` and put that bash first on `PATH`.
 Under an older shell lint refuses to start and exits 2 rather than reporting a
 false result.
+
+`_meta/normalize.sh` needs **perl with `Unicode::Normalize`**, which ships with
+perl on every mainstream Linux and on macOS. It uses it to put archive text in NFC.
+Without the module it exits with an error and writes nothing. It does not fall back
+to leaving text unnormalized, because then two spellings of one character would
+fail to match in grounding.
 
 ### Required
 
@@ -395,7 +406,7 @@ MAINTAIN ───────────────────────�
   reconcile      fix dangling part-of; work the untyped related:: backlog
   trust-audit    audit confidence against the claim rubric; record human sign-off
   conflicts      surface and document unacknowledged tensions
-  stale          read-only neglect audit (read-but-unwired sources, underconfident topics, never deep-extracted)
+  stale          read-only neglect audit (read-but-unwired sources, underconfident topics, never deep-extracted, empty topics)
 
 COMPOSE ─────────────────────────────────────────────────
   compose        topic → structured Markdown export in _exports/
@@ -567,11 +578,13 @@ bash _meta/test-lint.sh naming   # one
 `_meta/lint-fixtures/` holds one minimal vault per check, each with a `README.md`
 saying what it pins and an `expect` file recording the exit code, every FAIL/WARN
 line, and the summary counts. A fixture is a *sparse overlay* — only the notes
-under test — and the harness builds the scaffold around it from this vault's real
-`_meta/schema.md` and `_meta/domain.md`, so a schema change that breaks lint shows
-up here too.
+under test. The harness builds the scaffold around it from this vault's real
+`_meta/schema.md`, so a schema change that breaks lint shows up here too. It uses
+the fixture-owned `_meta/lint-fixtures/domain.md` rather than yours, because
+`domain.md` is the file a fork edits. Replacing your vocabulary does not break the
+fixtures, and CI checks this by running them against a foreign `domain.md`.
 
-This exists because lint is 1,700 lines of bash and the vault's only executable
+This exists because lint is 2,000 lines of bash and the vault's only executable
 oracle, and two defects got past reading its output: a provenance parser that read
 note prose as provenance and **shipped in `v1.0.0-rc.1`**, and a `cites::` naming
 a note that does not exist linting clean at exit 0. Both are now fixtures; both
@@ -581,7 +594,22 @@ were verified to fail the suite when the fix is reverted.
 before committing one.** An expectation captured from wrong behaviour enshrines
 the bug, which is the failure mode a harness has that a linter does not.
 
-GitHub Actions runs the suite plus `lint.sh` on every push
+Two more checks sit next to it:
+
+```bash
+bash _meta/check-skills.sh   # after editing a skill
+bash _meta/test-tools.sh     # after editing normalize.sh, pdf-clean.sh or validate-archive.sh
+```
+
+`check-skills.sh` rejects positional parameters in a `SKILL.md`: `$1`–`$9`, `$0`
+and `$ARGUMENTS`, braced or not. The skill loader substitutes them with the
+invocation's arguments before any shell sees the text, including inside code
+fences, so `awk '{print $2}'` silently computes something else. It also rejects any
+bundled copy of the schema, since skills read `_meta/schema.md` directly.
+`test-tools.sh` pins the archive scripts' contracts: exit codes, idempotence, and
+what NFC folds.
+
+GitHub Actions runs all three plus `lint.sh` on every push
 (`.github/workflows/test.yml`), and a fork inherits it. Note what a green check
 does **not** mean: `.archive/` is gitignored, so section 12 SKIPs in CI and quote
 grounding is never verified there. It is a local guarantee by construction.
@@ -639,8 +667,9 @@ Full article/transcript text is **not stored in the vault** by default. The `.ar
 
 The archive is gitignored and excluded from Obsidian's indexer.
 
-**Always pipe through `_meta/normalize.sh`.** It folds ligatures, smart quotes,
-dashes and exotic spaces to ASCII, rejoins words split across line breaks, and
+**Always pipe through `_meta/normalize.sh`.** It puts text in Unicode NFC, so a
+character has one byte spelling (Ω the ohm sign and Ω the Greek letter become one).
+It folds ligatures, smart quotes, dashes and exotic spaces to ASCII, rejoins words split across line breaks, and
 unwraps each paragraph onto one line. `memex-deep-extract` grounds every claim by
 running `grep -F` for its verbatim quote against this file, and `_meta/lint.sh`
 section 12 FAILs on a miss — raw `pdftotext` output would fail that check on
@@ -661,6 +690,18 @@ claim, so the skill refuses to run without an archive.
 fresh clone the archive is simply absent, and both the archive-mismatch check and
 the grounding check SKIP rather than fail — *unverifiable* is not *fabricated*.
 That is stated plainly rather than pretended around: grounding cannot run in CI.
+
+**What grounding proves is narrower than "the paper says this".** It proves that
+the quote's bytes occur in *this archive file*. The file is one rendering of one
+version of the work, after `normalize.sh`. A preprint or a re-render can differ from
+the version of record. So each source note with `raw::` also records
+`archive-sha256:`, the hash of the archive it was grounded against. `_meta/lint.sh`
+section 5 warns when the hash is missing, and when an archive on disk no longer
+matches it. That happens when the archive was re-fetched, edited or re-normalized,
+and it means section 12 checked the quotes against different bytes. Restoring
+archives into a fresh clone is how you get grounding back, and the hash tells you
+whether you restored the same text. Telling a preprint from the version of record
+is not built yet (`_meta/roadmap.md` R2).
 
 Extract quotes themselves *are* committed, unlike the archives they come from.
 They are short attributed excerpts — ordinary citation, and the reason the
