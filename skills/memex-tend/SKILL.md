@@ -31,7 +31,7 @@ is no Obsidian. Everything below is the plain-text half of the same signals.
 
 | Source | Answers |
 |--------|---------|
-| `_meta/lint.sh` | What is wrong, by section, at WARN and FAIL severity |
+| `_meta/lint.sh` | What is wrong, at WARN and FAIL severity, one message per finding |
 | `_meta/candidates/` | What a previous session proposed and never finished |
 | `_meta/log.md` | When each maintenance skill last ran |
 
@@ -89,13 +89,13 @@ TEND="$(mktemp -d -t memex-tend.XXXXXX)"; echo "tend scratch: $TEND"
 # The state oracle. Capture once; every later step reads this file, not the vault.
 bash "$VAULT/_meta/lint.sh" > "$TEND/lint.out" 2>&1; echo "lint exit=$?"
 
-# Findings attributed to their section
+# Findings per section, for the report; step 2 routes by text
 while IFS= read -r line; do
     case "$line" in
         "── "*)          sect="${line%% ─*}" ;;
-        *WARN*|*FAIL*)  printf '%s\t%s\n' "$sect" "$line" ;;
+        *WARN*|*FAIL*)  echo "$sect" ;;
     esac
-done < "$TEND/lint.out"
+done < "$TEND/lint.out" | sort | uniq -c
 
 # When each maintenance skill last ran: newest date per skill
 sed -n -e 's/^## \[\([0-9-]\{10\}\)\].*/D \1/p' \
@@ -113,33 +113,132 @@ overdue one — a skill with nothing to do has no reason to have run.
 
 ### 2. Route findings to skills
 
-Each lint section maps to the skill that can act on it. Findings with no skill are
-hand fixes; say so rather than inventing a route.
+Route each finding by its **text**, not its section number. The WARN and FAIL strings
+are stable and distinct, and one section holds findings for several skills. Keyed by
+section, rc.2's table could route 1 of trial 2's 16 end-of-campaign warnings. An
+evidence check filed under section 7 matched no row, and section 7's "atom on a map
+with sub-topics" row sent the atom back to the step that had stranded it (T2-43).
 
-| Lint section | Finding | Route to |
-|---|---|---|
-| 1 | missing `YYYY-MM-DD` prefix (FAIL) | hand fix — rename the file |
-| 1 | declared source type with no folder / undeclared folder | `memex-init` re-run, vocabulary only |
-| 2 | missing frontmatter field | hand fix, or re-run the capture skill that wrote it |
-| 4 | orphan atom | `memex-connect` to wire it, `memex-refactor` merge if it is redundant |
-| 5 | `raw::` pointing at a missing archive (FAIL) | hand fix — re-ingest or drop the `raw::` |
-| 6 | inbox-only source | `memex-connect` |
-| 6 | bloated atom | `memex-refactor` split — **recommend only** |
-| 6 | broad topic map | `memex-topic-emerge`, then `memex-review` |
-| 7 | orphan `part-of::` on an atom or a topic | `memex-reconcile` |
-| 7 | topic tree shape: a concept map naming two parents, a `part-of::` cycle, a project or research question naming a parent | hand fix — edit that topic's `part-of::` (`_meta/schema.md` § Topic Hierarchy) |
-| 7 | atom on a concept map that has sub-topics, or on two concept maps | hand fix — move its concept-map `part-of::` to one leaf, as `memex-topic-init` step 7 describes |
-| 7 | atom's newest source >18 months old | `memex-stale` |
-| 7 | unknown relation field | hand fix — it is a typo or a schema question |
-| 8 | over/under-confident, unvalidated, `high` with live contradictions | `memex-trust-audit` |
-| 8 | under-extracted source | `memex-deep-extract` — **name it, never run it** |
-| 9 | bare conflict link | `memex-conflicts` |
-| 10 | unknown tag | fix the tag, or `memex-init` to extend the vocabulary |
-| 11 | `type:`/`stage:`/`status:` violations (FAIL) | hand fix — schema conformance |
-| 12 | claim quote absent from the archive (FAIL) | `memex-deep-extract` re-run on that source — **the user's call** |
-| 13 | provenance shape, non-`human:` sign-off, stale sign-off | `memex-trust-audit` step 7 |
+The table is a file, so the matching is done by `grep`, not by reading. Each line
+is `fragment|route`, where the fragment is a piece of one lint message that no other
+message contains. Lines starting `#` name the section they came from.
 
-Skip a skill entirely when its sections are clean. "Nothing to do" is the most
+```bash
+TEND=<the scratch path step 1 printed>
+cat > "$TEND/routes" <<'EOF'
+# 1. Naming
+missing YYYY-MM-DD prefix|hand fix (FAIL) — rename the source file
+declares source type '|memex-init re-run, vocabulary only
+is not declared in _meta/domain.md § Source Types|memex-init re-run, vocabulary only
+atom has a date prefix|hand fix — rename the atom and its inbound links
+is ambiguous (schema.md § Disambiguation Policy)|hand fix (FAIL) — rename one note (schema.md § Disambiguation Policy)
+matches an alias of|memex-refactor merge if one concept — recommend only; else rename the entry
+# 2. Frontmatter
+missing field:|hand fix, or re-run the capture skill that wrote the note
+empty field:|hand fix, or re-run the capture skill that wrote the note
+(duplicate source;|hand fix — keep one source note, repoint the other's inbound links
+keep the credential out of the vault|hand fix NOW — strip the credential; it is also in git history
+# 4. Orphans
+no cites:: and no inbound links|memex-connect to wire it; memex-refactor merge if redundant — recommend only
+# 5. Archives
+raw:: with no archive-sha256:|hand fix — sha256sum the archive, add archive-sha256:
+archive-sha256: with no raw::|hand fix — drop archive-sha256:, or restore raw::
+is not 64 lowercase hex digits|hand fix — recompute archive-sha256:
+archive-sha256: does not match|the user's call — restore the archive from git, or memex-deep-extract re-grounds it; never run it
+raw:: points to missing file|hand fix (FAIL) — restore the archive, or re-ingest
+# 6. Graph health
+inbox-only; run memex-connect|memex-connect
+(fully isolated)|memex-connect
+may cover multiple concepts|memex-refactor split — recommend only
+consider splitting into sub-topics|memex-topic-emerge, then memex-review
+leaf concept map with no live member atoms|memex-connect to wire the sources behind it; or delete the map by hand
+no note carries defines::|hand fix — add defines:: to the note that uses the term
+# 7. Structure
+names an atom; part-of:: is topic-only|memex-reconcile Pass 1
+but no matching topic file found|memex-reconcile Pass 1
+only concept maps have a parent|hand fix — edit the topic's part-of:: (schema.md § Topic Hierarchy)
+a concept map's parent must be one|hand fix — edit the topic's part-of:: (schema.md § Topic Hierarchy)
+; a concept map has at most one|hand fix — edit the topic's part-of:: (schema.md § Topic Hierarchy)
+is on a part-of:: cycle|hand fix — edit the topic's part-of:: (schema.md § Topic Hierarchy)
+an atom names one leaf, and its ancestors derive|memex-review Lens A on either map
+has sub-topics; name the leaf this atom belongs to|memex-review Lens F on that map; it hands missing leaves to memex-topic-init
+may be stale|report only — the user's call whether newer sources exist (memex-save, memex-ingest)
+unknown relation field:|hand fix — a typo or a schema question
+but no such note|memex-reconcile Pass 2
+the successor holds supersedes::|hand fix — move supersedes:: to the successor (schema.md § Retirement)
+only the successor holds the field|hand fix — move supersedes:: to the successor (schema.md § Retirement)
+a retirement stub keeps only its body|hand fix — strip the stub's relation fields (schema.md § Retirement)
+untyped related:: link(s)|memex-reconcile Pass 3
+# 8. Confidence and coverage
+(needs 3+ independent for high)|memex-trust-audit
+(upgrade candidate)|memex-trust-audit
+but no cited source has been read claim by claim|memex-trust-audit
+may be under-extracted|memex-deep-extract — name it, never run it
+(high requires none unaddressed)|memex-trust-audit, then memex-conflicts
+and no cited source has an extract)|memex-deep-extract on its most-cited source — name it, never run it
+# 9. Conflicts
+(bare conflict link)|memex-conflicts
+# 10. Tags
+unknown tag:|fix the tag, or memex-init to extend the vocabulary
+# 11. Schema conformance
+carries status:; the vault field is stage:|hand fix (FAIL) — schema conformance
+missing required field: type:|hand fix (FAIL) — schema conformance
+declares "|hand fix (FAIL) — schema conformance
+not valid for|hand fix (FAIL) — schema conformance
+# 12. Extract grounding
+no extracted-from::|memex-deep-extract re-run on that source — the user's call (FAIL)
+but no such file in sources/|hand fix (FAIL) — repoint extracted-from::
+filename should be ext-|hand fix — rename the extract
+block ids in the body|hand fix — correct claims: in the extract
+duplicate claim ids|hand fix (FAIL) — renumber, then repoint cites
+claims but only|memex-deep-extract re-run on that source — the user's call (FAIL)
+empty quote: line|memex-deep-extract re-run on that source — the user's call (FAIL)
+quote not found in|memex-deep-extract re-run on that source — the user's call (FAIL)
+has no block|hand fix — repoint the cite to an existing claim
+capped at medium without claim-level grounding|memex-trust-audit
+Promotion Log has no row|hand fix — append the missing Promotion Log row
+# 13. Provenance
+generated: is missing by: or at:|hand fix — provenance shape
+generated.by '|hand fix — provenance shape
+generated.at '|hand fix — provenance shape
+verified: is present but has no list entries|memex-trust-audit step 7
+entr(ies) but|memex-trust-audit step 7
+verified.by '|memex-trust-audit step 7
+sign-off predates the current content|memex-trust-audit step 7 — re-sign or leave unsigned
+but never signed off (no verified:)|memex-trust-audit step 7
+EOF
+
+grep -E 'WARN|FAIL' "$TEND/lint.out" > "$TEND/findings"
+# Count per row. A row with no hits is dropped.
+grep -vE '^(#|$)' "$TEND/routes" | while IFS='|' read -r frag route; do
+    n=$(grep -cF -- "$frag" "$TEND/findings")
+    [ "$n" -gt 0 ] && printf '%s\t%s\t%s\n' "$n" "$route" "$frag"
+done
+# Findings no row matches. Report each one; never drop it.
+grep -vE '^(#|$)' "$TEND/routes" | cut -d'|' -f1 > "$TEND/fragments"
+grep -vF -f "$TEND/fragments" "$TEND/findings"
+```
+
+Any line the last command prints is a lint message this table does not know. It
+means lint gained a check since this skill was written. Report it verbatim, as
+*unrouted*, and do not guess a route. A new lint WARN needs a new row here in the
+same change.
+
+Three routes need more than a skill name:
+
+- **`has sub-topics; name the leaf`** (lint 7g). The atom sits on a map that has been
+  split, and the leaf it belongs to may not exist yet. rc.2 routed it to a hand edit
+  of `part-of::`, which was the step that stranded it. Group these by map and
+  schedule one `memex-review` per map. Lens F moves each atom to an existing child,
+  and hands the rest to `memex-topic-init`, one new leaf per group, with the atom
+  list. In trial 2 this was 12 of 16 warnings.
+- **`untyped related:: link(s)`** (lint 7j). This routes to `memex-reconcile` Pass 3.
+  7j names only atoms with no typed relation at all, so the backlog Pass 3 finds is
+  larger than the count here (T2-12).
+- **`never signed off`** (lint 13d). This routes to the sign-off pass. It is the one
+  step where the human does the work, so say so when it is scheduled (T2-13).
+
+Skip a skill entirely when none of its rows matched. "Nothing to do" is the most
 useful thing this skill can say, and the reason it reads state before proposing.
 
 ### 3. Order the plan
@@ -156,11 +255,13 @@ misses ones that were not yet visible.
    wrong, not just incomplete. Fix or escalate them, then re-run lint.
 3. **`memex-connect`** — wires inbox-only sources. Wiring changes orphan counts and
    confidence inputs, so it precedes everything that reads them.
-4. **`memex-reconcile`** — repairs dangling `part-of::`. Structural repair before
-   semantic audit. Its `related::` backlog pass has no lint signal: offer it, never
-   schedule it.
-5. **`memex-topic-emerge`, then `memex-review`** — only when section 6 flagged a
-   broad concept map, or the user asked. Topic structure comes before the audits
+4. **`memex-reconcile`** — repairs dangling `part-of::` and other dangling targets,
+   then works the `related::` backlog when 7j fired. Structural repair before
+   semantic audit.
+5. **`memex-topic-emerge`, then `memex-review`, then `memex-topic-init`** — when
+   section 6 flagged a broad concept map, 7g flagged atoms on a split map, or the
+   user asked. Emerge proposes the split; review Lens F moves atoms to existing
+   leaves; topic-init creates the leaves Lens F handed off. Topic structure comes before the audits
    because they read it: `memex-trust-audit` runs one topic at a time, and
    `memex-conflicts` looks for cross-topic pairs, which a map holding every atom
    cannot have. Splitting the map afterwards leaves both audited against topics that
@@ -245,14 +346,20 @@ pass from re-deriving the same conclusion an hour later.
 - Don't run `memex-deep-extract`, `memex-compose`, `memex-refactor`, `memex-init`,
   or `memex-seed`. The first three are the user's call; the last two already
   happened, and seed needs a manifest path tend was never given.
-- Don't propose a skill whose lint sections are clean, to look thorough. An
+- Don't route by section number. Match the message text against step 2's table; a
+  section holds findings for several skills (T2-43).
+- Don't drop a finding step 2 could not match. Report it as unrouted; the table is
+  missing a row.
+- Don't route lint 7g to a hand edit of `part-of::`. There may be no leaf to move
+  the atom to; `memex-review` Lens F decides, and `memex-topic-init` creates it.
+- Don't propose a skill none of whose rows matched, to look thorough. An
   eight-step plan on a healthy vault teaches the user to ignore this skill.
 - Don't run the plan without confirming it first. The whole point is deciding
   *whether* to spend the tokens.
 - Don't re-run lint after a read-only skill — `memex-stale` and `memex-search`
   change nothing, and the second pass costs as much as the first.
-- Don't route a FAIL to a skill that only reads. FAILs in sections 1, 5, and 11 are
-  hand fixes; naming a skill that cannot fix them wastes a step and hides the work.
+- Don't route a FAIL to a skill that only reads. FAILs in sections 1, 5, 11 and most
+  of 12 are hand fixes; naming a skill that cannot fix them wastes a step and hides the work.
 - Don't treat an empty `_meta/log.md` as neglect. A vault with nothing to tend has
   nothing in the log, and that is the same reading.
 - Don't summarize a skill's output in place of running it. Handing off means
