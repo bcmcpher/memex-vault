@@ -22,6 +22,13 @@ commit message from 2026-07. § From the trial-1 skill campaign is a new groupin
 for four findings that were physically stranded after § Where to Start Next in the
 fork's copy — a filing accident, not a tier.
 
+§ From the trial-2 skill campaign was added 2026-09-30, for `rc.3`. It is a
+disposition table, not a set of full arguments. The arguments for T2-1…T2-44 are in
+the trial-2 fork's `_meta/skill-evaluation.md`, with observed output and root
+causes. Copying them here would give each argument a second home. The table says
+where each finding landed. It also covers `rc-2-plan.md` § Not in RC-2, whose rows
+all closed in `rc.3`.
+
 Status markers read the same way here as in `_meta/roadmap.md`: *Applied* names
 where the change shipped.
 
@@ -547,6 +554,74 @@ undifferentiated since 2026-09-04.
 body** when `part-of::` membership is empty, and state which basis it used —
 a topic that relates its atoms in prose is not an empty topic, and treating it as
 one discards the most considered node in the vault.
+
+### From the trial-2 skill campaign
+
+*Added 2026-09-30, `rc.3`.* Trial 2 ran all 21 skills on a fresh fork of `rc.2`
+(`~/Projects/memex-trial2`, branch `skill-campaign-2`) over a 12-paper seeded corpus.
+It filed 44 findings. **All 44 are applied in `rc.3`.** None became a new `R` row.
+One finding corrected an existing row's premise: T2-20 falsified the sentence `R8`
+was deferred on, and that sentence is now corrected in `_meta/roadmap.md`. Commits
+are on branch `rc-3`, and each commit body lists the T2 ids it closes.
+
+| Finding | What was wrong | Where it landed |
+|---|---|---|
+| T2-1 | `memex-init` replaced `domain.md`, and every lint fixture failed | `test-lint.sh` scaffolds from a fixture-owned `domain.md`; CI runs a foreign one |
+| T2-2, T2-4 | The loader substitutes `$1` and `$ARGUMENTS` in skill bodies, so seed's manifest reader and tend's awk silently misread | `memex-seed`, `memex-tend`; new `_meta/check-skills.sh` in CI |
+| T2-3 | `normalize.sh` took an unknown flag as a filename and exited 0 | Unknown flag → exit 2; `_meta/test-tools.sh` |
+| T2-5 | `pdf-clean.sh` reported all-clear on normalized input; page furniture was invisible | "cannot analyze", non-zero exit; `validate-archive.sh` reports `Page N of M` |
+| T2-6 | Parallel mode A workers collided on scratch files | Scratch keyed by `mktemp -d` (schema § Concurrency); deep-extract, tend |
+| T2-7 | No Unicode canonicalization, so homoglyphs defeated grounding | NFC through perl `Unicode::Normalize`, with no fallback; changes 5 of the 12 trial-2 archives |
+| T2-8 | De-hyphenation was unconditional and documented as a clean win | Trade-off documented in `normalize.sh` |
+| T2-9 | `memex-connect` discovery counted `extracted-from::` as wiring, so it saw nothing to do after mode A | Discovery drops `extracted-from::`; lint 6a counts all nine relation fields |
+| T2-10, T2-14, T2-15 | Mode B proposed 134 atoms, ran an unbounded glossary pass, and proposed stubs lint would FAIL | Mode B thresholds and scope guards; the term check covers `atoms/` too |
+| T2-11, T2-16 | Parallel mode A produced an unreconciled concept vocabulary | New mode B step 0 reconciles slugs through modify candidates; step 5 compares reconciled slugs |
+| T2-12 | No oracle saw an untyped `related::` | Lint WARN; `memex-tend` routes it to `memex-reconcile` Pass 3 |
+| T2-13 | Section 13 skipped silently when nothing was signed off | "N of M verified", plus a WARN on never-signed `high`; tend routes it to the sign-off pass |
+| T2-17 | Lint section 9 and `memex-conflicts` scanned `atoms/` only and missed `challenges::` | Both scan `sources/` and all four epistemic fields; fixture `conflict-scope` |
+| T2-18 | `_meta/candidates/` was absent on a fresh clone | `.gitkeep` is committed and only the contents are ignored; `memex-init` creates the folder |
+| T2-19 | The §6d broad-map threshold was absolute | Now relative: ≥ 8 live atoms and ≥ 50%, or > 25 |
+| T2-20 | `memex-refactor` and `memex-reconcile` wrote across many files with no candidates | Schema gates the whole write set; both skills gate and assert every write; new `rewrite` candidate guarded by the target's hash |
+| T2-21 | Glossary entries were created without a `defines::` back-link | Templates carry `defines::`; mode B, meeting and glossary gate the wiring; lint WARNs on a glossary entry with no inbound link |
+| T2-22 | PMC's current URL fell through to `web` | New PMC host and path rule; a failed fetch counts as no evidence |
+| T2-23 | Lint independence did not read `attendees:` | Reads `attendees:`, `"Last, First"` and block-list authors |
+| T2-24, T2-35 | Fifteen bundled schema digests had drifted and lacked the decision tree | All deleted; skills read `$VAULT/_meta/schema.md`; `check-skills.sh` forbids their return |
+| T2-25 | `part-of::` was documented as atom → atom, and lint read that as dangling | `part-of::` is topic-only in the schema, README, lint 7a and `memex-review` |
+| T2-26, T2-27 | Reconcile Pass 3 could only promote in the link's direction, and discovered links with a raw grep | Reverse retype, pair handling, fence filter; skips retired atoms |
+| T2-28, T2-29, T2-30 | The under-extracted check measured the note, not the archive; step 4 missed extract-routed sources; the rubric had no row for mixed citations | Lint 8d and trust-audit measure `raw::` bytes and resolve extract citations; the rubric sentence covers bare cites |
+| T2-31, T2-32 | `memex-stale` reported sources read that morning; empty topics were invisible | Check 2 gated at 14 days; Check 5 lists empty leaves; lint 6d empty-leaf WARN |
+| T2-33 | `supersedes::` was written backwards by `memex-refactor` | Schema § Retirement (named by some `supersedes::` = retired); refactor writes it on the successor; lint direction check and one `RETIRED[]` table |
+| T2-34 | `memex-topic-init` left a populated parent's atoms behind | It re-homes them; lint says every direct member must move |
+| T2-36…T2-39 | `memex-topic-emerge` clustered on Type Tags, named clusters after colliding tags, saw only direct maps, and ran on a starved signal after reconcile | Domain Tags only; slug collision check across the vault (lint namespace guard); counts through the tree and typed links |
+| T2-40, T2-41 | `memex-review` could not see the topic tree, and Lens C reopened relations reconcile had settled | Loads the whole tree; Lens F hands splits to `memex-topic-init`; Lens C reads `kept::` log lines and never re-offers them; changes are gated and logged |
+| T2-42 | Glossary gated its creates but not the `defines::` wiring | The whole set is gated; the session is logged |
+| T2-43 | `memex-tend` routed by lint section number | Routes by message text, covering every WARN and FAIL; unrouted findings are printed; 7g → review Lens F |
+| T2-44 | `memex-compose` never resolved extract citations | Resolves `ext-…#^cNN` to the source and quotes the claim; retired atoms are listed apart |
+
+**`rc-2-plan.md` § Not in RC-2, closed.** That table recorded every known issue
+trial 2 was not going to exercise, so that a re-occurrence would not be logged as
+new. `rc.3` dispositions each row:
+
+| Row | Disposition in `rc.3` |
+|---|---|
+| Finding 13, skill half: post-write assertions | *Applied.* Schema write protocol: candidate → confirm → write → **assert** → delete → log; every writing skill |
+| M6 / finding 9: `version:` and `memex-deep-extract-reconcile` | *Deferred*, still `R2`'s 1.x half. The labelling half (`archive-sha256:`) is applied |
+| M10 / finding 15: Zotero first tier; findings 4, 5, 6: resolve, fetch, repo scripts | *Deferred*, still `R4`'s 1.x remainder |
+| Finding 8: grounding not reproducible from a clone | *Applied.* A sentence in schema § Extract Claims › Grounding, tied to `archive-sha256:` |
+| `memex-connect` batched analysis deviation | *Applied.* The batch analysis is sanctioned; confirmation stays per note |
+| `memex-save` step 5a prompt | *Applied.* Opt-in |
+| Open question 4: `topics/research/` vs `topics/projects/` | *Deferred.* Still untriggered by any observation |
+| M3, M4, M8, Phases 5/8/9 | *Deferred*, as `R5`, `R6`, `R3` and the phases |
+| M22: graph labels are filenames | *Accepted*, as `R16` |
+| Lint 8d line count on sources | *Applied.* Measures `raw::` bytes (with T2-28) |
+| Lint 7c 18-month freshness | *Applied.* Keys on `published:`, 5 years |
+| Lint §4 orphan check cost | *Accepted.* A cost comment is in place; revisit near 200 sources |
+| `authors:` as "Last, First" or wrapped lists | *Applied* (with T2-23) |
+| `echo -e` in `warn()`/`error()` | *Applied.* `printf`; fixture with a backslash quote |
+| `stage: unread` as a reader-facing flag | *Accepted.* Unchanged, for the reason the row gave |
+| `validate-archive.sh` holes | *Accepted.* Stated in the script's § Known limits header |
+| Candidate filename formats disagree | *Applied.* One format, `YYYY-MM-DD-HHMMSS-…` |
+| `memex-save` Vimeo route | *Applied.* oEmbed verified 200 on 2026-09-25 |
 
 ---
 

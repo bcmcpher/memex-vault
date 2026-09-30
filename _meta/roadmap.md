@@ -1,6 +1,15 @@
 # memex-vault Improvement Roadmap
 
-Revised: 2026-09-17 for `v1.0.0-rc.2`. **This is the first revision to live in the
+Revised: 2026-09-30 for `v1.0.0-rc.3`. Trial 2 ran all 21 skills on a fresh fork
+and filed T2-1…T2-44. rc.3 applies all 44 of them, along with the labelling half of
+`R2` and every row of `rc-2-plan.md` § Not in RC-2. This revision records that in
+§ Release Status. It marks `R2` *Partially applied*, corrects the premise `R8` is
+deferred on (T2-20 showed it was false for two skills), and points § Where to Start
+Next at trial 3. Nothing was added to § Open Work. Every T2 finding was either
+applied or turned out to restate an existing row. `_meta/roadmap-applied.md`
+§ From the trial-2 skill campaign records where each one landed.
+
+Superseded 2026-09-17 for `v1.0.0-rc.2`. **This is the first revision to live in the
 template**, and it does three things. It carries the 2026-09-11 revision across from
 the brain-connectivity fork — M6–M22, § The RC-2 seed corpus, and the discharged
 verification-debt rows; before this, the template's copy stopped at M5 while skills
@@ -128,6 +137,44 @@ suggests.** It is closer in one specific way: the criterion below is now the rig
 one, and every input to it is written down. Whether the tag promotes depends
 entirely on what trial 2 finds, and the honest expectation is that it finds
 something.
+
+**`v1.0.0-rc.3`, cut 2026-09-30 in the template (tag after the WP10 dry run).**
+Trial 2 found 44 things, so `rc.2` does not promote. The campaign ran in
+`~/Projects/memex-trial2`, and its evidence stays there: T2-1…T2-44 are in that
+fork's `_meta/skill-evaluation.md`, each with its observed output and a root cause
+at file:line. `_meta/rc-3-plan.md` holds the execution order that turned them into
+this release.
+
+Five of the 44 are the kind no fixture could have caught. Each one only shows up
+once real content goes through the skills:
+- **T2-2 / T2-4.** The skill loader substitutes `$1` and `$ARGUMENTS` in a skill
+  body, including inside code fences. Two skills lost commands this way and nothing
+  failed loudly.
+- **T2-20.** Two skills write six files per operation with no candidate at all.
+- **T2-33.** `supersedes::` was written backwards by the only skill that writes it.
+- **T2-43.** `memex-tend` routed by lint section number, so 15 of 16 real findings
+  had no usable route.
+
+What `rc.3` contains, by work package:
+- a hermetic lint harness (T2-1);
+- loader-safe skills plus `_meta/check-skills.sh` in CI (T2-2, T2-4);
+- archive scripts with NFC and strict arguments, plus `_meta/test-tools.sh` (T2-3,
+  T2-5, T2-7, T2-8);
+- schema changes: topic-only `part-of::`, § Retirement, gated write sets with a
+  post-write assert, and `archive-sha256:`;
+- deletion of the fifteen bundled schema digests (T2-24, T2-35);
+- lint changes 6a–6j, which take the fixtures from 8 to 22;
+- a revision of every writing skill;
+- `_meta/migrate-rc2-rc3.sh`.
+
+Full detail is in `CHANGELOG.md`.
+
+**Every row of `rc-2-plan.md` § Not in RC-2 is closed.** Each was either applied or
+carried into an `R` row that already existed. `_meta/roadmap-applied.md` has the
+table. **Trial-1 Finding 13**, a post-write assertion in every writing skill, is the
+largest of them. It is now part of the schema's write protocol, which runs
+candidate → confirm → write → assert → delete → log. Each writing skill's `rc.3`
+commit carries its share of that protocol.
 
 **Status 2026-09-11 — the RC did its job, and the answer is "not yet".** The
 brain-connectivity fork exercised all four verification-debt rows and then ran
@@ -274,15 +321,16 @@ Status markers and release targets are defined in the header. Every row names th
 evidence that the problem is real — for the comparison rows, "claude-obsidian has
 it" was not accepted as evidence anywhere in that document.
 
-**The tally, because it is the question this file gets opened for.** Of the
-twelve rows that are not yet done: **ten are `1.x`** — new capability, and the
-vault is coherent without them (`R1`, `R3`–`R7`, `R10`–`R13`, one of which, `R4`,
-is a partial whose remaining half is `1.x`). **One blocks 1.0 in part** (`R2`, the
-labelling half: the README says quote-grounded and M19 showed the guarantee is
-narrower than it reads). **One is undecided and with the user** (`R8`).
+**The tally, because it is the question this file gets opened for.** *(Updated
+2026-09-30 for `rc.3`.)* Twelve rows are not yet done. **Eleven are `1.x`**: new
+capability, and the vault is coherent without them. They are `R1`, `R3`–`R7` and
+`R10`–`R13`, plus `R2` and `R4`, which are partials whose remaining halves are
+`1.x`. **One is undecided and with the user** (`R8`). **None blocks 1.0.** `R2`'s
+labelling half was the last row that did, and it shipped in `rc.3`.
 
-So the shape of what is left is *scope growth, not unfinished work* — with one
-labelling defect and one architectural question as the exceptions. The two rows
+So what is left is *scope growth, not unfinished work*, with one architectural
+question as the exception. The `1.0` gate is now purely the trial criterion in
+§ Release Status. The two rows
 that were genuine pre-1.0 refinement, `R9` and `R14`, were applied before trial 2
 and are marked as such above.
 
@@ -299,8 +347,7 @@ changes. Import (Phase 9) is the other half, deferred.
 ### R2–R7 — from this vault's own history
 
 **R2. A source has no version model, re-rendering is indistinguishable from
-revision, and no content hash exists to tell them apart.** *Deferred — needs
-trial-2 drift data to calibrate. Was `M6` + `M19` + comparison verdict 1 (`F1`).* **Target: blocks 1.0 in part.** The *labelling* half does: the README says quote-grounded, and M19 showed the guarantee silently narrows from "this sentence is in the paper" to "this byte sequence is in this file", with nothing marking the difference. Recording the archive's SHA-256 at capture is what makes that honest, and it is small. The `version:` field and the reconcile skill are **1.x** — new machinery, and they need trial-2 drift data to calibrate.
+revision, and no content hash exists to tell them apart.** *Partially applied — `rc.3`: the labelling half. Source notes with `raw::` carry `archive-sha256:` (`_meta/schema.md` § Source Archive Hash), written by `memex-seed`, `memex-ingest` and `memex-deep-extract` mode A. `_meta/lint.sh` section 5 WARNs when the hash is missing or no longer matches the archive. The README states what grounding proves. The version model is still deferred. Was `M6` + `M19` + comparison verdict 1 (`F1`).* **Target: the labelling half blocked 1.0 and is applied; what remains is 1.x.** The *labelling* half did: the README says quote-grounded, and M19 showed the guarantee silently narrows from "this sentence is in the paper" to "this byte sequence is in this file", with nothing marking the difference. Recording the archive's SHA-256 at capture is what makes that honest, and it is small. The `version:` field and the reconcile skill are **1.x** — new machinery, and they need trial-2 drift data to calibrate.
 
 **These were three rows for one problem**, which is the clearest example of what
 the old numbering could not express. `M6` said a work exists as several
@@ -532,9 +579,23 @@ that document, which is why five of the fifteen are declines and not rows here.
 the user 2026-09-17; no decision recorded.* **Target: undecided — with the user.** A demonstrated defect (Stage 6's kill drill: 6 notes, 0 log entries, `lint.sh` exit 0) whose only known fix is a runtime, which reverses the zero-dependency decision that lets a vault be checked without an install. A defect would normally block 1.0; a fix this size would normally be 2.0. That tension is the reason this is a question rather than a row. One logical mutation, in their design,
 is one bundle: per-path precondition hashes, a vault-wide lock, a durable journal,
 atomic per-file replace, and a `recover` command. Workers return drafts; one
-orchestrator applies them. memex has the per-write half already and arrived at it
-independently — `memex-candidates` refuses a create whose target exists and a modify
-whose line no longer matches. What is missing is grouping, and Stage 6 demonstrated
+orchestrator applies them. memex has the per-write half and arrived at it
+independently: `memex-candidates` refuses a create whose target exists and a modify
+whose line no longer matches.
+
+*Corrected 2026-09-30, per trial 2's T2-20.* Until `rc.3`, "memex has the per-write
+half" was only true of most skills. `memex-refactor` and `memex-reconcile` wrote
+across up to six files with no candidate on disk, so a crash in the middle of a
+split left two live children, a parent still claiming the concept, and `lint.sh`
+exiting 0. `rc.3` makes the per-write half true everywhere:
+- `_meta/schema.md` § Candidate Lifecycle requires every file in a write set to be
+  gated before the first write.
+- Every writing skill asserts each write before deleting its candidate.
+- `rewrite` candidates, guarded by the target's hash, cover whole-body edits such as
+  a split's stub.
+
+The premise now holds, and the question below is unchanged. What is missing is
+grouping, and Stage 6 demonstrated
 the cost: a `memex-seed` run killed after 6 of 12 notes left 6 notes, 12 archives,
 6 candidates and **0 log entries, with `lint.sh` exiting 0**. Nothing records that a
 batch was half-applied. **The blocker is not difficulty, it is language:** a journal,
@@ -584,7 +645,8 @@ a *note* as machine-produced; nothing marks a *source* as model output.
 threads, explicitly "not a transcript", with a rule that it must not carry claims
 less qualified than the canonical page they came from. Hooks read it and never write
 it. memex has no equivalent and every session starts cold, re-reading
-`references/vault-schema.md`. That is a real cost with no recorded finding behind it,
+`_meta/schema.md`. That file was `references/vault-schema.md` until `rc.3` deleted
+the digests. That is a real cost with no recorded finding behind it,
 and the fix creates a second home for a claim — the failure mode their own schema had
 to write a rule against. Wants a trial-2 observation that the cold start actually
 costs something.
@@ -811,6 +873,19 @@ invalidating that.
 
 ## Where to Start Next
 
+**Since `v1.0.0-rc.3`, the first move is trial 3, not a phase.** It runs on a
+fresh fork of the `rc.3` tag, at `~/Projects/memex-trial3`. The corpus grows from
+12 papers to 22 (corpus v2): trial 2's twelve extracts are imported through a
+one-off importer, and ten new papers are deep-extracted fresh. `_meta/rc-3-plan.md`
+§ Part B is the procedure, including the predictions registered before it starts.
+The criterion has not changed: a trial that surfaces nothing new promotes `v1.0.0`,
+and a trial that surfaces something produces `rc.4`. *The open set trial 3 is judged
+against* is § Open Work, as below, minus `R2`'s labelling half, which is now in the
+tag.
+
+*What follows was written for trial 2 and is kept as the record of how that trial
+was set up. The same reasoning is why trial 3 runs on its own fork.*
+
 **Since `v1.0.0-rc.2`, the first move is trial 2, not a phase.** Everything RC-2
 was going to apply is applied, and the only thing that can move the release now is
 a full trial against the tag. It is not a build step, it needs no phase here, and
@@ -853,8 +928,8 @@ attribution, the exporter must not duplicate `_meta/normalize.sh`, and it create
 It is also the first phase that is real code rather than a skill document.
 
 Everything else outstanding is deferred: Phase 5 (Anki), Phase 9 (OKF import),
-and `R2`–`R8` and `R10`–`R13` in § Open Work. None blocks anything except the
-labelling half of `R2`. The two rows that were worth pulling forward, `R9` (lint
+and `R2`–`R8` and `R10`–`R13` in § Open Work. None blocks anything. The labelling
+half of `R2` was the exception, and it shipped in `rc.3`. The two rows that were worth pulling forward, `R9` (lint
 fixtures and CI) and `R14` (the `$VAULT` guard), were pulled forward and are in
 `rc.2`.
 
